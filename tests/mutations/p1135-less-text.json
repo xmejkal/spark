@@ -1,0 +1,110 @@
+[
+ {
+  "file": "scripts/spark/breadboard/sheet.py",
+  "name": "P1135: a part this project holds reads as in your drawer, not yours (test_flow.ThePartsNeedsTest.test_have_reads_the_drawer_in_the_sheet_s_words)",
+  "find": "    if candidate.get(\"held_here\"):\n        return HAVE_YOURS",
+  "replace": "    if False:\n        return HAVE_YOURS"
+ },
+ {
+  "file": "scripts/spark/breadboard/sheet.py",
+  "name": "P1135: a part nobody owns reads as in your drawer, not to get (test_flow.ThePartsNeedsTest.test_have_reads_the_drawer_in_the_sheet_s_words)",
+  "find": "return HAVE_IN_DRAWER if candidate[\"owned\"] else HAVE_TO_GET",
+  "replace": "return HAVE_IN_DRAWER if candidate[\"owned\"] is not None else HAVE_TO_GET"
+ },
+ {
+  "file": "scripts/spark/breadboard/sheet.py",
+  "name": "P1135: an unknown count reads as to get, not as the sheet reads it (test_flow.ThePartsNeedsTest.test_have_reads_the_drawer_in_the_sheet_s_words)",
+  "find": "return HAVE_IN_DRAWER if candidate[\"owned\"] else HAVE_TO_GET",
+  "replace": "return HAVE_IN_DRAWER if candidate[\"owned\"] not in (0, \"unknown\") else HAVE_TO_GET"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P1135: a need's lines stand in the phase's says again (test_flow.ThePhasesTest, test_flow.OffersPerNeedTest)",
+  "find": "            parts.append(PartsNeed(need[\"need\"], picked_names(plan, need), lines))",
+  "replace": "            parts.append(PartsNeed(need[\"need\"], picked_names(plan, need), lines))\n            said += lines"
+ },
+ {
+  "file": "scripts/spark/flow/flow_codes.py",
+  "name": "P1135: a shared sentence stays in the pick's own line (test_flow.ThePartsNeedsTest.test_a_wired_pick_of_an_unlisted_project_says_each_sentence_once_and_the_shared_ones_last)",
+  "find": "        own = own.replace(\" %s \" % said, \" \")",
+  "replace": "        own = own"
+ },
+ {
+  "file": "scripts/spark/flow/flow_codes.py",
+  "name": "P1135: the wired sentence is no shared sentence, so a Send of picks says it per pick (test_flow.ThePartsNeedsTest.test_a_wired_pick_of_an_unlisted_project_says_each_sentence_once_and_the_shared_ones_last, test_flow_page.TheLessTextTest.test_a_pick_s_send_box_says_the_shared_lines_apart_and_keep_names_a_picked_need_s_part)",
+  "find": "PROJECT_EFFECTS = (WIRED_PICK_MESSAGE, LIST_PROJECT_MESSAGE, PICK_HISTORY_MESSAGE)",
+  "replace": "PROJECT_EFFECTS = (LIST_PROJECT_MESSAGE, PICK_HISTORY_MESSAGE)"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1135: a pick's confirm says its effect whole (test_flow_page.TheLessTextTest.test_a_pick_s_send_box_says_the_shared_lines_apart_and_keep_names_a_picked_need_s_part)",
+  "find": "(effect_lines(offer[\"effect\"]) if need else [offer[\"effect\"]])",
+  "replace": "[offer[\"effect\"]]"
+ },
+ {
+  "file": "scripts/spark/flow/page_sections.py",
+  "name": "P1135: a picked need's row draws no picked line (test_flow_page.TheLessTextTest.test_a_picked_need_s_row_says_its_pick_before_its_offers_and_its_lines_after_them)",
+  "find": "name, _text(TICK), _text(picked_sentence(need[\"picked\"]))) if need[\"picked\"] else \"\")",
+  "replace": "name, _text(TICK), _text(picked_sentence(need[\"picked\"]))) if False else \"\")"
+ },
+ {
+  "file": "scripts/spark/flow/page_sections.py",
+  "name": "P1135: a pick's row writes its effect again (test_flow_page.TheLessTextTest.test_a_pick_s_row_reads_its_part_and_what_you_have_and_keeps_its_board_file_line)",
+  "find": "_text(flow_codes.PICK_ROW % (offer[\"part\"], offer[\"have\"])), line)",
+  "replace": "_text(offer[\"effect\"]), line)"
+ },
+ {
+  "file": "scripts/spark/flow/page_sections.py",
+  "name": "P1135: the build's row writes its effect again (test_flow_page.TheLessTextTest.test_the_parts_list_s_and_the_build_s_rows_hold_their_label_alone)",
+  "find": "return '<li data-key=\"%s\"%s>%s</li>' % (_text(offer[\"key\"]), _makes_stale(offer), _text(offer[\"label\"]))",
+  "replace": "return '<li data-key=\"%s\"%s>%s: %s</li>' % (_text(offer[\"key\"]), _makes_stale(offer), _text(offer[\"label\"]), _text(offer[\"effect\"]))"
+ },
+ {
+  "file": "scripts/spark/flow/page_sections.py",
+  "name": "P1135: the board-file line leaves the pick's row (test_flow_page.TheLessTextTest.test_a_pick_s_row_reads_its_part_and_what_you_have_and_keeps_its_board_file_line)",
+  "find": "line = '<p class=\"muted\">%s</p>' % _text(refused) if refused else \"\"",
+  "replace": "line = \"\""
+ },
+ {
+  "file": "scripts/spark/flow/page_sections.py",
+  "name": "P1135: the developer fold drops a pick's have (test_flow_page.TheLessTextTest.test_the_developer_fold_keeps_every_key_label_and_effect_and_a_pick_s_have)",
+  "find": "_text(offer[\"label\"]), self._have(offer), _text(offer[\"effect\"]))",
+  "replace": "_text(offer[\"label\"]), \"\", _text(offer[\"effect\"]))"
+ },
+ {
+  "file": "scripts/spark/flow/show_flow.py",
+  "name": "P1135: show prints no need lines (test_flow.TheNeedLinesTest)",
+  "find": "    lines += need_lines(phase)\n",
+  "replace": "    lines += []\n"
+ },
+ {
+  "file": "scripts/spark/flow/show_flow.py",
+  "name": "P1135: a need's line drops its pick keys (test_flow.TheNeedLinesTest.test_the_parts_line_ends_at_the_count_and_each_need_s_line_follows_it)",
+  "find": "items += [NEED_OFFERS % \", \".join(HAVE_KEY % (offer.key, offer.have) for offer in picks)] if picks else []",
+  "replace": "items += []"
+ },
+ {
+  "file": "scripts/spark/flow/show_flow.py",
+  "name": "P1135: the parts phase prints its picks on its offers line again (test_flow.TheNeedLinesTest.test_the_parts_line_ends_at_the_count_and_each_need_s_line_follows_it)",
+  "find": "for offer in phase.offers if pick_need(offer.key) not in named]",
+  "replace": "for offer in phase.offers]"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1135: a picked need's first radio reads not now (page_script.test.js, on a picked need the first radio reads its keep word)",
+  "find": "keep || this.words.not_now",
+  "replace": "this.words.not_now"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1135: a picked need's group points at no picked line (page_script.test.js, on a picked need the first radio reads its keep word)",
+  "find": "need.setAttribute(\"aria-describedby\", \"picked-\" + name);",
+  "replace": "void 0;"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1135: an offer's row keeps its label beside its button (page_script.test.js, a pick's row becomes one label)",
+  "find": "item.textContent = \"\";",
+  "replace": "void 0;"
+ }
+]

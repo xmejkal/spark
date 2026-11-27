@@ -42,12 +42,11 @@ from spark.flow.page_sections import TICK, shown_phase, word_of  # noqa: E402
 from spark.flow.offer_steps import build_step  # noqa: E402
 from spark.flow.phase_readers import MARKS, Offer, Phase  # noqa: E402
 from spark.flow.show_flow import read_flow  # noqa: E402
-from spark.flow import flow_codes  # noqa: E402
 from spark.flow.flow_codes import WIRED_BUILD_MESSAGE, WIRED_SHEET_MESSAGE, WIRED_STEP_MESSAGE  # noqa: E402
 from spark.flow.wired_board import day_of  # noqa: E402
 from spark.flow.fingerprint import FILES, fingerprint_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
-from test_flow import SOIL, FlowTest, in_prague, with_needs  # noqa: E402
+from test_flow import MAY_NOTE, SHARED, SOIL, WIRED_PICK, FlowTest, in_prague, with_needs  # noqa: E402
 from spark.flow.write_flow_page import FlowPageStore, PageParts, write_kept_page, WriteFlowPage, kept_pictures, kept_wiring, write_page  # noqa: E402
 
 #: The built fixture test_flow.py builds its projects from.
@@ -2161,7 +2160,7 @@ class TheSliceOneOrderTest(unittest.TestCase):
 def wired_effect(own):
     """A pick's effect on a wired board of an unlisted project, as the parts reader writes it (P1135): its own sentences
     between the three that every pick of the project says."""
-    return " ".join((flow_codes.WIRED_PICK_MESSAGE, own, flow_codes.LIST_PROJECT_MESSAGE, flow_codes.PICK_HISTORY_MESSAGE))
+    return " ".join([WIRED_PICK, own] + SHARED[1:])
 
 
 def a_picked_phase():
@@ -2171,7 +2170,7 @@ def a_picked_phase():
         return {"key": "pick:%s:%s" % (need, part), "label": "Pick “%s” for %s" % (name, need), "effect": effect,
                 "makes_stale": ["requirements"], "part": name, "have": "in your drawer"}
     offers = [pick("button", "tact-12mm", "Tactile 12 mm", wired_effect("Saves “Tactile 12 mm” as the pick.")),
-              pick("board", "beetle", "Beetle", wired_effect("Saves “Beetle” as the pick. " + flow_codes.NO_BOARD_FILE_MESSAGE % "Beetle")),
+              pick("board", "beetle", "Beetle", wired_effect("Saves “Beetle” as the pick. Spark cannot build from this pick: it has no board file for “Beetle”.")),
               dict(pick("board", "c6", "XIAO C6", wired_effect("Saves “XIAO C6” as the pick.")), have="to get")]
     needs = [{"need": "button", "picked": ["Tactile 6 mm"], "says": ["Not shown for button: 1 more pick."]},
              {"need": "board", "picked": [], "says": []}]
@@ -2212,7 +2211,7 @@ class TheLessTextTest(unittest.TestCase):
         self.assertIn('<li data-key="pick:board:beetle" data-makes-stale="requirements">Beetle: in your drawer<p class="muted">'
                       'Spark cannot build from this pick: it has no board file for “Beetle”.</p></li>', self.parts)
         self.assertIn('<li data-key="pick:board:c6" data-makes-stale="requirements">XIAO C6: to get</li>', self.parts)
-        for said in ("Saves “Beetle”", html.escape(flow_codes.WIRED_PICK_MESSAGE), flow_codes.PICK_HISTORY_MESSAGE):
+        for said in ("Saves “Beetle”", html.escape(WIRED_PICK), MAY_NOTE):
             self.assertNotIn(said, before_developer(self.text))
 
     def test_the_parts_list_s_and_the_build_s_rows_hold_their_label_alone(self):
@@ -2233,8 +2232,7 @@ class TheLessTextTest(unittest.TestCase):
     def test_a_pick_s_send_box_says_the_shared_lines_apart_and_keep_names_a_picked_need_s_part(self):
         words = page_words([a_picked_phase()])
         self.assertEqual(words["offers"]["pick:board:c6"]["says"], [
-            "Saves “XIAO C6” as the pick.", flow_codes.WIRED_PICK_MESSAGE, flow_codes.LIST_PROJECT_MESSAGE, flow_codes.PICK_HISTORY_MESSAGE,
-            "These steps may be marked out of date: requirements."])
+            "Saves “XIAO C6” as the pick."] + SHARED + ["These steps may be marked out of date: requirements."])
         self.assertEqual(words["keep"], {"button": "keep “Tactile 6 mm”"})
         self.assertEqual(page_words([a_need_phase()])["keep"], {})
 

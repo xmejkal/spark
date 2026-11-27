@@ -62,14 +62,8 @@
  {
   "file": "scripts/spark/flow/page_sections.py",
   "name": "P1067: a need's row gets no data-need, so the script cannot group its picks (test_flow_page.TheSliceOneOrderTest.test_each_need_row_carries_its_need_for_the_script_and_the_developer_fold_none)",
-  "find": "'<li class=\"need\" data-need=\"%s\"><strong>%s</strong><ul>%s</ul></li>' % (_text(need), _text(need),",
-  "replace": "'<li class=\"need\"%s><strong>%s</strong><ul>%s</ul></li>' % (\"\", _text(need),"
- },
- {
-  "file": "scripts/spark/flow/flow_page.py",
-  "name": "P1067: a pick's words lose its part, so its radio has no label (test_flow_page.TheSliceOneOrderTest.test_a_pick_offer_s_words_hold_its_need_and_its_part_and_the_other_offers_neither)",
-  "find": "dict(words, need=need, part=offer.get(\"part\"))",
-  "replace": "dict(words, need=need, part=None)"
+  "find": "'<li class=\"need\" data-need=\"%s\"><strong>%s</strong>%s%s%s</li>' % (name, name,",
+  "replace": "'<li class=\"need\"%s><strong>%s</strong>%s%s%s</li>' % (\"\", name,"
  },
  {
   "file": "scripts/spark/flow/page_script.js",

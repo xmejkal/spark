@@ -15,7 +15,8 @@ from spark.flow.flow_reading import FlowReading
 from spark.flow.guide import guide_of
 from spark.flow.published_page import PublishedPageStore
 from spark.flow.wired_board import read_wired, with_wired
-from spark.flow.phase_readers import MARKS, READERS, DeployReader, pick_need, picked_sentence
+from spark.flow.flow_codes import picked_sentence
+from spark.flow.phase_readers import MARKS, READERS, DeployReader, pick_need
 from spark.firmware.project_secrets import ProjectSecrets
 from spark.records import store
 from spark.core.operation import COMMON_ARGUMENTS, READS, Operation
@@ -180,6 +181,20 @@ class ShowFlow(Operation):
 
     name = "show-flow"
     summary = "Say where a project stands, phase by phase from the idea to the deploy, and what each phase offers next (P825)."
+    details = """flow.py show reads the project's files and the store, and writes nothing. It says each phase in order: idea,
+needs, parts, requirements, build, breadboard, firmware, simulate and deploy. Each phase has a status (ok, problems,
+could-not-run, not-started, partial or stale, or none), who does it (you, claude or your terminal), what it says, its
+offers and needs (each need of the parts phase that counts, with picked, its picks by name, and says, its own lines;
+null on every other phase and on a parts phase with problems or that could not run, P1135). With a goal in the brief
+(.spark/project.json), the idea is ok and says the goal. With no goal, or with a brief that cannot be read, it has none
+and says so. A hand-written project (requirements.json and no needs) has none for its needs and parts, and so has a
+project whose last need was dropped, which says so. Written firmware and a simulated image have none, because what their
+sentences say is for you to judge. An offer is a key, such as pick:soil:x-led, with a label (the words of its button,
+such as Build the board), its effect (plain sentences that name every write it makes), makes_stale (the phases it can
+make out of date, only those that hold something now), part (a pick's part, else null) and have (what you have of a
+pick's part, in the breadboard sheet's words: yours, in your drawer or to get; else null). In the text, the parts line
+says the count, and one line per need follows it: its pick with a tick, its lines, then its pick keys, each with its
+have. flow.py show runs no offer."""
     arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder (default: here)"), COMMON_ARGUMENTS["json"])
     effects = (READS,)
     data_keys = ("phases", "stands_at", "fingerprint", "guide", "deploy", "name", "title", "stamp", "artifact")

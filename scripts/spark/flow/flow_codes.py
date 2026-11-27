@@ -277,6 +277,38 @@ WIRED_EFFECT = {PICK: WIRED_PICK_MESSAGE, BUILD_BOARD: WIRED_BUILD_MESSAGE}
 #: Send of several picks says each once.
 PROJECT_EFFECTS = (WIRED_PICK_MESSAGE, LIST_PROJECT_MESSAGE, PICK_HISTORY_MESSAGE)
 
+
+def effect_lines(effect):
+    """A pick's effect as the Send box's lines (P1135): its own sentences, then each of PROJECT_EFFECTS that it holds, each
+    once. Sentences are joined with one space, so each one is cut out whole."""
+    shared = [said for said in PROJECT_EFFECTS if said in effect]
+    own = " %s " % effect
+    for said in shared:
+        own = own.replace(" %s " % said, " ")
+    return [own.strip()] + shared
+
+
+def board_file_line(effect):
+    """The sentence of a pick's `effect` that says spark cannot build from the pick (NO_BOARD_FILE_MESSAGE, P991), or None:
+    the page keeps it on the pick's row (P1135)."""
+    start, end = NO_BOARD_FILE_MESSAGE.split("%s")
+    at = effect.find(start)
+    if at < 0:
+        return None
+    stop = effect.find(end, at + len(start))
+    return effect[at:stop + len(end)] if stop >= 0 else None
+
+
+def quoted(names):
+    """Names as a person reads them in a sentence: each in quotes (“…”), ", " between two."""
+    return ", ".join("“%s”" % name for name in names)
+
+
+def picked_sentence(names):
+    """The one text of a need's picks (P1135), for the page and `show`."""
+    return PICKED_SAID % quoted(names)
+
+
 #: The page's script (P829 PR 3): every word the script shows, for the kinds of offer the page sends (`SENDABLE`). Python
 #: writes them into the page's inert words block; the script fills in only a time, an offer's label or spark's own line.
 #: No word says "done" alone.

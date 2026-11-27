@@ -14,7 +14,8 @@ from spark.breadboard import before_power, part_pictures, picture_check
 from spark.breadboard.svg_diagram import PAD_MARKS
 from spark.flow import flow_codes
 from spark.flow.guide import note_words
-from spark.flow.phase_readers import MARKS, board_file_line, pick_need, picked_sentence
+from spark.flow.flow_codes import board_file_line, picked_sentence
+from spark.flow.phase_readers import MARKS, pick_need
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 from spark.core.zone_time import day_and_time
 

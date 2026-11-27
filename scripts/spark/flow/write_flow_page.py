@@ -177,6 +177,18 @@ class WriteFlowPage(Operation):
 
     name = "write-flow-page"
     summary = "Write page.html in the project: each phase of the flow with a status word and a mark, and the project's pictures (P827)."
+    details = """flow.py page writes page.html in the project from the one reading that flow.py show prints (P1060): the station line
+(each phase's place from data.guide.stations, a ring on now, a note's words under its name, then Perfboard, PCB and
+Case greyed, P1119; DONE and LATER stand only in the developer fold), the phases, each with its status word and a mark,
+the wiring of a built project (the lines before power, then the steps, one at a time or all at once) and the pictures
+the project holds: the breadboard, and the schematic and the PCB that the build with --keep kept as files. The page
+adds no tick of its own: a phase that is not ok never shows one. Only the build with --keep draws the schematic and the
+PCB. The page reads the project's files and its board logs, and cannot see your wiring or what the board shows now. In
+the parts fold each need has a row: its pick with a tick, each part it may pick with what you have of it, then the
+need's own lines (P1135). Every other offer shows its label; its effect stands in its Send box and in the developer
+fold, which also says a pick's have. The page's <body> carries data-fingerprint (the first 12 hex digits of the
+fingerprint) and data-written (the newest change time of the three files flow.py's own text names). Only /spark:page
+publishes the page."""
     arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder (default: here)"),
                  Argument(("--artifact",), "artifact", str, "the id of the Artifact the page is published as (P829): kept in "
                           ".spark/page.json, the id only, and answered as data.artifact by every later page", metavar="ID"),

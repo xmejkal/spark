@@ -1,0 +1,46 @@
+# P1135: less text on the page, the next step easy to see, a mark on the pick: rows
+
+Card: [P1135 #1670](https://github.com/xmejkal/spark/issues/1670). The plan council ran on 2026-11-27, from about 03:56 to 04:06
+CET: the UX and AI-UX lens, the architecture lens and the refuter, all on Opus. The delegated council of three on Opus (the PO
+assistant, the tech lead and the architect) answered the open choices at 04:10 CET, delegated and the PO's to change. A second
+refuter round on Opus ran until 04:27 CET. The builder built it on 2026-11-27, from about 04:35 to 05:40 CET. This file holds the acted,
+raised and rejected findings only.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 1 | the "Not shown … refused … held by …" lines are the biggest block left (about 85 of 200 words), so each becomes a count | the UX lens, point 1 | raised | [P1278 #1840](https://github.com/xmejkal/spark/issues/1840), the PO's decision: the refuter rejected it because it reverses his P991 row 23 ("even if taken"), and the council chose a card, 2 of 3, with the option "name each refused part once per fold" |
+| 2 | "Spark cannot build from this pick" shows only in the Send box, but the person needs it before the choice | the UX lens, point 2 | acted | `board_file_line` keeps it muted on the pick's row, after the radio's label; a test and a mutation row |
+| 3 | "✓ picked “X”." hides a picked part that the person still has to buy | the UX lens, point 3 | raised | [P1279 #1841](https://github.com/xmejkal/spark/issues/1841): "(to get)" after a picked part; the refuter: today's page does not say it either, so a card, not a defect |
+| 4 | "Tell Claude a pick for each, or to set it aside" suggests the page can set a need aside | the UX lens, point 4 | acted | `PARTS_NOW` ends "Pick a part for each, or ask Claude to set one aside." for the page and `show` (Q5) |
+| 5 | the text view's offers line stops at five keys and shows neither the need nor `have` | the UX lens, point 5; the architect's fix 9 | acted | `show` prints one line per need: its pick, its lines, then its pick keys, each with its `have`; the phase's offers line keeps the offers that are no pick |
+| 6 | the station note is clipped at 600px or less, so on a phone the no-simulation line would show nowhere | the UX lens, point 6 | acted | `GuideHtmlSection` does not change (Q6, 2 of 3), and the p977 row does not move |
+| 7 | a picked need's first radio reads "not now" | the UX lens, point 7 | acted | it reads "keep “X”" from `flow_codes.KEEP_PICK` in the words block (Q7); a node test and a mutation row |
+| 8 | the chosen row gets a 3px edge (States.dc.html), and the radiogroup points at its picked line | the UX lens, point 8; the session's decision in round 2 (fix 5): a 2px teal edge on a pale fill, as Parts.dc.html draws the chosen card | raised | `aria-describedby="picked-<need>"` is built, with a node test. The style rule is not: it puts teal on a new (selector, `border-color`) pair, which `test_teal_is_only_a_button_fill_a_frame_edge_or_a_focus_ring` refuses (its `TEAL_ROLES`), a test the plan does not name. It waits for the session before the merge |
+| 9 | `effect_lines` rests on a wrong claim: `wired_offer` puts the wired sentence first, so `[own] + shared` is not the effect in its order | the architecture lens, point 1 | acted | the test checks that the set of sentences equals the effect's and that each stands once |
+| 10 | `needs: []` on the needs phase reads as "no needs" | the architecture lens, point 2 | acted | `needs` is `null` on every phase but parts, and on a parts phase with problems or could-not-run (Q2); a test |
+| 11 | the page paragraph of the help holds frontend text, which `Operation.details` must not | the architecture lens, point 3 | acted | `--json`, `--artifact`, the bad id, the secrets sentence and the exit codes stay in EPILOG; a test |
+| 12 | the fallback for needs missing from `needs` is dead code | the architecture lens, point 4 | acted | no fallback; the test helpers give `needs` |
+| 13 | a pick that is NOW's offer leaves the fold, and the developer fold writes no `have` (a D22 gap) | the architecture lens, point 5 | acted | the developer fold writes "(have)" after a pick's label; a test and a mutation row |
+| 14 | `have_of` restates the sheet's rule | the architecture lens, point 6 | acted | `have_of` stands beside `_have` in sheet.py, and their docstrings point to each other; an unknown count reads "in your drawer", as the sheet's (fix 5) |
+| 15 | the ✓ comes from `MARKS[OK][1]`, and the developer fold loses the lines per need | the architecture lens, point 7 | acted | both use `MARKS[OK][1]`; the need lines stand in the parts fold, and `test_flow_reading`'s fixture 3 (D22) runs unchanged |
+| 16 | flow.md restates the moved help | the architecture lens, point 8 | acted | flow.md links to each verb's `--help` |
+| 17 | test_flow_page.py:322, test_wired_board.py:253 and the node count change too | the refuter, round 1 | acted | each named in its commit with its old and new text; the count is 29 |
+| 18 | the p991-offers.json rows at `picked_line` move | the refuter, round 1 | acted | three rows moved to `picked_names`; `tools/mutate.py --anchors` passes |
+| 19 | a page from disk draws no radios, so step 6 cannot see them | the refuter, round 1 | acted | the plan's step 6 injects the test stand-in for the Artifact's database (fix 7); the session runs that check |
+| 20 | one line per need bends D24 ("No restyle of the CLI text") | the delegated council, Q3 | acted | design.md's D24 gets a one-line note, delegated and the PO's to change |
+| 21 | a new mutation row is critical | the delegated council, Q11 | rejected | none, 3 of 3: the sweep runs new rows anyway |
+| 22 | test_flow.py:573 pins the parts phase's offers line, which changes | the refuter, round 2, fix 1 | acted | the test takes six needs, so the needs phase has six offers that are no pick and the p825 row on `OFFERS_SHOWN` keeps its test |
+| 23 | p1062's developer-fold row and its E17 row sit in code the fold rewrites | the refuter, round 2, fix 2 | acted | the developer-fold row moved; the E17 anchor is unchanged, and `--anchors` passes |
+| 24 | new row 4 ("`picked` stays empty") is the same mutant as p991's moved row | the refuter, round 2, fix 3 | acted | only the moved p991 row stands |
+| 25 | GuideHtmlSection also writes the no-simulation and SET ASIDE lines, so "exactly two `<p>`" fails on those projects | the refuter, round 2, fix 4 | acted | the test counts the `<p>`s inside `div.now` |
+| 26 | the help's cited lines, the secrets sentence, and EPILOG printing under every verb | the refuter, round 2, fix 6 | acted | the pointer reads "Each verb's own --help says what it does"; the secrets sentence stays in EPILOG |
+| 27 | the PR has a rows file | the refuter, round 2, fix 7 | acted | this file |
+| 28 | `phases[].needs` (a list of objects) sits beside `guide.now.needs` (a list of ids) | the refuter, round 2, nit 8 | acted | the council chose `needs`, 3 of 3; flow.md says not to read one as the other. The name is the PO's to change |
+| 29 | the plan's 15 new rows | the builder | acted | 18 rows: row 4 dropped (row 24), row 14 split in two, and three more for the offers line's filter, the `aria-describedby` and an offer row's text that the script clears |
+| 30 | old node tests 2, 3, 4 and 7 index the build row's children, so a row that "becomes its button alone" by a removed text node breaks them | the builder | acted | the script clears an `<li>`'s text with `textContent = ""` and keeps its " " before the button, so those tests stay as they are; a new node test pins the clearing |
+| 31 | a need with no pick, no line and no pick offer gets a row | the builder | rejected | it gets none, by the rule `show` follows for its need lines |
+| 32 | the ✓ of a picked need in a partial parts phase breaks the rule that a phase that is not ok shows no tick | the builder | rejected | the ✓ is the need's pick, not the phase's status; `test_no_tick_outside_the_script_for_a_status_that_is_not_ok` reads needs with no pick and stays green |
+| 33 | the page's golden, tests/golden-design/flow-ok-page.txt, differs from today's output | the builder | acted | accepted with `SPARK_ACCEPT=flow` twice and read line by line: `"keep": {}` in the words block, then the compiled script's lines of `drawButtons` and `drawNeed`; no HTML line outside the script changed |
+| 34 | `effect_lines`, `board_file_line` and `picked_sentence` sit beside `pick_offer` in phase_readers.py | the plan | rejected | with them and `have_of` phase_readers.py holds 642 lines, over R1's 600 (test_architecture); a new module would change `TheFlowAreaTest.MODULES`, a test the plan does not name. The three, with `quoted`, are pure functions over flow_codes' own sentences and stand there; `have_of` stands in sheet.py |
+| 35 | json.md:141 names `needs` and `have` | the plan | rejected | the row's cell would hold 347 characters, over the docs' 300 (test_docs); it links flow.md, which holds both keys |
+| 36 | the new tests read flow_codes' own sentences as their expectation | test_self_confirmation | acted | they read literal sentences (test_flow's `WIRED_PICK`, `LISTS_IT`, `MAY_NOTE`) |

@@ -21,7 +21,8 @@ from spark.flow.fingerprint import SHORT
 from spark.flow.page_sections import (WIRING, DeveloperHtmlFold, FreshHtmlLine, GuideHtmlSection, IntroHtmlLine, NotesHtmlSection,
                                       PartsHtmlFold, PicturesHtmlFold, StandsAtHtmlLine, StationsHtmlLine, TitleHtmlHeading,
                                       WiringHtmlFold, _text)
-from spark.flow.phase_readers import MARKS, effect_lines, pick_need, quoted
+from spark.flow.flow_codes import effect_lines, quoted
+from spark.flow.phase_readers import MARKS, pick_need
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 from spark.core.zone_time import MONTHS
 

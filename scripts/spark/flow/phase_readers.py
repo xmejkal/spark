@@ -38,12 +38,11 @@ NOT_SIMULATED_SAYS = {firmware_codes.NO_SIM_TOML: [flow_codes.NO_SIM_MESSAGE],
                       firmware_codes.NO_IMAGE: [flow_codes.NO_IMAGE_MESSAGE, flow_codes.SCENARIO_HINT]}
 #: Value: one offer of a phase: its key (`pick:soil:x-led`), its label (the words of its button), its effect (plain
 #: sentences that name every write taking it makes), `makes_stale`, the phases it can make out of date (P829), `step`,
-#: the NextStep that runs it (offer_steps, P1030), `part`, the name of a pick's part, else None (P1067: the page's radio
-#: says it), and `have`, what the person has of a pick's part in the sheet's words (`have_of`, P1135), else None. The JSON
-#: of `data` holds all but the step, which is in `next`.
+#: the NextStep that runs it (offer_steps, P1030), `part`, a pick's part's name (P1067), and `have`, what the person has
+#: of it (`sheet.have_of`, P1135), else None each. The JSON of `data` holds all but the step, which is in `next`.
 Offer = namedtuple("Offer", "key label effect makes_stale step part have", defaults=(None, None))
-#: Value (P1135): one need of the parts phase that counts: its id, `picked` (its picks by the names a person reads, [] for
-#: none) and `says`, its own lines. Its pick offers are the phase's, by `pick_need`.
+#: Value (P1135): one need of the parts phase that counts: its id, `picked` (its picks by name, [] for none) and `says`,
+#: its own lines. Its pick offers are the phase's, by `pick_need`.
 PartsNeed = namedtuple("PartsNeed", "need picked says")
 #: The parts phase offers at most this many picks per need (P976, the PO, 2026-11-21: "so many unrelated things").
 OFFERS_PER_NEED = 3
@@ -56,8 +55,7 @@ HELD_FILES = {flow_codes.REQUIREMENTS: Path(REQUIREMENTS_FILE), flow_codes.BUILD
 
 class Phase(namedtuple("Phase", "phase status mark by says offers needs", defaults=(None,))):
     """Value: where one phase of a project stands: its name, its status (an outcome, a phase word of `flow_codes`, or None),
-    its glyph from MARKS, who does it, what it says (sentences for a person; a null value reads `unknown`), its Offers and
-    `needs`, the PartsNeeds of a parts phase that read its needs (P1135), else None."""
+    its glyph from MARKS, who does it, what it says (a null value reads `unknown`), its Offers and its PartsNeeds (P1135)."""
 
     def to_dict(self):
         return dict(self._asdict(), offers=[dict(key=offer.key, label=offer.label, effect=offer.effect, makes_stale=list(offer.makes_stale),
@@ -313,25 +311,6 @@ def picked_names(plan, need):
             for pick in need.get("pick") or []]
 
 
-def quoted(names):
-    """Names as a person reads them in a sentence: each in quotes (“…”), ", " between two."""
-    return ", ".join("“%s”" % name for name in names)
-
-
-def picked_sentence(names):
-    """The one text of a need's picks (P1135), for the page and `show`."""
-    return flow_codes.PICKED_SAID % quoted(names)
-
-
-def have_of(candidate):
-    """What the person has of `candidate` (a row of `needs.match`), in the sheet's have words (P1135), as `sheet._have`
-    decides them from the drawer: yours when this project holds a piece, to get when they own none, else in your drawer,
-    a count of many or unknown too."""
-    if candidate.get("held_here"):
-        return sheet.HAVE_YOURS
-    return sheet.HAVE_IN_DRAWER if candidate["owned"] else sheet.HAVE_TO_GET
-
-
 def pick_offer(project, need, candidate, listed, notes):
     """The Offer to pick `candidate` for `need`, one the project's `needs.PickPlan` does not refuse. `notes` are the
     sentences `pick_notes` gave of it. `listed` says whether the project is on the person's list."""
@@ -341,28 +320,7 @@ def pick_offer(project, need, candidate, listed, notes):
     said += [] if listed else [flow_codes.LIST_PROJECT_MESSAGE]
     return Offer(key, label, " ".join(said + [flow_codes.PICK_HISTORY_MESSAGE]), makes_stale(project, flow_codes.PICK),
                  offer_steps.pick_step(project, need, pick_id, candidate_label(candidate)), candidate_label(candidate),
-                 have_of(candidate))
-
-
-def effect_lines(effect):
-    """A pick's effect as the Send box's lines (P1135): its own sentences, then each of `flow_codes.PROJECT_EFFECTS` that
-    it holds, each once. Sentences are joined with one space, so each one is cut out whole."""
-    shared = [said for said in flow_codes.PROJECT_EFFECTS if said in effect]
-    own = " %s " % effect
-    for said in shared:
-        own = own.replace(" %s " % said, " ")
-    return [own.strip()] + shared
-
-
-def board_file_line(effect):
-    """The sentence of a pick's `effect` that says spark cannot build from the pick (NO_BOARD_FILE_MESSAGE, P991), or None:
-    the page keeps it on the pick's row (P1135)."""
-    start, end = flow_codes.NO_BOARD_FILE_MESSAGE.split("%s")
-    at = effect.find(start)
-    if at < 0:
-        return None
-    stop = effect.find(end, at + len(start))
-    return effect[at:stop + len(end)] if stop >= 0 else None
+                 sheet.have_of(candidate))
 
 
 def pick_need(key):
@@ -427,8 +385,7 @@ def set_aside(listed):
 class PartsReader(PhaseReader):
     """Strategy: the picks of the needs (`needs.match`): problems when a need cannot be matched, partial while some need
     that counts has no pick, and every candidate offered as a pick. A need set aside with no pick does not count, has no
-    pick offer and is named (P977). Each need that counts is one PartsNeed, with its picks by name and its own lines
-    (P1135); the phase says the count and what is set aside."""
+    pick offer and is named (P977). Each need that counts is a PartsNeed with its picks and its own lines (P1135)."""
 
     PHASE, BY = flow_codes.PARTS, flow_codes.BY_YOU
 

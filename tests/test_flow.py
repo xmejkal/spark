@@ -35,7 +35,8 @@ from fakes import FakeClock, FakeOutsideWorld, FakeTextFileWriter  # noqa: E402
 from spark.build.build_record import BUILD_RECORD_FILE, EARLIER_DIST, BuildRecordStore, sha256_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
 from spark.flow.phase_readers import Offer, Phase, SimulateReader  # noqa: E402
-from spark.flow.phase_readers import board_file_line, effect_lines, have_of, picked_sentence  # noqa: E402
+from spark.breadboard.sheet import have_of  # noqa: E402
+from spark.flow.flow_codes import board_file_line, effect_lines, picked_sentence  # noqa: E402
 from spark.flow import flow_codes  # noqa: E402
 from spark.flow import flow_page, run_request  # noqa: E402
 from spark.flow import deploy_reading  # noqa: E402
@@ -568,6 +569,22 @@ class TheCommandTest(FlowTest):
                 flow.main(argv)
             self.assertIn("\n" + own.summary + "\n", out.getvalue(), argv)
             self.assertNotIn(other.summary, out.getvalue(), argv)
+
+    def test_each_verb_s_help_holds_its_own_operation_s_details_and_the_cli_s_own_text(self):
+        # P1135 (Q10): help written once: what a verb does is its Operation's `details`; EPILOG keeps the frontend's sentences
+        from spark.flow.write_flow_page import WriteFlowPage
+        for argv, own, other in ((["show", "--help"], ShowFlow, WriteFlowPage), (["page", "--help"], WriteFlowPage, ShowFlow)):
+            with contextlib.redirect_stdout(io.StringIO()) as out, self.assertRaises(SystemExit):
+                flow.main(argv)
+            said = out.getvalue()
+            self.assertIn(own.details, said, argv)
+            self.assertNotIn(other.details, said, argv)
+            for line in ("Each verb's own --help says what it does", "--artifact ID", "Exit codes:"):
+                self.assertIn(line, said, argv)
+        details = " ".join(ShowFlow.details.split())
+        self.assertIn("have (what you have of a pick's part", details)
+        self.assertIn("needs (each need of the parts phase", details)
+        self.assertNotIn("--json", ShowFlow.details + WriteFlowPage.details)
 
     def test_a_word_that_is_no_verb_is_refused_with_2(self):
         with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as stopped:
@@ -1360,6 +1377,13 @@ class RecordFirstOffersTest(FlowTest):
                          {"soil": ["A soil probe"], "wet": ["A soil probe"], "dry": [], "two": ["A soil probe", "Spare probe from the shed"]})
 
 
+#: The three sentences every pick of an unlisted project on a board that can be wired says, as a person reads them (P1135).
+WIRED_PICK = ("If you wired the board, this pick needs a new build, and a new build can move pins: compare the new sheet with "
+              "your wiring before power, and rewire what differs.")
+LISTS_IT, MAY_NOTE = "Adds this project to your list of projects.", "May note the choice in your history."
+SHARED = [WIRED_PICK, LISTS_IT, MAY_NOTE]
+
+
 def sentences(text):
     """The sentences of an effect, which spark joins with one space after each full stop."""
     return [said + "." for said in text[:-1].split(". ")]
@@ -1424,20 +1448,20 @@ class ThePartsNeedsTest(FlowTest):
         self.a_part("x-none")
         said, _ = show(with_needs(a_built_project(), SOIL))
         effect = offer_of(said, "pick:soil:x-none")["effect"]
-        self.assertTrue(effect.startswith(flow_codes.WIRED_PICK_MESSAGE))  # wired_offer puts it first (fix 1)
+        self.assertTrue(effect.startswith(WIRED_PICK))  # wired_offer puts it first (fix 1)
         lines = effect_lines(effect)
         said_once = [sentence for line in lines for sentence in sentences(line)]
         self.assertEqual(sorted(said_once), sorted(sentences(effect)))
         self.assertEqual(len(said_once), len(set(said_once)))
-        self.assertEqual(lines[1:], list(flow_codes.PROJECT_EFFECTS))
-        self.assertIn(flow_codes.TO_GET_MESSAGE, lines[0])
-        self.assertEqual(effect_lines("Saves it. May note the choice in your history."), ["Saves it.", flow_codes.PICK_HISTORY_MESSAGE])
+        self.assertEqual(lines[1:], SHARED)
+        self.assertIn("You have none, so it goes on the list to get.", lines[0])
+        self.assertEqual(effect_lines("Saves it. May note the choice in your history."), ["Saves it.", MAY_NOTE])
 
     def test_the_board_file_line_is_found_in_an_effect_that_holds_it_and_in_no_other(self):
-        refused = " ".join((flow_codes.PICK_MESSAGE % ("Beetle", "board"), flow_codes.NO_BOARD_FILE_MESSAGE % "Beetle",
-                            flow_codes.PICK_HISTORY_MESSAGE))
-        self.assertEqual(board_file_line(refused), "Spark cannot build from this pick: it has no board file for “Beetle”.")
-        self.assertIsNone(board_file_line(" ".join((flow_codes.PICK_MESSAGE % ("Beetle", "board"), flow_codes.PICK_HISTORY_MESSAGE))))
+        cannot = "Spark cannot build from this pick: it has no board file for “Beetle”."
+        saves = "Saves “Beetle” as the pick for the board need in this project."
+        self.assertEqual(board_file_line(" ".join((saves, cannot, MAY_NOTE))), cannot)
+        self.assertIsNone(board_file_line(" ".join((saves, MAY_NOTE))))
 
     def test_the_picked_sentence_names_each_pick_in_quotes(self):
         self.assertEqual(picked_sentence(["A", "B"]), "picked “A”, “B”.")

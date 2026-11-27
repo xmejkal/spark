@@ -160,7 +160,7 @@ HAVE_YOURS, HAVE_IN_DRAWER, HAVE_TO_GET = "yours", "in your drawer", "to get"
 
 def _have(requirements_path, record_ids):
     """{record id: yours | in your drawer | to get}, from the drawer; None when the project is not on the list. The flow's
-    pick offers say the same words of a candidate (`phase_readers.have_of`, P1135)."""
+    pick offers say the same words of a candidate (`have_of`, P1135)."""
     name = store.find_listed_name(requirements_path.resolve().parent)
     if not name:
         return None
@@ -175,6 +175,15 @@ def _have(requirements_path, record_ids):
             elif said[record_id] == HAVE_TO_GET and entry.get("count", 1):
                 said[record_id] = HAVE_IN_DRAWER
     return said
+
+
+def have_of(candidate):
+    """What the person has of a part a need may pick (a row of `needs.match`: its `owned` count and `held_here`), in these
+    have words, as `_have` decides them from the drawer (P1135): yours when this project holds a piece, to get when they
+    own none, else in your drawer, a count of many or unknown too."""
+    if candidate.get("held_here"):
+        return HAVE_YOURS
+    return HAVE_IN_DRAWER if candidate["owned"] else HAVE_TO_GET
 
 
 def _parts_table(board, design_parts, resistors, supplies, have):

@@ -56,20 +56,20 @@
  {
   "file": "scripts/spark/flow/phase_readers.py",
   "name": "P991: the parts phase does not name the picks (test_flow.RecordFirstOffersTest, test_flow.OffersPerNeedTest, test_flow.ThePhasesTest, test_flow.TheGuideTest)",
-  "find": "            named = picked_line(plan, need)",
-  "replace": "            named = None"
+  "find": "picked_names(plan, need), lines))",
+  "replace": "[], lines))"
  },
  {
   "file": "scripts/spark/flow/phase_readers.py",
   "name": "P991: a pick is named by its key, not by its name (test_flow.RecordFirstOffersTest)",
-  "find": "    names = [\"“%s”\" % plan.name_of(next(iter(needs.as_record(pick, plan.known, plan.entries).values())))",
-  "replace": "    names = [\"“%s”\" % next(iter(pick.values()))"
+  "find": "    return [plan.name_of(next(iter(needs.as_record(pick, plan.known, plan.entries).values())))",
+  "replace": "    return [next(iter(pick.values()))"
  },
  {
   "file": "scripts/spark/flow/phase_readers.py",
   "name": "P991: a drawer entry of a known record is named by its label, not by the record's name (test_flow.RecordFirstOffersTest)",
-  "find": "    names = [\"“%s”\" % plan.name_of(next(iter(needs.as_record(pick, plan.known, plan.entries).values())))",
-  "replace": "    names = [\"“%s”\" % plan.name_of(next(iter(pick.values())))"
+  "find": "    return [plan.name_of(next(iter(needs.as_record(pick, plan.known, plan.entries).values())))",
+  "replace": "    return [plan.name_of(next(iter(pick.values())))"
  },
  {
   "file": "scripts/spark/flow/phase_readers.py",
