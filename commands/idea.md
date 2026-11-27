@@ -14,7 +14,7 @@ Mark each step below — S, M, C and L — so the cost line can count what it to
 as the project's folder is chosen (S's item 0; the questions before it are not counted):
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step '<project>' S
 ```
 
 `--step` writes a line to the person's history in the store, and lists the project in `projects.json` when it is not listed. Run it with
@@ -54,7 +54,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
    repository **with the Write tool** — a word the person said never goes on a command line — and:
 
    ```
-   ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs-set <project> <file> --dry-run
+   ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs-set '<project>' '<file>' --dry-run
    ```
 
    then without `--dry-run`. A need holds no reason, count or place, and `--needs-set` sets no pick (`--pick` does, below) — the
@@ -92,7 +92,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
 ## M — what the store offers for each need
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --match <project>
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --match '<project>'
 ```
 
 Owned candidates come first, each with how many are owned and **free** (a part another project holds is not free,
@@ -135,7 +135,7 @@ When a need shows no candidate, or fewer than you expect, a record may say nothi
 is never offered. Look:
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --audit --project <project>
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --audit --project '<project>'
 ```
 
 Only its "says nothing of what it does" line (`no_function` with `--json`) is yours here; a BROKEN row, or exit 1, is for the person to know — say it, do not fix
@@ -143,7 +143,7 @@ it. For a record that plausibly fits, write its function as a JSON list `[{"does
 any repository with the Write tool, then:
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --function-set <part> <file> --project <project> --dry-run
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --function-set '<part>' '<file>' --project '<project>' --dry-run
 ```
 
 Show the person the file it prints, then run it without `--dry-run`. A record on the shelf that came from one of the
@@ -167,7 +167,7 @@ it, and the button is tested on the board.
 Then:
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --pick <project> alarm=max98357a-dfr0954 alarm=speaker-terminal board=firebeetle2-esp32s3 --dry-run
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --pick '<project>' alarm=max98357a-dfr0954 alarm=speaker-terminal board=firebeetle2-esp32s3 --dry-run
 ```
 
 and without `--dry-run`. Each need it names gets exactly those picks, and what the person owns of each is reserved for
@@ -206,7 +206,7 @@ They are replaced as a whole, so copy the lines that still hold first
 leg apart}, is merged leg by leg. Then
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set <part> <file> --project <project> --dry-run
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set '<part>' '<file>' --project '<project>' --dry-run
 ```
 
 and without `--dry-run`. A record in spark's own library is changed in spark's repository, not from here: say so. A
@@ -225,7 +225,7 @@ Run `/spark:init --board <the board pick>` in the project first; for a board who
 writes the file all the same: say so. Then fill what the part picks owe (above), and:
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --requirements <project> --dry-run
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --requirements '<project>' --dry-run
 ```
 
 and without `--dry-run`. It writes `requirements.json`: the board and every part pick with a record. A later run changes
@@ -272,7 +272,7 @@ file is written:
 ## T — the tally
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --tally <project>
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --tally '<project>'
 ```
 
 ends the run with the cost line — "5 picks: 5 from the store (5 owned) — 1 request, 1 document, 14 min" — counted from the

@@ -9,8 +9,8 @@ Part of the [guide for AI agents](../agents.md).
 ```sh
 git clone https://github.com/xmejkal/spark
 export CLAUDE_PLUGIN_ROOT="$PWD/spark"
-cd <the gadget's project folder>        # not the clone's folder, and not your home
-python3 "$CLAUDE_PLUGIN_ROOT/scripts/init_project.py" --project . --board <id>
+cd "<the gadget's project folder>"        # not the clone's folder, and not your home
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/init_project.py" --project . --board '<id>'
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/tools.py" --status --project .
 ```
 
@@ -93,7 +93,7 @@ These only read:
 
 - `check_all.py` (its `--boards` names the board definitions to verify against their vendor headers), `check_physics.py`, `check_footprints.py`, `compare_design.py`, `check_bom.py`;
 - `assign_pins.py` without `--emit-pins`, and `run_scenario.py --dry-run` (op `run-scenario`, P1078), which needs no token, starts no run and names the paid run as its `next` step;
-- `check_firmware.py` (op `check-firmware`, `--project`, `--json`, P1208). It writes nothing, and it needs no `sim/`, no board and no token. It runs two things of the project on this machine: it imports the project's firmware modules, and it runs the project's own tests, `tests/`, with `unittest` in one process under a time limit (60 s). The tests' code runs in the project folder and can write files there: spark writes nothing, but the tests may. The stand-ins below are not on the tests' path: a test that needs `machine` brings its own. A failed test is `problems` (exit 1, `own_test_failed`), and a run that gave no count is `could-not-run` (`own_tests_not_run`). The module-level code of the firmware runs
+- `check_firmware.py` (op `check-firmware`, `--project`, `--json`, P1208). It needs no `sim/`, no board and no token. It writes one file, the check record `.spark/check-firmware.json` (P1209): the status, the counts, the two result lines, the time and the sha256 of the files under `firmware/` and `tests/`, only when `firmware/` is there. `flow.py show` and the page read it, no gate does, and when the project has a `page.html` the run writes that page again. It runs two things of the project on this machine: it imports the project's firmware modules, and it runs the project's own tests, `tests/`, with `unittest` in one process under a time limit (60 s). The tests' code runs in the project folder and can write files there: spark writes only its record, but the tests may. The stand-ins below are not on the tests' path: a test that needs `machine` brings its own. A failed test is `problems` (exit 1, `own_test_failed`), and a run that gave no count is `could-not-run` (`own_tests_not_run`). The module-level code of the firmware runs
   on this machine, each module in its own process under a time limit ([P59](https://github.com/xmejkal/spark/issues/7)).
   The stand-ins (`scripts/spark/firmware/stand_in/`) are `machine` (`Pin`, `PWM`, `ADC`, `SPI`, `SoftSPI`, `I2C`, `SoftI2C`, `I2S`),
   `micropython` and `framebuf` ([P421](https://github.com/xmejkal/spark/issues/551)). They keep their arguments and

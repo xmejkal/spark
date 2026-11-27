@@ -320,7 +320,8 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/check_firmware.py --project .
 ```
 
 It imports each module of `firmware/` with stand-ins for the board's modules and runs the project's own `tests/`. It
-needs no `sim/`, no board and no token, and it writes nothing (`check_firmware.py --help`). If it says ok, the next step
+needs no `sim/`, no board and no token, and it keeps its answer for the page in `.spark/check-firmware.json`, which no
+gate reads (`check_firmware.py --help`). If it says ok, the next step
 is the scenario below. If a module does not import or an own test fails, fix that first: the paid run would fail on it.
 
 Every part record says how it is simulated (`simulation`: a Wokwi part standing in, a custom
@@ -329,8 +330,8 @@ with its reason), so the one command's last stage needs no table anywhere else. 
 account's CI token in `WOKWI_CLI_TOKEN` (wokwi.com/dashboard/ci), first the free checks, then the run:
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/<name>.scenario.yaml --dry-run --json
-${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/<name>.scenario.yaml --json
+${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/'<name>'.scenario.yaml --dry-run --json
+${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/'<name>'.scenario.yaml --json
 ```
 
 Decide on its envelope (op `run-scenario`, [its JSON](../docs/guide/agents/firmware-codes.md#run_scenariopys-envelope), P1078): the status,

@@ -33,6 +33,7 @@ wrote page.html: where the project stands, phase by phase, with its pictures: op
 <p><strong>NOW (build), by claude</strong></p>
 <p class="next" data-key="build" data-makes-stale=""><strong>NEXT</strong> Ask Claude in the chat to build the board. It takes seconds and costs nothing.</p>
 </div>
+<p class="simulation">Free checks: not run yet. Ask Claude to run them, for free.</p>
 </section>
 <details class="fold" data-fold="parts"><summary><h2><span aria-hidden="true">·</span> Parts <span>not checked by spark</span></h2></summary>
 <p>a hand-written project: requirements.json and no needs</p>
