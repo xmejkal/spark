@@ -2215,7 +2215,7 @@ class TheFollowUpTest(FlowTest):
         project.mkdir(parents=True)
         steps = {"'<answers.json>'": phase_steps.brief_step(project),
                  "'sim/scenarios/<name>.scenario.yaml'": phase_steps.scenario_steps(project)[0],
-                 "'soil=<part>'": picks_step(project, ["soil=%s" % phase_steps.PART_PLACEHOLDER], "pick a part")}
+                 "'soil=<part>'": picks_step(project, ["soil=<part>"], "pick a part")}
         for quoted, step in steps.items():
             with self.subTest(op=step.op):
                 self.assertIn(" %s" % quoted, FlowFollowUp().line(step))
