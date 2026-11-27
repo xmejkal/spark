@@ -46,7 +46,7 @@ from spark.flow.flow_codes import WIRED_BUILD_MESSAGE, WIRED_SHEET_MESSAGE, WIRE
 from spark.flow.wired_board import day_of  # noqa: E402
 from spark.flow.fingerprint import FILES, fingerprint_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
-from test_flow import in_prague  # noqa: E402
+from test_flow import MAY_NOTE, SHARED, SOIL, WIRED_PICK, FlowTest, in_prague, with_needs  # noqa: E402
 from spark.flow.write_flow_page import FlowPageStore, PageParts, write_kept_page, WriteFlowPage, kept_pictures, kept_wiring, write_page  # noqa: E402
 
 #: The built fixture test_flow.py builds its projects from.
@@ -319,10 +319,11 @@ class TheDocumentTest(unittest.TestCase):
         phases = [a_phase("one"), a_phase("two", None)]
         self.assertEqual(page_of(*phases), page_of(*phases))
 
-    def test_an_offer_shows_its_label_and_effect_and_keeps_its_key_in_data_key(self):
-        # P1062: the sendable row stands once, in the parts fold; the developer fold shows its key as text, with no hook
+    def test_an_offer_shows_its_label_and_keeps_its_key_in_data_key(self):
+        # P1062: the sendable row stands once, in the parts fold; the developer fold shows its key as text, with no hook.
+        # P1135: the row holds its label alone; its effect stands in its Send box and in the developer fold
         text = page_of(a_phase("one", offers=[Offer("build", "Build the board", "Builds the board.", (), build_step("project"))]))
-        self.assertEqual(text.count('<li data-key="build" data-makes-stale="">Build the board: Builds the board.</li>'), 1)
+        self.assertEqual(text.count('<li data-key="build" data-makes-stale="">Build the board</li>'), 1)
         self.assertLess(text.index('<li data-key="build"'), text.index(fold(text, "developer")))
         self.assertIn("<li><code>build</code> Build the board: Builds the board.</li>", developer(text))
         self.assertEqual(without_script(text).count(">build<"), 1)
@@ -1129,7 +1130,8 @@ TEAL_ROLES = {(selector, prop) for selector in ("[data-makes-stale]>button:not(:
               for prop in ("background", "border-color")} | {
     ("[data-makes-stale] [role=group]", "border-color"), ("a:focus-visible", "outline"), ("button:focus-visible", "outline"),
     ("summary:focus-visible", "outline"), (".now [data-makes-stale]>button", "border-color"),
-    (".now [data-makes-stale]>button:hover", "border-color"), (".now>p:first-child::before", "border")}
+    (".now [data-makes-stale]>button:hover", "border-color"), (".now>p:first-child::before", "border"),
+    ('[data-need] label:has(:checked:not([value=""]):not(:disabled))', "border-color")}
 #: (text, ground) pairs that a person reads: 4.5:1 in both themes. The outline button and the confirm box are ink on the
 #: surface, the disabled label is muted on the line, and the Now link is the Now ink on the Now plane.
 TEXT_PAIRS = [("--ink", "--bg"), ("--ink", "--surface"), ("--muted", "--bg"), ("--muted", "--surface"), ("--muted", "--line"),
@@ -1138,7 +1140,8 @@ TEXT_PAIRS = [("--ink", "--bg"), ("--ink", "--surface"), ("--muted", "--bg"), ("
 #: (edge, ground) pairs of a control or a ring: 3:1 in both themes. The kind-1 fill and Send on a frame or the ground, the
 #: outline, the focus ring on each ground it can stand on, the Now dot and the Now button's edge, and the confirm frame.
 EDGE_PAIRS = [("--accent", "--surface"), ("--accent", "--bg"), ("--ink", "--surface"), ("--focus", "--bg"), ("--focus", "--surface"),
-              ("--focus", "--now-bg"), ("--now-halo", "--now-bg"), ("--accent-edge", "--surface"), ("--accent-edge", "--now-bg")]
+              ("--focus", "--now-bg"), ("--now-halo", "--now-bg"), ("--accent-edge", "--surface"), ("--accent-edge", "--now-bg"),
+              ("--accent-edge", "--bg")]  # P1135: the chosen pick's edge stands on its pale fill
 
 
 def page_style(page):
@@ -1962,13 +1965,15 @@ class TheDeployedPageTest(unittest.TestCase):
 
 
 def a_need_phase(says=("1 of 2 needs picked",), status="partial"):
-    """A parts phase dict with two needs of two picks each, and a drop: the picks in the reading's order."""
+    """A parts phase dict with two needs of two picks each, and a drop: the picks in the reading's order, and the needs
+    (P1135), neither picked."""
     def pick(need, part):
         return {"key": "pick:%s:%s" % (need, part), "label": "Pick %s for %s" % (part, need), "effect": "Saves %s." % part,
-                "makes_stale": ["requirements"]}
+                "makes_stale": ["requirements"], "part": part, "have": "in your drawer"}
     offers = [pick("light", "led-red"), pick("button", "tact-6mm"), pick("light", "led-green"), pick("button", "tact-12mm"),
-              {"key": "needs-drop:light", "label": "Drop the light need", "effect": "Drops it.", "makes_stale": []}]
-    return dict(a_phase("parts", status, says=says).to_dict(), offers=offers)
+              {"key": "needs-drop:light", "label": "Drop the light need", "effect": "Drops it.", "makes_stale": [], "part": None, "have": None}]
+    needs = [{"need": need, "picked": [], "says": []} for need in ("light", "button")]
+    return dict(a_phase("parts", status, says=says).to_dict(), offers=offers, needs=needs)
 
 
 def order_page(guide=None, phases=None, wiring=PageWiring(THREE, [an_item()], ["rec"], None), deployed=None,
@@ -2127,7 +2132,7 @@ class TheSliceOneOrderTest(unittest.TestCase):
                 self.assertNotIn('data-key="needs-drop:light"', text)
                 self.assertIn("<code>needs-drop:light</code> Drop the light need: Drops it.", developer(text))
         self.assertIn('<p class="next" data-key="build"', order_page(guide=a_guide(now=build)))
-        self.assertIn('<li data-key="build" data-makes-stale="">Build the board: Builds it.</li>', order_page())
+        self.assertIn('<li data-key="build" data-makes-stale="">Build the board</li>', order_page())
 
     def test_each_need_row_carries_its_need_for_the_script_and_the_developer_fold_none(self):
         """P1067: the script groups a need's picks by the row's `data-need`, so a choice per need needs no rule of its own."""
@@ -2136,15 +2141,15 @@ class TheSliceOneOrderTest(unittest.TestCase):
             self.assertEqual(text.count('<li class="need" data-need="%s"><strong>%s</strong><ul>' % (need, need)), 1, need)
         self.assertNotIn("data-need", developer(text))
 
-    def test_a_pick_offer_s_words_hold_its_need_and_its_part_and_the_other_offers_neither(self):
-        """P1067: the radio of a pick is labelled by its part, and the Send of picks names their needs."""
+    def test_a_pick_offer_s_words_hold_its_need_and_the_other_offers_none(self):
+        """P1067: the Send of picks names their needs. P1135: a pick's radio is labelled by its row's text, so its words hold
+        no part."""
         phase = a_need_phase()
-        phase["offers"][0]["part"] = "Red LED"
         offers = page_words([phase, dict(a_phase("build").to_dict(), offers=[{"key": "build", "label": "Build the board",
                                                                               "effect": "Builds it.", "makes_stale": []}])])["offers"]
         self.assertEqual(offers["pick:light:led-red"], {"label": "Pick led-red for light", "says": [
-            "Saves led-red.", "These steps may be marked out of date: requirements."], "need": "light", "part": "Red LED"})
-        self.assertEqual((offers["pick:button:tact-6mm"]["need"], offers["pick:button:tact-6mm"]["part"]), ("button", None))
+            "Saves led-red.", "These steps may be marked out of date: requirements."], "need": "light"})
+        self.assertEqual(offers["pick:button:tact-6mm"]["need"], "button")
         self.assertEqual(offers["build"], {"label": "Build the board", "says": ["Builds it."]})
 
     def test_the_words_of_several_picks_are_python_s(self):
@@ -2171,6 +2176,99 @@ class TheSliceOneOrderTest(unittest.TestCase):
         self.assertEqual(pick_need("pick:light:drawer:7"), "light")
         for key in ("build", "needs-drop:light", "requirements", "pick"):
             self.assertIsNone(pick_need(key), key)
+
+
+def wired_effect(own):
+    """A pick's effect on a wired board of an unlisted project, as the parts reader writes it (P1135): its own sentences
+    between the three that every pick of the project says."""
+    return " ".join([WIRED_PICK, own] + SHARED[1:])
+
+
+def a_picked_phase():
+    """A parts phase dict (P1135): button picked “Tactile 6 mm”, with one more pick and a line of its own, and board not
+    picked, with a pick spark has no board file for and one it has."""
+    def pick(need, part, name, effect):
+        return {"key": "pick:%s:%s" % (need, part), "label": "Pick “%s” for %s" % (name, need), "effect": effect,
+                "makes_stale": ["requirements"], "part": name, "have": "in your drawer"}
+    offers = [pick("button", "tact-12mm", "Tactile 12 mm", wired_effect("Saves “Tactile 12 mm” as the pick.")),
+              pick("board", "beetle", "Beetle", wired_effect("Saves “Beetle” as the pick. Spark cannot build from this pick: it has no board file for “Beetle”.")),
+              dict(pick("board", "c6", "XIAO C6", wired_effect("Saves “XIAO C6” as the pick.")), have="to get")]
+    needs = [{"need": "button", "picked": ["Tactile 6 mm"], "says": ["Not shown for button: 1 more pick."]},
+             {"need": "board", "picked": [], "says": []}]
+    return dict(a_phase("parts", "partial", says=("1 of 2 needs picked",)).to_dict(), offers=offers, needs=needs)
+
+
+def parts_fold(text):
+    """The parts fold, from its tag to its end."""
+    start = text.index(fold(text, "parts"))
+    return text[start:text.index("</details>", start)]
+
+
+class TheLessTextTest(unittest.TestCase):
+    """P1135 (the PO: "its still way too much text"; "clearly see on the page" what is picked): a picked need's row says its
+    pick with a tick, each pick's row its part and what you have of it, and a step's effect stands in its Send box and in
+    the developer fold only."""
+
+    def setUp(self):
+        in_prague(self)
+        build = {"key": "build", "label": "Build the board", "effect": "Builds it.", "makes_stale": [], "part": None, "have": None}
+        self.text = order_page(phases=[a_picked_phase(), dict(a_phase("build", "not-started").to_dict(), offers=[build])])
+        self.parts = parts_fold(self.text)
+
+    def test_a_picked_need_s_row_says_its_pick_before_its_offers_and_its_lines_after_them(self):
+        self.assertIn('<li class="need" data-need="button"><strong>button</strong><p class="picked" id="picked-button">'
+                      '<span aria-hidden="true">✓</span> picked “Tactile 6 mm”.</p><ul><li data-key="pick:button:tact-12mm" '
+                      'data-makes-stale="requirements">Tactile 12 mm (in your drawer)</li></ul><p class="muted">Not shown for button: '
+                      '1 more pick.</p></li>', self.parts)
+        self.assertIn('<li class="need" data-need="board"><strong>board</strong><ul>', self.parts)
+        self.assertNotIn("picked-board", self.text)
+
+    def test_the_fold_s_top_keeps_only_the_phase_s_lines(self):
+        top = self.parts[:self.parts.index("<ul>")]
+        self.assertEqual(re.findall(r"<p>([^<]*)</p>", top), ["1 of 2 needs picked"])
+        self.assertEqual(self.parts.count("Not shown for button"), 1)
+
+    def test_a_pick_s_row_reads_its_part_and_what_you_have_and_keeps_its_board_file_line(self):
+        self.assertIn('<li data-key="pick:board:beetle" data-makes-stale="requirements">Beetle (in your drawer)<p class="muted">'
+                      'Spark cannot build from this pick: it has no board file for “Beetle”.</p></li>', self.parts)
+        self.assertIn('<li data-key="pick:board:c6" data-makes-stale="requirements">XIAO C6 (to get)</li>', self.parts)
+        for said in ("Saves “Beetle”", html.escape(WIRED_PICK), MAY_NOTE):
+            self.assertNotIn(said, before_developer(self.text))
+
+    def test_the_parts_list_s_and_the_build_s_rows_hold_their_label_alone(self):
+        offer = {"key": "requirements", "label": "Write the parts list", "effect": "Writes it.", "makes_stale": ["build"]}
+        text = order_page(phases=[dict(a_phase("requirements", "not-started").to_dict(), offers=[offer])], guide=a_guide())
+        self.assertIn('<li data-key="requirements" data-makes-stale="build">Write the parts list</li>', text)
+        self.assertIn('<li data-key="build" data-makes-stale="">Build the board</li>', self.parts)
+        self.assertNotIn("Writes it.", before_developer(text))
+        self.assertNotIn("Builds it.", before_developer(self.text))
+
+    def test_the_developer_fold_keeps_every_key_label_and_effect_and_a_pick_s_have(self):
+        inside = developer(self.text)
+        beetle = a_picked_phase()["offers"][1]
+        self.assertIn("<li><code>pick:board:beetle</code> Pick “Beetle” for board (in your drawer): %s</li>" % html.escape(beetle["effect"]),
+                      inside)
+        self.assertIn("<li><code>build</code> Build the board: Builds it.</li>", inside)
+
+    def test_a_pick_s_send_box_says_the_shared_lines_apart_and_keep_names_a_picked_need_s_part(self):
+        words = page_words([a_picked_phase()])
+        self.assertEqual(words["offers"]["pick:board:c6"]["says"], [
+            WIRED_PICK, "Saves “XIAO C6” as the pick."] + SHARED[1:] + ["These steps may be marked out of date: requirements."])
+        self.assertEqual(words["keep"], {"button": "keep “Tactile 6 mm”"})
+        self.assertEqual(page_words([a_need_phase()])["keep"], {})
+
+
+class TheNowBoxAtThePartsTest(FlowTest):
+    """P1135 (council P1251: "a line count for NOW is pinned"): at the parts moment the NOW box holds two lines, who acts and
+    NEXT, whose sentence is two sentences."""
+
+    def test_the_now_box_holds_two_lines_at_the_parts_moment(self):
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL + [{"id": "wet", "does": "sense", "what": "soil-moisture"}])
+        run_flow("page", "--project", str(project), "--json")
+        text = (project / "page.html").read_text(encoding="utf-8")
+        box = text.split('<div class="now">')[1].split("</div>")[0]
+        self.assertEqual(len(re.findall(r"<p[ >]", box)), 2, box)
+        self.assertIn("2 needs have no part yet: soil, wet. Pick a part for each, or ask Claude to set one aside.", box)
 
 
 class TheSectionsTest(unittest.TestCase):

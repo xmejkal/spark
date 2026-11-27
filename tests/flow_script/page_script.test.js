@@ -15,8 +15,11 @@ const script = require(path.join(__dirname, "..", "..", "scripts", "spark", "flo
 
 // The words as the page's words block holds them: literals, the plan's section 9 and the review's words, not the code's own.
 const STALE = "These steps may be marked out of date: requirements.";
-/** P1067: a pick's words, with its need and its part, as page_words writes them. */
-const pick = (need, part) => ({ label: "Pick “" + part + "” for " + need, says: ["Saves “" + part + "” as the pick.", STALE], need, part });
+/** P1067: a pick's words, with its need, as page_words writes them (P1135: its radio says its row's text, so no part). */
+const pick = (need, part) => ({ label: "Pick “" + part + "” for " + need, says: ["Saves “" + part + "” as the pick.", STALE], need });
+/** P1135: each pick's part, as its row in the parts fold names it with what you have of it. */
+const PARTS = { "pick:display:oled-128": "OLED 128", "pick:display:lcd-1602": "LCD 1602", "pick:button:tactile-6mm": "Tactile 6 mm",
+                "pick:button:tactile-12mm": "Tactile 12 mm" };
 const WORDS = {
   offers: { build: { label: "Build the board", says: ["Saves its files in this project."] },
             "pick:light:led-red-5mm": { label: "Pick “Red LED” for light", says: ["Saves “Red LED” as the pick."] },
@@ -42,7 +45,7 @@ const WORDS = {
   refused: { "the project changed after the page was read, so nothing ran":
              "Nothing ran. The project changed after you clicked. Reload this page and click again." },
   marks: { ok: "✓", problems: "✗", "could-not-run": "?", "not-run": "–" },
-  not_now: "not now", picks_said: ["%d pick (%s)", "%d picks (%s)"], send_picks: "Send %s", choose_first: "Choose a part first.",
+  keep: {}, not_now: "not now", picks_said: ["%d pick (%s)", "%d picks (%s)"], send_picks: "Send %s", choose_first: "Choose a part first.",
   picks_together: "Spark checks the picks together. If one fails, spark saves none.",
   waiting_picks: "Sent at %s: %s. Nothing has run yet. To run it, type /spark:page in Claude Code.",
   ok_picks: "Saved as the picks. Nothing is built yet. Reload to see the new state.",
@@ -90,8 +93,9 @@ class FakeElement {
  * and a user who is the owner unless `owner` is false (null: no user capability). With `guide`, the page holds the guide's
  * section (P1062), whose NOW box holds the NOW line. With `ask`, the NOW box also holds a chat offer's block with that tell
  * (P1122), and the window's clipboard keeps what is written to it. With `needs`, the parts fold holds NEEDS' rows, each
- * `<li class="need" data-need>` with its picks, after the build's row (P1067). */
-function fakeWindow(db, owner = true, nowKey = "build", guide = true, ask = null, needs = false) {
+ * `<li class="need" data-need>` with its picks, after the build's row (P1067); a pick's row says its part and what you have
+ * (P1135). `words` is the words block (P1135: WORDS, unless a test gives a need a keep word). */
+function fakeWindow(db, owner = true, nowKey = "build", guide = true, ask = null, needs = false, words = WORDS) {
   const body = new FakeElement("body", { "data-fingerprint": "0123456789ab", "data-written": "2026-11-21T15:40:00+01:00" });
   const intro = body.appendChild(new FakeElement("p", { class: "intro" }));
   const section = guide ? new FakeElement("section", { id: "guide" }) : null;
@@ -110,16 +114,20 @@ function fakeWindow(db, owner = true, nowKey = "build", guide = true, ask = null
     const row = list.appendChild(new FakeElement("li", { class: "need", "data-need": need }));
     row.appendChild(new FakeElement("strong")).textContent = need;
     const inner = row.appendChild(new FakeElement("ul"));
-    keys.forEach((key) => picks.push(inner.appendChild(new FakeElement("li", { "data-key": key, "data-makes-stale": "requirements" }))));
+    for (const key of keys) {
+      const item = inner.appendChild(new FakeElement("li", { "data-key": key, "data-makes-stale": "requirements" }));
+      item.appendChild(new FakeElement("#text")).textContent = PARTS[key] + " (in your drawer)";
+      picks.push(item);
+    }
   }
-  const words = new FakeElement("script", { id: "spark-words" });
-  words.textContent = JSON.stringify(WORDS);
+  const wordsBlock = new FakeElement("script", { id: "spark-words" });
+  wordsBlock.textContent = JSON.stringify(words);
   const made = [];
   const document = {
     body,
     createElement: (tag) => { const element = new FakeElement(tag); made.push(element); return element; },
     createTextNode: (text) => ({ text }),
-    getElementById: (id) => (id === "spark-words" ? words : null),
+    getElementById: (id) => (id === "spark-words" ? wordsBlock : null),
     querySelector: (selector) => ({ ".intro": intro, "#guide": section }[selector] || null),
     querySelectorAll: (selector) => ({ "[data-makes-stale]": [now, offer, ...picks], ".ask[data-key]": block ? [block] : [] }[selector] || []),
   };
@@ -449,7 +457,7 @@ async function aPicksPage(db = fakeDb()) {
   return Object.assign(page, { db, asked, radio, sendRow, sendPicks: sendRow.children[0], chooseFirst: sendRow.children[1] });
 }
 
-test("P1067: each need gets native radios, not now first and checked, each labelled by its part, and a choice sends nothing", async () => {
+test("P1067: each need gets native radios, not now first and checked, each labelled by its row's text, and a choice sends nothing", async () => {
   const { made, list, radio, db } = await aPicksPage();
   const [display, button] = list.children;
   assert.deepEqual([display.attributes.role, display.attributes["aria-label"], button.attributes["aria-label"]],
@@ -458,7 +466,8 @@ test("P1067: each need gets native radios, not now first and checked, each label
     ["radio", "pick:display", "", true], ["radio", "pick:display", OLED, false], ["radio", "pick:display", "pick:display:lcd-1602", false],
     ["radio", "pick:button", "", true], ["radio", "pick:button", TACTILE, false], ["radio", "pick:button", "pick:button:tactile-12mm", false]]);
   const labels = made.filter((element) => element.tag === "label");
-  assert.deepEqual(labels.map(textOf), [" not now", " OLED 128", " LCD 1602", " not now", " Tactile 6 mm", " Tactile 12 mm"]);
+  assert.deepEqual(labels.map(textOf), [" not now", " OLED 128 (in your drawer)", " LCD 1602 (in your drawer)", " not now",
+    " Tactile 6 mm (in your drawer)", " Tactile 12 mm (in your drawer)"]);
   assert.equal(display.children[1], labels[0], "not now stands first, before the need's picks");
   assert.equal(labels[1].parentNode.children[0], labels[1], "a pick's choice leads its row, as the design draws it");
   assert.deepEqual([labels[1].style.minHeight, labels[1].style.display], ["var(--button-height)", "inline-flex"]);
@@ -567,4 +576,30 @@ test("P1067: picks that ran with problems say first that no pick was saved, and 
     { mark: "✗", text: "No pick was saved. Ran, with problems: the button has no piece left. Reload to see the new state.", grey: false });
   assert.equal(script.shownState({ id: "x", key: OLED, at: AT }, problems, WORDS).text,
     "Ran, with problems: the button has no piece left. Reload to see the new state.");
+});
+
+test("P1135: a pick's row becomes one label, its radio with the row's text, and another row becomes its button alone", async () => {
+  const page = fakeWindow(fakeDb(), true, "build", true, null, true);
+  const refused = page.picks[1].appendChild(new FakeElement("p", { class: "muted" }));
+  refused.textContent = "Spark cannot build from this pick: it has no board file for “LCD 1602”.";
+  page.offer.textContent = "Build the board";  // the build's row holds its label alone, as Python writes it
+  await script.start(page.win);
+  const [label, line] = page.picks[1].children;
+  assert.deepEqual([page.picks[1].children.length, label.tag, textOf(label), line], [2, "label", " LCD 1602 (in your drawer)", refused]);
+  // the button says the label, so the row's own text goes
+  assert.deepEqual([page.offer.textContent, page.offer.children.map((child) => child.tag ? child.textContent : child.text)],
+    ["", [" ", "Build the board"]]);
+  // the NOW <p> keeps its sentence, as P993 puts the step in its place, and gets its button after it
+  assert.deepEqual([page.now.children[0].textContent, page.now.lastChild.tag],
+    [" Build the board. It takes seconds and costs nothing. Use the button.", "button"]);
+});
+
+test("P1135: on a picked need the first radio reads its keep word, and the group points at its picked line", async () => {
+  const words = Object.assign({}, WORDS, { keep: { button: "keep “Tactile 3 mm”" } });
+  const page = fakeWindow(fakeDb(), true, "build", true, null, true, words);
+  await script.start(page.win);
+  const [display, button] = page.list.children;
+  const firsts = page.made.filter((element) => element.tag === "label").filter((label) => label.children[0].value === "");
+  assert.deepEqual(firsts.map(textOf), [" not now", " keep “Tactile 3 mm”"]);
+  assert.deepEqual([button.attributes["aria-describedby"], display.attributes["aria-describedby"]], ["picked-button", undefined]);
 });

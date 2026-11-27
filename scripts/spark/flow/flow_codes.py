@@ -231,8 +231,8 @@ OWED_MESSAGE = "%s still lacks what spark needs: %s. Ask Claude how to fill it i
 NO_STANCE_MESSAGE = ("Spark cannot simulate %s yet. The parts list and the build go on, and a deploy asks your yes for "
                      "firmware that no simulation tested.")
 PICKED_BY = "%s for %s"
-#: The says line that names a need's pick (P991): the need, then each pick's name in quotes (“…”), ", " between two.
-PICKED_FOR_MESSAGE = "Picked for %s: %s."
+#: A picked need's line after the ok tick, its first radio, and a pick's row with its have in parentheses (P991, P1135).
+PICKED_SAID, KEEP_PICK, PICK_ROW = "picked %s.", "keep %s", "%s (%s)"
 DROP_MESSAGE = "To drop this need, tell Claude: “drop the %s need”."
 REQUIREMENTS_MESSAGE = "Writes the parts list, requirements.json, from your picks. Parts you wrote there yourself stay."
 SHELVE_MESSAGE = "May copy a part's record from spark's catalog into your store."
@@ -275,6 +275,37 @@ WIRED_BUILD_MESSAGE = ("If you wired the board, this build can move pins: compar
                        "power, and rewire what differs.")
 #: The fixed sentence of each kind of offer that can move a pin.
 WIRED_EFFECT = {PICK: WIRED_PICK_MESSAGE, BUILD_BOARD: WIRED_BUILD_MESSAGE}
+#: What every pick of one project says alike (P1135): the Send box says each apart, so a Send of several says it once.
+PROJECT_EFFECTS = (WIRED_PICK_MESSAGE, LIST_PROJECT_MESSAGE, PICK_HISTORY_MESSAGE)
+
+
+def effect_lines(effect):
+    """A pick's effect as the Send box's lines (P1135): the wired sentence first (P1044; PROJECT_EFFECTS holds it
+    first), its own, then its other PROJECT_EFFECTS, each once. One space joins sentences, so each is cut out whole."""
+    shared = [said for said in PROJECT_EFFECTS if said in effect]
+    own = " %s " % effect
+    for said in shared:
+        own = own.replace(" %s " % said, " ")
+    return shared[:1] + [own.strip()] + shared[1:] if WIRED_PICK_MESSAGE in shared else [own.strip()] + shared
+
+
+def board_file_line(effect):
+    """The NO_BOARD_FILE_MESSAGE sentence of a pick's `effect` (P991), kept on its page row (P1135), or None."""
+    start, end = NO_BOARD_FILE_MESSAGE.split("%s")
+    at = effect.find(start)
+    stop = effect.find(end, at + len(start)) if at >= 0 else -1
+    return effect[at:stop + len(end)] if stop >= 0 else None
+
+
+def quoted(names):
+    """Names as a person reads them in a sentence: each in quotes (“…”), ", " between two."""
+    return ", ".join("“%s”" % name for name in names)
+
+
+def picked_sentence(names):
+    """The one text of a need's picks (P1135), for the page and `show`."""
+    return PICKED_SAID % quoted(names)
+
 
 #: The page's script (P829 PR 3): every word the script shows, for the kinds of offer the page sends (`SENDABLE`). Python
 #: writes them into the page's inert words block; the script fills in only a time, an offer's label or spark's own line.
@@ -394,7 +425,7 @@ BACK_LABEL, NEXT_LABEL = "Back to step %d", "Next: step %d"
 #: (phase, status). Each names who acts. A phase and status with none here gets PROBLEMS_NOW or COULD_NOT_RUN_NOW. A stale parts list is
 #: `STALE_REQUIREMENTS`'s (P1140).
 IDEA_NOW = "Tell Claude your goal in the chat, in your own words."
-PARTS_NOW = "%s no part yet: %s. Tell Claude a pick for each, or to set it aside."
+PARTS_NOW = "%s no part yet: %s. Pick a part for each, or ask Claude to set one aside."
 ONE_NEED_HAS, MANY_NEEDS_HAVE = "1 need has", "%d needs have"
 REQUIREMENTS_NOW = "Ask Claude in the chat to write the parts list from your picks."
 #: Every need set aside (P980): the parts phase is ok, but the parts list has no pick to be written from.

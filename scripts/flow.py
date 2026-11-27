@@ -20,19 +20,14 @@ from spark.flow.write_flow_page import WriteFlowPage
 VERBS = {"show": ShowFlow, "page": WriteFlowPage, "run-request": RunRequest}
 DEFAULT_VERB = "show"
 
-EPILOG = """flow.py show reads the project's files and the store, and writes nothing. It says each phase in order: idea,
-needs, parts, requirements, build, breadboard, firmware, simulate and deploy. Each phase has a status (ok, problems,
-could-not-run, not-started, partial or stale, or none), who does it (you, claude or your terminal), what it says and its
-offers. With a goal in the brief (.spark/project.json), the idea is ok and says the goal. With no goal, or with a brief
-that cannot be read, it has none and says so. A hand-written project (requirements.json and no needs) has none for its
-needs and parts, and so has a project whose last need was dropped, which says so. Written firmware and a simulated image
-have none, because what their sentences say is for you to judge. An offer is a key, such as pick:soil:x-led, with a
-label (the words of its button, such as Build the board), its effect (plain sentences that name every write it makes),
-makes_stale (the phases it can make out of date, only those that hold something now) and part (a pick's part, else
-null). flow.py show runs no offer.
+EPILOG = """Each verb's own --help says what it does: flow.py show --help, flow.py page --help and flow.py run-request --help.
+The rest of this text is the CLI's own, for every verb.
+
 The guide (P977) starts the text: NOW, the phase to act on now, its sentence and the key of its offer, or next: and the
 op of the step of a now phase that holds no offer, with needs you for a step the person takes (P1034), then DONE and
-LATER (with nothing open, the line that says so stands in place of NOW). One line per phase comes after it. With --json,
+LATER (with nothing open, the line that says so stands in place of NOW). One line per phase comes after it; the parts
+line says the count, and one line per need follows it: its pick with a tick, its lines, then its pick keys, each with
+its have (P1135). With --json,
 next holds the step of that offer, raw (P1030), or the step of the simulate or the deploy (P1034), and an empty next
 means: read data.guide.now. When Wokwi has no model of the board, the build ends its simulation stage skipped with the
 code board_not_in_wokwi and exits 0 (P1207). The guide counts that build as done and says there is no simulation. An
@@ -52,19 +47,11 @@ From the On the board station on, guide.gate_a (P1220) is gate A's one free cond
 failed on the current image, and the line TESTED BEFORE THE BOARD says it. An empty shut_by never means that gate A is open.
 It reads sim/runs/ and runs nothing, so it costs no Wokwi minutes.
 
-flow.py page writes page.html in the project from the one reading that flow.py show prints (P1060): the station line
-(each phase's place from data.guide.stations, a ring on now, a note's words under its name, then Perfboard, PCB and
-Case greyed, P1119; DONE and LATER stand only in the developer fold), the phases, each with its status word and a mark, the wiring of a built project (the lines before power, then the steps, one at a time
-or all at once) and the pictures the project holds: the breadboard, and the schematic and the PCB that the build with
---keep kept as files. The page adds no tick of its own: a
-phase that is not ok never shows one. Only the build with --keep draws the schematic and the PCB. The page reads the
-project's files and its board logs, and cannot see your wiring or what the board shows now. Each offer shows its label and its effect. The page's <body> carries
-data-fingerprint (the first 12 hex digits of the fingerprint) and data-written (the newest change time of the three files
-below). With --json, flow.py page prints its own keys, not show's nine: data.file, data.did, data.stands_at,
-data.phases (each phase and its status only), data.fingerprint, data.guide and data.artifact. --artifact ID keeps the id of the Artifact the page is published as
-in .spark/page.json, the id only, and every later page answers it as data.artifact (null when none is kept). An id that
-is no UUID in lower case is a bad argument, and nothing is written. Only /spark:page publishes the page. Show,
-run-request and the page show each value of the project's secrets files (firmware/*secret*.py, values only) as ***
+With --json, flow.py page prints its own keys, not show's nine: data.file, data.did, data.stands_at, data.phases (each
+phase and its status only), data.fingerprint, data.guide and data.artifact. --artifact ID keeps the id of the Artifact
+the page is published as in .spark/page.json, the id only, and every later page answers it as data.artifact (null when
+none is kept). An id that is no UUID in lower case is a bad argument, and nothing is written. Show, run-request and the
+page show each value of the project's secrets files (firmware/*secret*.py, values only) as ***
 (P1060); a secrets file that cannot be read or parsed keeps the page from being written, and show notes the mask is off.
 
 flow.py run-request runs the step the page asked for: flow.py run-request --help says the request's shape and its
