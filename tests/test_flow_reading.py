@@ -135,7 +135,8 @@ class FromShowToThePageTest(FlowTest):
 
 class ByConstructionTest(unittest.TestCase):
     """D22 by construction: `compose_page` takes the reading and the parts only and reads no file, `write_flow_page`
-    imports none of the flow's readers, and the reading holds no path."""
+    imports none of the flow's readers, and the reading holds no Path object. Its `steps` (P1286) hold whole paths as
+    strings in their argv, for show's `next`: `compose_page` never reads them, so no path reaches the page from them."""
 
     def tree(self):
         return ast.parse(WRITE_FLOW_PAGE.read_text(encoding="utf-8"))
@@ -150,6 +151,14 @@ class ByConstructionTest(unittest.TestCase):
     def test_write_flow_page_imports_none_of_the_flow_s_readers(self):
         imported = {alias.name for node in ast.walk(self.tree()) if isinstance(node, ast.ImportFrom) for alias in node.names}
         self.assertEqual(imported & {"flow_and_guide", "phases_of", "fingerprint_of"}, set())
+
+    def test_compose_page_never_reads_the_reading_s_steps(self):
+        # the review (lens L1): the guard below runs on a project with no steps, so this one pins that the page never reads them
+        compose = next(node for node in ast.walk(self.tree()) if isinstance(node, ast.FunctionDef) and node.name == "compose_page")
+        read = {node.attr for node in ast.walk(compose)
+                if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id == "reading"}
+        self.assertIn("guide", read)
+        self.assertNotIn("steps", read)
 
     def test_no_field_of_the_reading_holds_a_path(self):
         project = Path(tempfile.mkdtemp()) / "plant-alarm"
