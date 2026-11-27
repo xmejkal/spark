@@ -578,17 +578,17 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
 
 
 class TheRunAndItsTextAreInTheLibraryTest(unittest.TestCase):
-    """P783 PR 3: `check.run_every_check` is the dict check_all prints and `check.render_every_check` its text, so the
+    """P783 PR 3: `check.every_check`'s dict (P1255: its first part) is the dict check_all prints and `check.render_every_check` its text, so the
     CLI only parses and prints."""
 
     def test_a_folder_that_is_not_there_is_project_unusable_and_one_line(self):
         missing = Path(tempfile.mkdtemp()) / "nowhere"
-        result = check.run_every_check(project=str(missing), boards=[], circuit=None, rules=None, package=None)
+        result = check.every_check(project=str(missing), boards=[], circuit=None, rules=None, package=None)[0]
         self.assertEqual((result["tool"], result["status"], result["reason"].code), ("check_all", "could-not-run", "project_unusable"))
         self.assertEqual(check.render_every_check(result, str(missing)), "  [????] check_all          %s" % result["reason"])
 
     def test_nothing_named_is_every_check_skipped_with_no_project_key_and_no_resolved_block(self):
-        result = check.run_every_check(project=None, boards=[], circuit=None, rules=None, package=None)
+        result = check.every_check(project=None, boards=[], circuit=None, rules=None, package=None)[0]
         self.assertEqual((result["status"], result["resolved"]), ("could-not-run", []))
         self.assertNotIn("project", result)
         self.assertEqual(check.render_every_check(result, None), check.render(result["results"]))
@@ -718,7 +718,7 @@ class CheckDesignIsAnOperationTest(unittest.TestCase):
     def test_boards_given_as_one_string_is_one_board_not_its_characters(self):
         # the review of P804: `list("b.json")` was six boards of one character each
         folder = Path(tempfile.mkdtemp())
-        one = check.run_every_check(project=str(folder), boards="b1.json")
+        one = check.every_check(project=str(folder), boards="b1.json")[0]
         self.assertEqual([note for note in one["resolved"] if note.startswith("boards ")], ["boards       b1.json (given)"])
 
     def test_a_folder_that_is_not_there_is_one_could_not_run_finding(self):
@@ -1410,6 +1410,16 @@ class TheCheckRecordIsKeptTest(unittest.TestCase):
         (self.project / "page.html").write_text("<html></html>")
         _, _, text = self.run_on(self.project)
         self.assertIn("wrote page.html again", text)
+
+    def test_a_run_that_wrote_no_record_does_not_write_the_page_again(self):
+        """P1255 fix F: an input outside the project and its roots writes no record, so the page is not written again."""
+        (self.project / "page.html").write_text("<html></html>")
+        circuit = written("circuit.json", [])
+        _, _, text = self.run_on(self.project, "--circuit", circuit)
+        self.assertNotIn("wrote page.html again", text)
+        self.assertEqual((self.project / "page.html").read_text(), "<html></html>")
+        self.assertIsNone(CheckDesign().written_project({"project": str(self.project), "circuit": circuit, "boards": []}))
+        self.assertEqual(CheckDesign().written_project({"project": str(self.project), "boards": []}), self.project)
 
     def test_the_run_writes_only_with_a_project(self):
         self.assertEqual(CheckDesign().effects_of({"project": None}), (READS,))

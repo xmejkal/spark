@@ -134,7 +134,7 @@ class CheckFirmware(Operation):
             return result._replace(data=dict(result.data, written=False))
         answer = {"status": result.status(), "data": {key: result.data[key] for key in KEPT_KEYS}, "lines": kept_lines}
         records = CheckRecordStore(project, self.name, leave_out=is_secret_path)
-        return answer_saved(records, result, INPUTS, stamp(outside.clock.now()), answer)
+        return answer_saved(records, result, INPUTS, stamp(outside.clock.now()), answer)[0]
 
     def written_project(self, values):
         """The project whose check record a run writes, so the core writes its page again (P1035)."""

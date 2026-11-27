@@ -311,21 +311,21 @@ class TheAnswerSavedTest(unittest.TestCase):
 
     def test_a_saved_answer_is_written_true(self):
         project = a_project()
-        result = answer_saved(CheckRecordStore(project, "check-firmware"), self.RESULT, INPUTS, AT, ANSWER)
-        self.assertEqual((result.data, list(result.lines), result.notes), ({"status": "ok", "written": True}, ["a line"], None))
+        result, sentence = answer_saved(CheckRecordStore(project, "check-firmware"), self.RESULT, INPUTS, AT, ANSWER)
+        self.assertEqual((result.data, list(result.lines), result.notes, sentence), ({"status": "ok", "written": True}, ["a line"], None, None))
         self.assertTrue(CheckRecordStore(project, "check-firmware").read().current)
 
     def test_a_failed_save_is_written_false_with_one_note_and_one_line(self):
         project = a_project()
         (project / ".spark").write_text("a file where the folder goes")
-        result = answer_saved(CheckRecordStore(project, "check-firmware"), self.RESULT, INPUTS, AT, ANSWER)
+        result, said = answer_saved(CheckRecordStore(project, "check-firmware"), self.RESULT, INPUTS, AT, ANSWER)
         sentence = "did not keep the check record: FileExistsError"
-        self.assertEqual((result.data["written"], list(result.lines)), (False, ["a line", sentence]))
+        self.assertEqual((result.data["written"], list(result.lines), said), (False, ["a line", sentence], sentence))
         self.assertEqual(result.notes, [{"subject": ".spark/check-firmware.json", "sentence": sentence}])
 
     def test_an_input_save_refuses_is_written_false_and_the_answer_stands(self):
         """P1255 fix A: a ValueError of `save` (an input that is no plain input) never loses the check's answer."""
-        result = answer_saved(CheckRecordStore(a_project(), "check-design"), self.RESULT, ("home:x",), AT, ANSWER)
+        result, _ = answer_saved(CheckRecordStore(a_project(), "check-design"), self.RESULT, ("home:x",), AT, ANSWER)
         self.assertEqual((result.data["written"], list(result.lines)), (False, ["a line", "did not keep the check record: ValueError"]))
 
     def test_an_answer_not_saved_with_a_reason_says_it_and_with_none_says_nothing(self):

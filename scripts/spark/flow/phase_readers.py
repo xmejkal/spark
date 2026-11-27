@@ -449,6 +449,11 @@ def skipped_stages(record):
     return [stage.get("name") for stage in record.get("stages") or [] if stage.get("status") == SKIPPED]
 
 
+def board_only(record):
+    """Whether the build `record` was on the board alone: it skipped the build stage (P878)."""
+    return BUILD.name in skipped_stages(record)
+
+
 class BuildReader(PhaseReader):
     """Strategy: the record of the last build (`.spark/build.json`): its status, or stale when the requirements file it was
     built from changed after it. A skipped stage is no pass (P878): an ok build on the board alone, or one whose simulation
@@ -463,7 +468,7 @@ class BuildReader(PhaseReader):
         offers = ([Offer(flow_codes.BUILD_BOARD, flow_codes.BUILD_LABEL, build_effect(project), makes_stale(project, flow_codes.BUILD_BOARD),
                          offer_steps.build_step(project))]
                   if (project / REQUIREMENTS_FILE).is_file() else [])
-        built = record is not None and BUILD.name not in skipped_stages(record)
+        built = record is not None and not board_only(record)
         checked = [line for line in [checks_reading.design_line(project, built)] if line]  # P1255: the Design checks' line
         if record is None:
             return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_BUILD_MESSAGE] + checked, offers)
@@ -476,7 +481,7 @@ class BuildReader(PhaseReader):
         if stale:
             return self.phase(flow_codes.STALE, [stale] + says, offers)
         skipped = skipped_stages(record) if record.get("status") == OK else []
-        if BUILD.name in skipped:
+        if skipped and board_only(record):
             return self.phase(None, [flow_codes.BOARD_ONLY_BUILD_MESSAGE] + checked)  # no offer: a rebuild skips the same stages
         if skipped == [SIMULATION.name] and stops_only_for_no_model(record):
             return self.phase(None, says + [flow_codes.NO_SIMULATION_NOW], offers)  # P1207: Wokwi has no model of the board
@@ -503,7 +508,7 @@ class BreadboardReader(PhaseReader):
                 raise
             record = None  # no sheet and no record to read: not started, and the build phase says the record's sentence
         stale = why_build_stale(project, record) if record else None
-        if record and not stale and BUILD.name in skipped_stages(record):
+        if record and not stale and board_only(record):
             return self.phase(None, [flow_codes.BOARD_ONLY_MESSAGE])
         if not kept:
             return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_SHEET_MESSAGE])

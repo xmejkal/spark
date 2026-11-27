@@ -71,6 +71,17 @@ def record_inputs(checked, inputs):
     return list(dict.fromkeys(names))
 
 
+def record_target(checked, inputs):
+    """(the project whose check record a run over `checked` and `inputs` writes, the names of its inputs, None), or (None,
+    None, why) when it writes none: `record_project`'s why, or OUTSIDE when an input lies outside the project and its
+    roots. The run and `written_project` both ask it, so a run that writes no record writes no page again."""
+    project, why = record_project(checked)
+    names = record_inputs(checked, inputs) if project else None
+    if names and None in names:
+        return None, None, OUTSIDE
+    return project, names, why
+
+
 def record_lines(findings, results, unmeasured):
     """The lines a check record keeps, from the Findings `CheckDesign.run` made and the `results`: one per check that
     found problems, one for the checks that could not look, the count of the other checks that ran, with the `unmeasured`
@@ -115,8 +126,11 @@ class CheckDesign(Operation):
         return self.effects if values.get("project") else (READS,)
 
     def written_project(self, values):
-        """The project whose check record a run keeps (`record_project`), so the core writes its page again, or None."""
-        return record_project(CheckedFolder.named(values.get("project"))[0])[0]
+        """The project whose check record a run writes (`record_target`), so the core writes its page again, or None."""
+        checked = CheckedFolder.named(values.get("project"))[0]
+        if record_project(checked)[0] is None:
+            return None
+        return record_target(checked, check.inputs_for(values, checked)[0])[0]
 
     def run(self, project=None, *, outside, **paths):
         """Every check over `project` and `paths` (boards, circuit, rules, package, each a plain value), its answer kept (`keep`)."""
@@ -133,14 +147,11 @@ class CheckDesign(Operation):
         record of the project `record_project` names, over the inputs `record_inputs` names, at `outside.clock`'s time
         (`check_record.answer_saved`). With no record, `not_written` is the sentence that says why, a note and a line
         too, or None for a run that keeps none and says nothing."""
-        project, why = record_project(checked)
-        names = record_inputs(checked, inputs) if project else []
-        if None in names:
-            project, why = None, OUTSIDE
+        project, names, why = record_target(checked, inputs)
         if project is None:
             said = answer_not_saved(result, record_file(self.name), why)
             return said._replace(data=dict(said.data, not_written=why))
         answer = {"status": result.status(), "data": {}, "lines": record_lines(result.findings, result.data["results"], result.data["unmeasured"])}
-        kept = answer_saved(CheckRecordStore(project, self.name), result, names, stamp(outside.clock.now()), answer)
-        return kept._replace(data=dict(kept.data, not_written=None if kept.data["written"] else kept.notes[-1]["sentence"]))
+        saved, why = answer_saved(CheckRecordStore(project, self.name), result, names, stamp(outside.clock.now()), answer)
+        return saved._replace(data=dict(saved.data, not_written=why))
 # --- end MVP ---

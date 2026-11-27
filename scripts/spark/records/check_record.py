@@ -183,15 +183,15 @@ class CheckRecordStore:
 
 
 def answer_saved(records, result, inputs, at, answer):
-    """The OperationResult `result` with `data.written` True once the CheckRecordStore `records` saved `answer` over
-    `inputs` at `at`. A save that fails (OSError), or refuses an input that is no plain input (ValueError), gives
-    `answer_not_saved` with NOT_KEPT_SENTENCE and the class of what failed, and the result stands."""
+    """(the OperationResult `result` with `data.written` True once the CheckRecordStore `records` saved `answer` over
+    `inputs` at `at`, None). A save that fails (OSError), or refuses an input that is no plain input (ValueError), gives
+    (`answer_not_saved` with NOT_KEPT_SENTENCE and the class of what failed, that sentence), and the result stands."""
     try:
         records.save(inputs, at, answer)
     except (OSError, ValueError) as failed:
         sentence = NOT_KEPT_SENTENCE % type(failed).__name__
-        return answer_not_saved(result, record_file(records.name), sentence)
-    return result._replace(data=dict(result.data, written=True))
+        return answer_not_saved(result, record_file(records.name), sentence), sentence
+    return result._replace(data=dict(result.data, written=True)), None
 
 
 def answer_not_saved(result, subject, sentence):

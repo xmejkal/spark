@@ -492,14 +492,9 @@ def every_check(project=None, boards=(), circuit=None, rules=None, package=None)
     return result, inputs, checked
 
 
-def run_every_check(project=None, boards=(), circuit=None, rules=None, package=None):
-    """The dict of `every_check` alone: what `check_all.py --json` prints."""
-    return every_check(project, boards, circuit, rules, package)[0]
-
-
 def render_every_check(result, project):
     """
-    Renderer: the text `check_all.py` prints for `run_every_check`'s dict: the `[????] check_all` line for a refusal, else
+    Renderer: the text `check_all.py` prints for `every_check`'s dict: the `[????] check_all` line for a refusal, else
     the inputs resolved from the folder `project`, when any, and `render` of the results.
     """
     if "reason" in result:

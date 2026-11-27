@@ -2,8 +2,8 @@
  {
   "file": "scripts/spark/checks/check_design.py",
   "name": "P1255: the record is never saved (test_check_all.TheCheckRecordIsKeptTest.test_a_run_keeps_its_answer_over_the_inputs_it_read)",
-  "find": "        kept = answer_saved(CheckRecordStore(project, self.name), result, names, stamp(outside.clock.now()), answer)\n",
-  "replace": "        kept = result._replace(data=dict(result.data, written=True))\n"
+  "find": "        saved, why = answer_saved(CheckRecordStore(project, self.name), result, names, stamp(outside.clock.now()), answer)\n",
+  "replace": "        saved, why = result._replace(data=dict(result.data, written=True)), None\n"
  },
  {
   "file": "scripts/spark/checks/check_design.py",
@@ -20,8 +20,8 @@
  {
   "file": "scripts/spark/checks/check_design.py",
   "name": "P1255: an input outside the project and its roots is not said (test_check_all.TheCheckRecordIsKeptTest.test_an_input_outside_the_project_and_its_roots_keeps_no_record_and_says_why)",
-  "find": "            project, why = None, OUTSIDE\n",
-  "replace": "            project, why = None, None\n"
+  "find": "        return None, None, OUTSIDE\n",
+  "replace": "        return None, None, None\n"
  },
  {
   "file": "scripts/spark/checks/check_design.py",
@@ -110,7 +110,7 @@
  {
   "file": "scripts/spark/flow/phase_readers.py",
   "name": "P1255: a board-only build says not run yet (test_flow.TheDesignChecksLineTest.test_a_board_only_build_says_the_line_only_with_a_record)",
-  "find": "        built = record is not None and BUILD.name not in skipped_stages(record)\n",
+  "find": "        built = record is not None and not board_only(record)\n",
   "replace": "        built = record is not None\n"
  },
  {
@@ -124,5 +124,17 @@
   "name": "P1255 fix A: a requirements name is saved as it is (test_check_all.TheCheckRecordIsKeptTest.test_a_requirements_file_with_a_colon_in_its_name_keeps_the_answer_and_says_why_no_record)",
   "find": "    names += [input_name(checked.project, path)\n",
   "replace": "    names += [path.name\n"
+ },
+ {
+  "file": "scripts/spark/checks/check_design.py",
+  "name": "P1255 fix F: a run that wrote no record writes the page again (test_check_all.TheCheckRecordIsKeptTest.test_a_run_that_wrote_no_record_does_not_write_the_page_again)",
+  "find": "        return record_target(checked, check.inputs_for(values, checked)[0])[0]\n",
+  "replace": "        return record_project(checked)[0]\n"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P1255 fix F: board_only reads the simulation stage (test_flow.TheDesignChecksLineTest.test_a_board_only_build_says_the_line_only_with_a_record)",
+  "find": "    return BUILD.name in skipped_stages(record)\n",
+  "replace": "    return SIMULATION.name in skipped_stages(record)\n"
  }
 ]
