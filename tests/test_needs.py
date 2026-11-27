@@ -1908,7 +1908,7 @@ class TheBoardsLimitsNoteTest(unittest.TestCase):
         self.assertEqual(self.matched("show", "lilygo-t-display")["limits"], [self.DISPLAY])
         self.assertEqual(self.matched("charge", "lilygo-t-display")["limits"], [])
 
-    STAND_IN_BUTTON = "Wokwi's 6 mm pushbutton: either side of a pair is the same contact; no bounce is modelled"
+    STAND_IN_BUTTON = "Wokwi's pushbutton: either side of a pair is the same contact; no bounce is modelled"
     WIRED_BUTTON = ("the Wokwi stand-in has no button on GPIO47, so spark wires Wokwi's pushbutton to GPIO47 in its place: a "
                     "scenario presses that part, not the board's own button. Test it on the board.")
 
@@ -2658,8 +2658,8 @@ class TheRequirementsFileTest(unittest.TestCase):
                 with contextlib.redirect_stdout(out):
                     parts.main(["--requirements", str(project)] + extra)
                 self.assertEqual(out.getvalue(), "  %s %s: board firebeetle2-esp32s3; parts tactile-button (OpenLid), tactile-button (Mode), x-led\n"
-                                 "  part tactile-button (OpenLid): Wokwi's 6 mm pushbutton: either side of a pair is the same contact; no bounce is modelled\n"  # P778: each part's own limit
-                                 "  part tactile-button (Mode): Wokwi's 6 mm pushbutton: either side of a pair is the same contact; no bounce is modelled\n"
+                                 "  part tactile-button (OpenLid): Wokwi's pushbutton: either side of a pair is the same contact; no bounce is modelled\n"  # P778: each part's own limit
+                                 "  part tactile-button (Mode): Wokwi's pushbutton: either side of a pair is the same contact; no bounce is modelled\n"
                                  "  part x-led: Wokwi's LED: lights on current; its forward voltage and brightness are not this part's\n"
                                  "  onto the shelf, so every project builds with it: x-led\n"
                                  "  reserved, not placed — no record: speaker\n"
@@ -2692,8 +2692,8 @@ class TheRequirementsFileTest(unittest.TestCase):
                          "so a stall cannot be simulated\n"  # P778: each part's own limit, the kept one's too
                          "  part jst-ph-2-power-inlet: not simulated at all: a connector is wiring, not a part to simulate; the simulator "
                          "powers the board itself\n"
-                         "  part tactile-button (BtnOpen): Wokwi's 6 mm pushbutton: either side of a pair is the same contact; no bounce is modelled\n"
-                         "  part tactile-button (BtnMode): Wokwi's 6 mm pushbutton: either side of a pair is the same contact; no bounce is modelled\n"
+                         "  part tactile-button (BtnOpen): Wokwi's pushbutton: either side of a pair is the same contact; no bounce is modelled\n"
+                         "  part tactile-button (BtnMode): Wokwi's pushbutton: either side of a pair is the same contact; no bounce is modelled\n"
                          "  kept, not from a pick: jst-ph-2-power-inlet\n"
                          "  rail TRACTION has no supply — pick a power inlet or a supply (l9110s-module.VCC draws from it)\n"
                          "  net MOTOR6V is driven by jst-ph-2-power-inlet.VCC and nothing listed receives it — pick what it drives "

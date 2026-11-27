@@ -78,7 +78,7 @@
       "attrs": {
         "color": "green"
       },
-      "stand_in": "Wokwi's 6 mm pushbutton: either side of a pair is the same contact; no bounce is modelled"
+      "stand_in": "Wokwi's pushbutton: either side of a pair is the same contact; no bounce is modelled"
     }
   }
 }
