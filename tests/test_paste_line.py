@@ -21,15 +21,16 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT / "tools"))
 
 from spark.core.privacy import Privacy  # noqa: E402
 from spark.core.renderers import copy_line  # noqa: E402
 from spark.core.result import NextStep  # noqa: E402
+from check_commit import PASTE_SHELLS  # noqa: E402  the gate's own list of the shells
 
 #: The stub of look.py: its own path, then each argument, each ended by a NUL.
 STUB = "#!/bin/sh\nprintf '%s\\0' \"$0\" \"$@\"\n"
-#: The shells a person pastes into, and the variables that would make them read a file of the person's.
-SHELLS = ("zsh", "bash")
+#: The variables that would make a shell a person pastes into (PASTE_SHELLS) read a file of the person's.
 STARTUP_VARIABLES = ("ZDOTDIR", "BASH_ENV", "ENV")
 
 
@@ -64,7 +65,7 @@ class ThePastedLineRunsTest(unittest.TestCase):
     def test_each_shell_runs_the_line_as_printed_and_writes_nothing(self):
         line = copy_line(self.step, self.home, Privacy.of(self.project, self.tmp / "store", self.home, ()), self.scripts)
         self.assertTrue(line and line.startswith('"$HOME"/'), line)
-        for name in SHELLS:
+        for name in PASTE_SHELLS:
             with self.subTest(shell=name):
                 shell = shutil.which(name)
                 if shell is None:
