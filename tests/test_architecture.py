@@ -354,8 +354,9 @@ class TheBenchAreaTest(unittest.TestCase):
         self.assertEqual(twins, [])
 
     def test_the_next_lines_name_the_cli_in_scripts(self):
-        # the refuter of #915: next_text builds the CLI's path from its own file, two folders up since the move
-        code = "from spark.bench import board_envelope; print(board_envelope.next_text([{'op': 'look', 'argv': [], 'why': 'w'}]))"
+        # the refuter of #915: the next lines build the CLI's path from its own file, two folders up since the move (P1256:
+        # next_text became next_lines)
+        code = "from spark.bench import board_envelope; print(board_envelope.next_lines([{'op': 'look', 'argv': [], 'why': 'w'}]))"
         run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True,
                              timeout=60, stdin=subprocess.DEVNULL)
         self.assertIn(str(ROOT / "scripts" / "look.py"), run.stdout, run.stderr)

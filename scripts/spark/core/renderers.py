@@ -95,8 +95,8 @@ class JsonDocument(FlatJsonLine):
 #: The scripts folder: a step's op runs `<SCRIPTS>/<script_of(op)>`.
 SCRIPTS = Path(__file__).resolve().parents[2]
 #: The script of each step op that is not `<op>.py` (P1081 #1585, P1078). Which script runs an op is the CLI frontend's
-#: fact, which the Operation catalogue does not hold (P1077): `step_command`, `board_envelope.next_text` and the flow's
-#: follow-up line read it through `script_of`.
+#: fact, which the Operation catalogue does not hold (P1077): `step_command` reads it through `script_of`, and the build's
+#: and the follow-up's `next:` lines are `step_command`'s (P1256).
 OP_SCRIPTS = {"pick": "parts.py", "requirements": "parts.py", "needs-drop": "parts.py", "move-hold": "parts.py",
               "build-board": "check_spine.py", "research-part": "research.py", "run-scenario": "run_scenario.py"}
 #: The symbol of each mark on the status line, when the stream can encode it.
