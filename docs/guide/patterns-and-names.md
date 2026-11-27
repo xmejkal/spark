@@ -214,7 +214,7 @@ to the rules we set". New code follows them now. Today's names change in the nam
 ([P382](https://github.com/xmejkal/spark/issues/489)) and the v0.13 area moves, so an old name is no example.
 
 1. One word has one meaning in the code, the docs, the JSON and Miro. The P323 glossary holds the words, and
-   [words.md](words.md) holds the tables of words for one area.
+   [words.md](words.md) holds the tables of words for one area. For example, gate A (P1220) is the condition before the permanent build and not the deploy's gate: the code writes `gate_a` and `TESTED_LABEL` (`TESTED BEFORE THE BOARD`, upper case like `ON THE BOARD`), and no code refuses on it. Its `fact` is a superset of `ImageFact.fact`: it adds `no-model` and `null`.
 2. A name says what the thing is for, not which tool does it. Only the adapter that wraps a tool carries the tool's
    name: `BoardReader` is the role, and `EsptoolBoardReader` fills it with esptool.
 3. Each level has one responsibility. You can say it in one sentence without "and".

@@ -43,6 +43,9 @@ console text (P1043). Only ready seen on the image the project holds now is ok. 
 seen is problems. Firmware newer than that image, an image that differs from the last deploy's, or no image makes it
 stale, and stale wins over problems. The says line keeps the verdict. With the deploy ok, guide.now is null and
 guide.no_open_phase says why. data.deploy holds the logged deploy: at, image, verdict, cause, fact and read_back.
+From the On the board station on, guide.gate_a (P1220) is gate A's one free condition: shut_by lists run-failed while a run
+failed on the current image, and the line TESTED BEFORE THE BOARD says it. An empty shut_by never means that gate A is open.
+It reads sim/runs/ and runs nothing, so it costs no Wokwi minutes.
 
 flow.py page writes page.html in the project from the one reading that flow.py show prints (P1060): the station line
 (each phase's place from data.guide.stations, a ring on now, a note's words under its name, then Perfboard, PCB and

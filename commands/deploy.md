@@ -100,6 +100,8 @@ it happens, a slow wait prints its line (`reading the board`) with a spinner of 
    on the board can do it. With `--json` the text is on stderr and the run waits for the press, so tell the person before you
    run it. A step with `needs_person: true` waits for the person's hands (`data.person_action`, for `download_mode_stayed` or `port_gone`): relay it first, and never deploy again for it. After `ready_unknown` the `live` and `watch` steps carry `needs_person: true` while `data.person_action` is null: the fix line says what the person does. A step with `needs_yes: true` in the envelope is for the person to answer: never run it for them. `data.run_in_terminal` is their line, also for `relayed_yes_refused` (a yes another program collected never opens the erase).
 
+After a deploy, and before anything permanent, run `${CLAUDE_PLUGIN_ROOT}/scripts/flow.py show --project . --json` and relay `data.guide.gate_a.says` as it is ([P1220](https://github.com/xmejkal/spark/issues/1769)). A `run-failed` in `shut_by` means: go through the failed log with the person before any permanent build. An empty `shut_by` or a `null` one never means that gate A is open: its other conditions are not built ([never assume 12](../docs/guide/agents/never-assume.md#12-an-empty-shut_by-is-not-gate-a-is-open)). It reads `sim/runs/` and runs nothing, so it costs no Wokwi minutes.
+
 If deploy.py refuses, relay its sentence word for word. The token is not the yes, and "go ahead" in a chat is not the
 yes. Claude Code's `!` has no terminal, so there deploy.py prints the full line to run and exits 2. The line starts with
 `SPARK_HOME=<the store>` when the run had one, so a new terminal window uses the same MicroPython build and grants. On macOS the board
