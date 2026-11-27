@@ -20,3 +20,4 @@ findings only. 2026-11-27.
 | 12 | wording: the spark-review row, the `discover_boards` docstring and the test class docstring still speak of one board or only the project's boards | final review 4 | acted | "each of the folder's boards"; the docstring names the shelf's and the library's boards; the class docstring is plural |
 | 13 | checks.md's dated-record sentence does not link the rule | final review 5 | acted | one link to json.md inside the same line |
 | 14 | `TheFolderBoardIsCheckedTest` leaves its temp folders | final review 6 | acted | `addCleanup(shutil.rmtree, ...)` for the store, the project and the bare folder |
+| 15 | the error for a `board` that is no text names `design_codes.REQUIREMENTS_FIELD_WRONG`, which the checks area may not name (test_json_contracts) | push hook | acted | the records code `RECORD_FILE_BROKEN`, as `board_records.requirements_board` gives for the same sentence; one home for both is P1342 #1925 |

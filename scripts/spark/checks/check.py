@@ -41,9 +41,9 @@ days after that changed (audit B18, 2026-09-29). Five checks running clean will 
 import json
 from pathlib import Path
 
-from spark.records import board_records
+from spark.records import board_records, records_codes
 from spark.build import build_record
-from spark.design import design_codes, fab, loader
+from spark.design import fab, loader
 from spark.checks import check_codes
 from spark.checks.checked_folder import FOLDER, PROJECT, CheckedFolder
 from spark.core.outcomes import OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, answer
@@ -384,7 +384,7 @@ def folder_boards(checked):
         named = loader.read(requirements).get("board")
         if named is not None and not isinstance(named, str):
             raise loader.DesignError("%s holds %r where one board id belongs", requirements, named,
-                                     code=design_codes.REQUIREMENTS_FIELD_WRONG)
+                                     code=records_codes.RECORD_FILE_BROKEN)
         boards.append(named or marked)
     return list(dict.fromkeys(board for board in boards or [marked] if board))
 
