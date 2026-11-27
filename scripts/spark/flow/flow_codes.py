@@ -73,11 +73,8 @@ NO_SHEET_MESSAGE = "no breadboard.md yet"
 SHEET_NOT_JUDGED_MESSAGE = "breadboard.md, spark does not judge the wiring"
 SHEET_STALE_MESSAGE = "breadboard.md is from other requirements than requirements.json"
 FIRMWARE_MESSAGE = "firmware/main.py written %s"
-#: The rule of a firmware the free checks can import (the card P1209 #1758, page-check step 7): main.py runs on import, so
-#: the code they import lives in the modules it calls. The firmware step's sentence and its NOW end with it, and the
-#: write-firmware tell says it in its one sentence with no file name, as every tell is written.
-THIN_MAIN_RULE = "Keep main.py thin, with the code in modules it calls, so the free checks can import them."
-WRITE_FIRMWARE_TELL = "Write the firmware for this project's board, with a thin main that calls modules the free checks can import."
+#: The thin-main rule (P1209 #1758, page-check step 7): main.py runs on import, so the free checks import the modules it calls; the tell says it with no file name.
+THIN_MAIN_RULE, WRITE_FIRMWARE_TELL = "Keep main.py thin, with the code in modules it calls, so the free checks can import them.", "Write the firmware for this project's board, with a thin main that calls modules the free checks can import."
 NO_FIRMWARE_MESSAGE = "No firmware/main.py yet. Ask Claude to write it in the chat. " + THIN_MAIN_RULE
 TESTED_MESSAGE = "a passed run tested the current image"
 NEWER_MESSAGE = "changed after the image: %s"
@@ -455,8 +452,7 @@ BUILD_PARTIAL_NOW = "The build stopped. Ask Claude what stopped it and what to d
 SHEET_NOW = "No wiring sheet yet. Ask Claude to build the board."
 SHEET_STALE_NOW = "The wiring sheet is out of date. Ask Claude to build the board again."
 #: The firmware with a current wiring sheet: two jobs in any order, and the count of the sheet's steps.
-TWO_JOBS_NOW = ("Two jobs, in any order: wire the breadboard (%d steps, power off), and ask Claude to write the firmware. "
-                "Spark cannot see your wiring. " + THIN_MAIN_RULE)
+TWO_JOBS_NOW = "Two jobs, in any order: wire the breadboard (%d steps, power off), and ask Claude to write the firmware. Spark cannot see your wiring. " + THIN_MAIN_RULE
 FIRMWARE_NOW = "Ask Claude in the chat to write the firmware for this board. " + THIN_MAIN_RULE
 SIMULATE_NOW = "Ask Claude for the scenario command, and run it in your terminal. It uses Wokwi CI minutes."
 #: The simulate phase's closing hint is the same sentence (P979).
@@ -561,8 +557,7 @@ STATION_NOTES_BY_PHASE = {(NO_MODEL_NOTE, SIMULATE): "no Wokwi model of this boa
 #: A fact is NO_MODEL_NOTE for a board Wokwi has no model of.
 #: Each row says a fact and no action.
 #: The NOW sentence and NEXT say what to do, so a failed run is not said twice on the page.
-#: The row is data only. No code refuses on it.
-#: An empty `shut_by` never means that gate A is open.
+#: The row is data only. No code refuses on it, and an empty `shut_by` never means that gate A is open.
 GATE_A_SAYS = {RUN_FAILED: "A run failed on this image (%s).", IMAGE_TESTED: "A run passed on this image.",
                IMAGE_OLDER: "Your firmware changed after the image, so no run tested it as it is now.",
                IMAGE_UNTESTED: "No run tested this image.",
