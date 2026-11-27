@@ -779,11 +779,12 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
         self.assertEqual({str(code): code.fix for code in build_codes.CODES}, self.BUILD_FIXES)
         self.assertEqual(len(build_codes.CODES), 29)
 
-    def test_the_six_codes_check_firmware_answers_are_codes_with_a_fix_and_its_findings_name_them_and_give_none(self):
+    def test_the_eight_codes_check_firmware_answers_are_codes_with_a_fix_and_its_findings_name_them_and_give_none(self):
         # P1208 review A2: firmware_codes keeps plain words for the other steps, so the area is not in AREAS_WITH_FIXES; its
         # check_firmware codes are Codes read through fix_of, and the scan reads the Operation's file as an area's
-        six = ("NO_FIRMWARE_FOLDER", "NOTHING_TO_IMPORT", "IMPORT_FAILED", "IMPORT_TIMEOUT", "OWN_TEST_FAILED", "OWN_TESTS_NOT_RUN")
-        for name in six:
+        eight = ("NO_FIRMWARE_FOLDER", "NOTHING_TO_IMPORT", "IMPORT_FAILED", "IMPORT_TIMEOUT", "OWN_TEST_FAILED", "OWN_TESTS_NOT_RUN",
+                 "PIN_MAP_NAME_MISSING", "PIN_MAP_NOT_READ")
+        for name in eight:
             held = getattr(firmware_codes, name)
             self.assertEqual((type(held), held.meaning, firmware_codes.CODES[held]), (Code, firmware_codes.CODES[held], held.meaning), name)
             self.assertTrue(held.fix.strip(), name)

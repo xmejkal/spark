@@ -1,7 +1,8 @@
 """
 check-firmware as an Operation on the core (P1208, #1757): the free checks of a project's firmware in one call, with no sim/ and
-no board. They are the import check (`import_probe.look`: each firmware module imported on this machine over the stand-ins)
-and the project's own tests (`own_tests`: PROJECT/tests run with unittest). `check_firmware.py` is its CLI. It keeps its
+no board. They are the import check (`import_probe.look`: each firmware module imported on this machine over the stand-ins),
+the project's own tests (`own_tests`: PROJECT/tests run with unittest) and the pin names (`pin_map_uses`: each pin name that the
+firmware uses, compared with `firmware/pins.py`, read with `ast`, nothing run, P882). `check_firmware.py` is its CLI. It keeps its
 answer in one file, the check record `.spark/check-firmware.json` (P1209, `records/check_record`), which `flow.py show` and
 the page read. No gate reads it, so it blocks no deploy: the deploy reads the logs of sim/runs/ only.
 """
@@ -11,10 +12,12 @@ from pathlib import Path
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, RUNS, WRITES, Operation
 from spark.core.outcomes import COULD_NOT_RUN, NONE_RECORDED, NOT_CHECKED, PROBLEMS, RECORDED
 from spark.core.result import Finding, OperationResult
+from spark.core.text_guards import printable
 from spark.core.zone_time import stamp
 from spark.firmware import firmware_codes
 from spark.firmware.import_probe import IMPORT_TIMEOUT_S, IMPORTED, look
 from spark.firmware.own_tests import OWN_TESTS_TIMEOUT_S, TESTS_FOLDER, UnittestReader
+from spark.firmware.pin_map_uses import PIN_MAP_PATH, PinMapUses
 from spark.firmware.project_secrets import FIRMWARE_FOLDER, is_secret_path
 from spark.records.check_record import CheckRecordStore
 
@@ -24,16 +27,18 @@ NO_TESTS_NOTE = "no tests/ folder: this project has no own tests"
 #: What a run that could not keep its check record says, as a note and a line, with the class of what failed (P1209).
 NOT_KEPT_SENTENCE = "did not keep the check record: %s"
 #: The folders the free checks read, which the check record hashes and its older line names, and the keys of `data` it keeps.
-INPUTS, KEPT_KEYS = (FIRMWARE_FOLDER + "/", TESTS_FOLDER + "/"), ("imports", "tests")
+INPUTS, KEPT_KEYS = (FIRMWARE_FOLDER + "/", TESTS_FOLDER + "/"), ("imports", "tests", "pin_map")
 IMPORTS_LINE, IMPORTS_NOT_CHECKED_LINE = "imports: %d of %d imported", "imports: not checked (no firmware/ folder)"
 TESTS_LINE, SKIPPED_PART = "tests: %d of %d passed (%s/)", ", %d skipped"
 NO_TESTS_LINE, TESTS_NOT_CHECKED_LINE = "tests: none (no %s/ folder)", "tests: not checked (%s)"
 #: The subject of an import problem that names no module (`nothing_to_import`).
 FIRMWARE_SUBJECT = "firmware"
+#: With no firmware/pins.py, the one problem of the pin names (its code is a variant with the fix to build the map).
+NO_PIN_MAP_SENTENCE = PIN_MAP_PATH + " is not there, and %d use%s it, first %s:%d"
 
 #: What `--help` says after the arguments (P481).
 DETAILS = """It needs no sim/, no board and no token. It writes one file, .spark/check-firmware.json, the check record that
-`flow.py show` and the page read: the status, the counts, the two result lines, the time and the sha256 of each file
+`flow.py show` and the page read: the status, the counts, the result lines, the time and the sha256 of each file
 under firmware/ and tests/ (the secrets files left out), kept only when firmware/ is there. No gate reads it, so it
 blocks no deploy. When the project has a page.html, it writes that page again.
 
@@ -63,6 +68,14 @@ the shape that can be tested. When firmware/ holds nothing to import but the boo
 problem, not a pass: the firmware cannot be imported without running main.py, so move the code out of main.py into a
 module that main.py calls. No firmware/ folder is could-not-run.
 
+The pin names: the check reads every .py under firmware/ except pins.py, lib/ and the secrets files, with `ast`, and runs
+nothing of them or of pins.py. It compares each pin name that a file uses with the names that firmware/pins.py holds: `pins.X`
+after `import pins [as p]`, and each name of `from pins import X`. A name the map lacks is a problem (`pin_map_name_missing`,
+with its file and line), and a file or a map that does not parse is could-not-run (`pin_map_not_read`). A use it cannot compare
+(`from pins import *`, the module used as a value, a module name that the file binds another way too) is an assumption,
+counted in the result line, never a pass. It compares names only. It never sees whether the pin is wired, right or used right.
+`data.pin_map` holds `used`, `missing` and `not_compared`.
+
 The own tests are PROJECT/tests, run with unittest in a process of their own (`own_tests_child.py`), %g s at most.
 The tests' code runs on this machine too, in the project folder, and can write files there: spark writes only its record. The
 answer's `data.tests` holds `passed` of `total` and the ids of the tests that failed. A failed or raising test is a problem
@@ -73,10 +86,11 @@ and never the wiring.""" % (IMPORT_TIMEOUT_S, OWN_TESTS_TIMEOUT_S)
 
 class CheckFirmware(Operation):
     """
-    Operation: the free checks of a project's firmware, the import check and the project's own tests, in one answer. Its data
-    is `project`, `imports` ({"imported", "total"}, or {"state": "not-checked"} when firmware/ is not there), `modules` (what `import_probe.look`
+    Operation: the free checks of a project's firmware, the import check, the project's own tests and the pin names, in one
+    answer. Its data is `project`, `imports` ({"imported", "total"}, or {"state": "not-checked"} when firmware/ is not there), `modules` (what `import_probe.look`
     gives: `module`, `status`, `detail`, and `code` for one not imported) and `tests` (the OwnTests: `state`, and `passed`,
-    `total`, `failed` and `skipped` only when recorded). A module not imported and a failed own test are problems; a firmware/
+    `total`, `failed` and `skipped` only when recorded) and `pin_map` (the PinMapUses' `to_data`). A module not imported, a failed
+    own test and a pin name that the map lacks are problems; a firmware/
     that is not there and a run of tests that gave no count are could-not-run, never ok; a project with no tests/ is a note.
     It reads files, runs children on this machine and writes one file, the check record (P1209): `data.written` says
     whether this run wrote it, and a write that failed is a note and a line, never a finding.
@@ -88,7 +102,7 @@ class CheckFirmware(Operation):
     arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder with firmware/ and tests/ (default: here)"),
                  COMMON_ARGUMENTS[JSON_DEST])
     effects = (READS, RUNS, WRITES)
-    data_keys = ("project", "imports", "modules", "tests", "written")
+    data_keys = ("project", "imports", "modules", "tests", "pin_map", "written")
 
     def __init__(self, import_timeout_s=IMPORT_TIMEOUT_S, tests_timeout_s=None, own_tests_reader=None):
         """The timeouts are constants of the firmware area, no setting; a test gives a shorter one. `own_tests_reader` is the
@@ -104,12 +118,15 @@ class CheckFirmware(Operation):
         """The imports and the own tests of PROJECT, each child started through `outside.run`."""
         modules, import_problems, unchecked = look(project, self.import_timeout_s, outside.run)
         tests = self.reader.read(project, outside)
+        pins = PinMapUses.read(project)
         findings = self.import_findings(modules, import_problems, unchecked) + self.own_test_findings(tests)
+        findings += self.pin_findings(pins)
         imports = self.imports_of(modules, unchecked)
-        data = {"project": str(project), "imports": imports, "modules": modules, "tests": self.tests_data(tests)}
+        data = {"project": str(project), "imports": imports, "modules": modules, "tests": self.tests_data(tests), "pin_map": pins.to_data()}
         notes = [{"subject": TESTS_FOLDER, "sentence": NO_TESTS_NOTE}] if tests.state == NONE_RECORDED else None
-        kept_lines = self.result_lines(imports, tests)
-        result = OperationResult(data, findings, lines=self.module_lines(modules) + kept_lines, notes=notes)
+        kept_lines = self.result_lines(imports, tests, data["pin_map"])
+        result = OperationResult(data, findings, lines=self.module_lines(modules) + kept_lines, notes=notes,
+                                 assumptions=pins.assumptions() or None)
         return self.keep(project, result, kept_lines, outside)
 
     def keep(self, project, result, kept_lines, outside):
@@ -151,6 +168,19 @@ class CheckFirmware(Operation):
                 for test_id in tests.failed or ()]
 
     @staticmethod
+    def pin_findings(pins):
+        """The Findings of the PinMapUses `pins`: a problem for each use whose name the pin map lacks, one problem when the map is
+        not there, and one could-not-run, naming the file, when the names could not be read (no firmware/ is the import check's)."""
+        if pins.state == NOT_CHECKED:
+            return [Finding.of(COULD_NOT_RUN, printable(pins.where), firmware_codes.PIN_MAP_NOT_READ, printable(pins.why))] if pins.where else []
+        if not pins.has_map and pins.missing:
+            first, count = pins.missing[0], len(pins.missing)
+            return [Finding.of(PROBLEMS, PIN_MAP_PATH, firmware_codes.PIN_MAP_NAME_MISSING_NO_MAP,
+                               NO_PIN_MAP_SENTENCE % (count, " needs" if count == 1 else "s need", printable(first.file), first.line))]
+        return [Finding.of(PROBLEMS, printable("%s:%d" % (each.file, each.line)), firmware_codes.PIN_MAP_NAME_MISSING, each.sentence())
+                for each in pins.missing]
+
+    @staticmethod
     def imports_of(modules, unchecked):
         """The import count, or {"state": "not-checked"} when firmware/ was not there, as `tests` says it: a number nobody took
         is no number."""
@@ -169,13 +199,16 @@ class CheckFirmware(Operation):
         return ["%-9s %s%s" % (entry["status"], entry["module"], "  " + entry["detail"] if entry["detail"] else "") for entry in modules]
 
     @staticmethod
-    def result_lines(imports, tests):
-        """The text's last two lines, which the check record keeps too (P1209): the imports line (`imports_of`'s count) and
-        the tests line."""
+    def result_lines(imports, tests, pin_map):
+        """The text's last result lines, which the check record keeps too (P1209): the imports line (`imports_of`'s count), the
+        tests line and, when the check saw a use or a place and firmware/ is there, the pin map line (`pin_map` is `data.pin_map`)."""
         lines = [IMPORTS_NOT_CHECKED_LINE if imports.get("state") == NOT_CHECKED else IMPORTS_LINE % (imports["imported"], imports["total"])]
         if tests.state == NONE_RECORDED:
-            return lines + [NO_TESTS_LINE % TESTS_FOLDER]
-        if tests.state == NOT_CHECKED:
-            return lines + [TESTS_NOT_CHECKED_LINE % tests.why]
-        return lines + [TESTS_LINE % (tests.passed, tests.total, TESTS_FOLDER) + (SKIPPED_PART % tests.skipped if tests.skipped else "")]
+            lines.append(NO_TESTS_LINE % TESTS_FOLDER)
+        elif tests.state == NOT_CHECKED:
+            lines.append(TESTS_NOT_CHECKED_LINE % tests.why)
+        else:
+            lines.append(TESTS_LINE % (tests.passed, tests.total, TESTS_FOLDER) + (SKIPPED_PART % tests.skipped if tests.skipped else ""))
+        pin_line = None if imports.get("state") == NOT_CHECKED else PinMapUses.line_from(pin_map)
+        return lines + [pin_line] if pin_line else lines
 # --- end MVP ---
