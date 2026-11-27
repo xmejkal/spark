@@ -62,7 +62,7 @@ small agents work on it, in turn:
    with `parts.py --read`, page by page, and stops where the facts are.
    If a line says `… is not installed — install: …`, ask the person once, run
    `${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <name> --project .`, and launch the reader again. `/spark:setup`
-   does the same for everything at once. `--install` downloads, so no command's `allowed-tools` lists it. Claude Code
+   does the same for everything at once. A line that says `but no Python spark asked holds its module` is the exception: do not run `--install`, and follow `/spark:setup`. `--install` downloads, so no command's `allowed-tools` lists it. Claude Code
    asks before it runs. The exception is the person's own settings: an allow rule of theirs, or auto mode. The
    person's answer to that question is the yes.
 

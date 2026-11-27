@@ -25,7 +25,7 @@ Run init before installing anything: without a `package.json` in the project, np
 ([P113](https://github.com/xmejkal/spark/issues/47)).
 
 **Reading `tools.py --status`.** It exits 2 while any tool is missing, even one the current step does not need, so read
-the `[????]` rows.
+the `[????]` rows. An `[ok  ]` row of a Python tool names the Python that runs it and the executable it was found through: `mpremote 1.29.0, runs with <Python> (found through <executable>)`. A tool's `exe` field is the executable that spark looks for on the PATH when the running Python lacks the module (default: mpremote and esptool, in `data/tools.json`; the person's and the project's tools files win, field by field). `tools.py --pin mpremote.exe=` turns that lookup off. A sentence with `but no Python spark asked holds its module` or `Spark cannot ask` is no `--install` case, and the tool is left out of `N to install`: tell the person which Python holds the executable, and give the step at the end of the sentence if there is one.
 
 - **A `[????]` row** that says `/spark:setup add <name>`: run `tools.py --install <name> --project . --dry-run` and show
   the person the commands. If they say yes, run it again without `--dry-run`.

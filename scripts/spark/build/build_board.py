@@ -152,10 +152,11 @@ class BuildBoard(Operation):
             # P945: find the facts that draw a part before the wiring, then P517: write the firmware next
             own_steps = (drawing_next_steps(kept, project_of(requirements))
                          + board_envelope.firmware_next_steps(code == EXIT_OK, requirements))
-            text = guard_lines(render(built.stages, code, left_off(built.requirements)) + board_envelope.next_text(own_steps))
+            text = guard_lines(render(built.stages, code, left_off(built.requirements)))
+            # P1256 (B4): the step lines join after the split, as PastedLines the mask leaves whole
             return OperationResult(said_of(built.stages, code, built.requirements, kept), findings_of(built.stages),
                                    [NextStep(**step) for step in own_steps],
-                                   lines=text[:-1].split("\n"),  # the one final newline is `print`'s
+                                   lines=text[:-1].split("\n") + board_envelope.next_lines(own_steps),  # the one final newline is `print`'s
                                    diagnostics=["  %s" % entry["line"] for entry in kept or []])
         finally:
             if built.workdir is not None:

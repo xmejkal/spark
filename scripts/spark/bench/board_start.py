@@ -9,6 +9,7 @@ restart left that board in download mode, with the port gone and back as for a r
 """
 
 import collections
+import shlex
 
 from spark.bench import board_codes
 from spark.bench.deploy_stages import RESET_WAIT_MESSAGE, DeployPhase
@@ -92,7 +93,8 @@ class BoardStartService:
 
     def gone_result(self):
         """The result for a board that is not listed."""
-        return BoardStartResult(board_codes.PORT_GONE, None, download_mode.port_gone(self.places))
+        devs = getattr(self.finder, "command", None)  # P1264: the command spark ran, in the Python that holds mpremote
+        return BoardStartResult(board_codes.PORT_GONE, None, download_mode.port_gone(self.places, shlex.join(devs) if devs else "mpremote devs"))
 
     def wait_for_start(self, port, read, report, timeout_s=download_mode.RESET_WAIT_S, usb=None):
         """Wait at most `timeout_s` for the port to go and come back, and call `read(port)` each time it does: it says

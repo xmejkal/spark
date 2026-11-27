@@ -18,7 +18,7 @@ from spark.bench import known_board
 from spark.bench.known_board import CANNOT_TELL, NONE, OTHER
 from spark.bench.deploy_stages import DeployPhase
 from spark.records import board_records
-from spark.bench.firmware_platform import MicroPythonPlatform
+from spark.bench.firmware_platform import FINDING_THE_TOOLS, MicroPythonPlatform
 from spark.bench.image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
 from spark.bench import bench_privacy
 from spark.core import codes
@@ -115,7 +115,9 @@ line is `no board found.` and the last line, the fix, says that the board can be
 calls, and says what to try in order: download mode with BOOT, a wait for the wake, then the cable. A firmware file
 that does not parse is named. The board doctor can find the port not on USB, named or found by spark. If firmware/
 then calls deepsleep, the doctor's next line is the same fix, opened by the named port or the found one (P1049, P1057). With --json, `next`
-then holds the look step, which needs the person: the same look, run once after the person did step 1 or 2 (P1048)."""
+then holds the look step, which needs the person: the same look, run once after the person did step 1 or 2 (P1048).
+
+""" + FINDING_THE_TOOLS
 
 
 class LookAtBoard(Operation):

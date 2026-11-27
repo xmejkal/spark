@@ -1,0 +1,18 @@
+[
+ {"file": "scripts/spark/records/tool_finder.py", "name": "the PATH is never asked", "find": "        return [found.python] if found else None", "replace": "        return None"},
+ {"file": "scripts/spark/records/tool_python.py", "name": "the first line is not read", "find": "[_first_line_python(executable), beside]", "replace": "[beside]"},
+ {"file": "scripts/spark/records/tool_python.py", "name": "no python3 beside a shim", "find": "[_first_line_python(executable), beside]", "replace": "[_first_line_python(executable)]"},
+ {"file": "scripts/spark/records/tool_python.py", "name": "the shim runs, not its Python", "find": "ToolPython(answer[0], answer[1], executable)", "replace": "ToolPython(candidate, answer[1], executable)"},
+ {"file": "scripts/spark/records/versions.py", "name": "the floor ignores the tool's Python", "find": "return found.release if found else None", "replace": "return None"},
+ {"file": "scripts/spark/records/tool_python.py", "name": "one child per call", "find": "if key in self.kept:", "replace": "if False:"},
+ {"file": "scripts/spark/records/tool_finder.py", "name": "the sentence hides where spark looked", "find": "tool_python.TOOL_PYTHONS.looked(entry),", "replace": "\"\","},
+ {"file": "scripts/spark/records/tool_python.py", "name": "an import tool is looked for on the PATH", "find": "bool(entry.get(\"exe\")) and bool(entry.get(\"module\"))", "replace": "True"},
+ {"file": "scripts/spark/records/tool_python.py", "name": "a probe failure reads as no module", "find": "return None, \"did not answer in %d s\" % self.timeout_s", "replace": "return None, \"\""},
+ {"file": "scripts/spark/records/tool_python.py", "name": "exit 3 is no module", "find": "done.returncode == 3", "replace": "done.returncode == 1"},
+ {"file": "scripts/spark/records/tool_finder.py", "name": "install keeps what it found", "find": "        tool_python.TOOL_PYTHONS.forget()\n", "replace": "        pass\n"},
+ {"file": "scripts/spark/records/tool_finder.py", "name": "a tool on the PATH with no module reads as not installed", "find": "tool_python.TOOL_PYTHONS.on_path(entry, hint, tool_name, project) or", "replace": "\"\" or"},
+ {"file": "scripts/spark/records/tool_finder.py", "name": "the running Python no longer wins", "find": "        if importlib.util.find_spec(entry[\"module\"]):\n            return [sys.executable]", "replace": "        if False:\n            return [sys.executable]"},
+ {"file": "scripts/spark/bench/board_start.py", "name": "port gone names a Python that may not hold mpremote", "find": "shlex.join(devs) if devs else \"mpremote devs\"", "replace": "\"python3 -m mpremote devs\""},
+ {"file": "scripts/spark/records/tool_python.py", "name": "the probe child runs with -I", "find": "[python, \"-c\", PROBE, module]", "replace": "[python, \"-I\", \"-c\", PROBE, module]"},
+ {"file": "scripts/spark/records/tool_python.py", "name": "the start folder stays on the probe's path", "find": "import sys; del sys.path[0]  # the folder", "replace": "import sys  # the folder"}
+]

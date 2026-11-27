@@ -132,6 +132,7 @@
     "for": "writing the flash image that passed the simulation onto the board (deploy.py), and reading the board on USB without changing it (look.py)",
     "kind": "python",
     "module": "esptool",
+    "exe": "esptool",
     "silent_step": "hold_boot",
     "version": "5.5.0",
     "oldest_version": "5.0",
@@ -143,6 +144,7 @@
     "for": "MicroPython's REPL on the board over USB, to see the firmware start (deploy.py prints the line), and listing the boards on USB (look.py)",
     "kind": "python",
     "module": "mpremote",
+    "exe": "mpremote",
     "silent_step": "press_reset",
     "version": "1.29.0",
     "install": {

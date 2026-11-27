@@ -2,8 +2,8 @@
  {
   "file": "scripts/spark/records/tool_finder.py",
   "name": "a tool that is not installed is a plain ToolError again",
-  "find": "raise ToolMissingError(\"%s (%s) is not installed",
-  "replace": "raise ToolError(\"%s (%s) is not installed"
+  "find": "raise ToolMissingError(\"%s\", tool_python.TOOL_PYTHONS.on_path",
+  "replace": "raise ToolError(\"%s\", tool_python.TOOL_PYTHONS.on_path"
  },
  {
   "file": "scripts/spark/records/tool_finder.py",

@@ -165,6 +165,22 @@ class EachKindRunsItsStepTest(RunRequestTest):
         self.assertEqual((code, self.ran()), (0, {"build-board": [{"requirements": str(self.project / "requirements.json"), "keep": self.project,
                                                              "sim_dir": None, "firmware": None}]}))
 
+    def test_the_build_s_next_line_keeps_its_real_store_and_project_through_the_mask(self):
+        # P1256 (F4): the answer is masked, but a PastedLine of the build keeps its paths, so a person can paste it; masked,
+        # it read `SPARK_HOME=<store>` and `--project <project>`, which a shell reads as redirections
+        from spark.bench import board_envelope
+        lines = board_envelope.next_lines([board_envelope.look_step(self.project, None)])
+        self.steps["build-board"] = FakeStep("build-board", OperationResult({}, lines=["  built"] + lines))
+        self.ask("build")
+        operation = RunRequest(readers=self.readers, operations=self.steps)
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            code = run_cli(HelpText("flow.py", tool="flow"), operation, ["--project", str(self.project)],
+                           outside_builder=build_bare_outside_world, outside=FakeOutsideWorld())
+        printed = [line for line in out.getvalue().split("\n") if line.startswith("  next: ")]
+        self.assertEqual((code, printed), (0, lines))
+        self.assertIn("SPARK_HOME=%s " % Path(os.environ["SPARK_HOME"]).resolve(), printed[0])
+        self.assertIn("--project %s" % self.project, printed[0])
+
     def test_a_step_with_problems_answers_its_first_problem_and_exits_1(self):
         self.steps["build-board"] = FakeStep("build-board", OperationResult({}, [Finding("problems", "board", "a_code", "the board has no pins", "fix it")]))
         self.ask("build")

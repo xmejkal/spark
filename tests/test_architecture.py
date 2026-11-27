@@ -354,8 +354,9 @@ class TheBenchAreaTest(unittest.TestCase):
         self.assertEqual(twins, [])
 
     def test_the_next_lines_name_the_cli_in_scripts(self):
-        # the refuter of #915: next_text builds the CLI's path from its own file, two folders up since the move
-        code = "from spark.bench import board_envelope; print(board_envelope.next_text([{'op': 'look', 'argv': [], 'why': 'w'}]))"
+        # the refuter of #915: the next lines build the CLI's path from its own file, two folders up since the move (P1256:
+        # next_text became next_lines)
+        code = "from spark.bench import board_envelope; print(board_envelope.next_lines([{'op': 'look', 'argv': [], 'why': 'w'}]))"
         run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True,
                              timeout=60, stdin=subprocess.DEVNULL)
         self.assertIn(str(ROOT / "scripts" / "look.py"), run.stdout, run.stderr)
@@ -579,7 +580,7 @@ class TheRecordsAreaTest(unittest.TestCase):
     MODULES = ["answer_operation", "board_pads", "board_records", "board_rules", "brief", "check_record", "chip_table", "deploy_record_store", "fact_needs", "folder_walk", "launcher",
                "missing_facts", "onboard_parts", "project_commit", "provenance", "record_kind", "records_codes", "registered_project_store",
                "storage", "store", "tool_choices",
-               "tool_finder", "versions"]
+               "tool_finder", "tool_python", "versions"]
     #: Each CLI's own top-level functions: `main` and what only it uses to print (`_validate_all` and `print_status`).
     #: `boards.py --list` runs design's `ListBoards`, imported inside `main` (P707). A library function back in a CLI,
     #: under any name, fails the check.
@@ -723,6 +724,16 @@ class TheCoreImportsNoAreaTest(unittest.TestCase):
         self.assertTrue({"flow", "bench", "records"} <= areas, areas)
         found = {path.name: sorted(measure.imports_of(ast.parse(path.read_text())) & areas) for path in sorted((spark / "core").glob("*.py"))}
         self.assertEqual({name: names for name, names in found.items() if names}, {})
+
+
+class TheShellLineIsALeafTest(unittest.TestCase):
+    """P1256 (R3-8): the rule a printed command passes, `shell_line.copyable`, imports only the standard library, so any
+    interface asks it with no import of spark: a stricter rule than U1's, which lets a leaf import a leaf of the core."""
+
+    def test_shell_line_imports_only_the_standard_library(self):
+        tree = ast.parse((ROOT / "scripts" / "spark" / "core" / "shell_line.py").read_text())
+        self.assertIn("shell_line", measure.LEAVES)
+        self.assertEqual(sorted(name for name in measure.imports_of(tree) if name not in sys.stdlib_module_names), [])
 
 
 class TheFlowAreaTest(unittest.TestCase):
