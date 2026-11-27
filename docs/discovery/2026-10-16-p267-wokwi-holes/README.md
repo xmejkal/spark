@@ -74,3 +74,8 @@ The 6 mm part's unturned pins equal wokwi-elements `src/pushbutton-6mm-element.t
 lines 15-20. All four turned pins agree with the turn rule for the center (14, 13). The 12 mm part measured
 (33.5, 24) this time, 0.5 px from the (33.5, 24.5) of 2026-10-16. That is inside the 1.5 px tolerance, and the
 geometry file keeps its value.
+
+The XIAO golden's new `breadboard.json` (sha256 0409ac7ab08ffcd862cb777be7c59764a3f35d2cf1b2a5362408d130556d2faf,
+the bytes `test_the_drawing_keeps_the_bytes_wokwi_showed` pins) was pasted into the same editor the same night.
+`button-light-xiao-6mm.png` shows it. The button's pins sit at (150.8, 89.4), (132, 89.4), (150.8, 117.4) and
+(132, 117.4): in e14 and e12 within 0.4 px, and in f14 and f12 within 0.9 px.

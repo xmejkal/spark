@@ -249,13 +249,14 @@ class TheXiaoLayoutTest(unittest.TestCase):
         self.assertEqual(once, drawing.WokwiBreadboardDiagram().text(BreadboardSceneMaker().make(sheet._plan_layout(xiao_read()))))
 
     def test_the_drawing_keeps_the_bytes_wokwi_showed(self):
-        # The screenshot in docs/discovery/2026-10-16-p267-wokwi-holes/ shows exactly these bytes (P267, PR #303).
+        # docs/discovery/2026-10-16-p267-wokwi-holes/button-light-xiao-6mm.png shows exactly these bytes in Wokwi (P1240,
+        # 2026-11-27). The first screenshot of P267 (PR #303) showed an older layout.
         # A refactor must not move a part by a rounding step: P270 changes the units inside, never the file.
         with in_store():
             text = drawing_text(XIAO / "requirements.json")
         self.assertEqual(hashlib.sha256(text.encode()).hexdigest(),
-                         # P953: the three ground jumpers go to the bottom - rail (bn.6, bn.14, bn.10); no part moved
-                         "51af5c2905f30b678888b241a52dd115a7a7ad142cde56ce2929b6498b0cb528")
+                         # P1240: the 6 mm button in e12, e14, f12, f14
+                         "0409ac7ab08ffcd862cb777be7c59764a3f35d2cf1b2a5362408d130556d2faf")
 
     def test_every_hole_named_exists_on_a_half_board(self):
         drawn = json.loads(drawing.WokwiBreadboardDiagram().text(BreadboardSceneMaker().make(self.layout)))
