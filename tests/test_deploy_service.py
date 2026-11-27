@@ -342,6 +342,13 @@ class TheValuesOnOneLineTest(ServiceCase):
         service.plan = lambda port=None: planned(port)._replace(commands=[command])
         return service
 
+    @needs_littlefs
+    def test_a_command_with_a_line_break_is_one_line_in_its_running_line(self):
+        # the review's R1: the running line is an Event, and its text view keeps line breaks
+        report = self.look()
+        self.service_with_command(["esptool", "--port", self.RAW_PORT, "erase-flash"]).deploy(report, report.token(), FakeConsent(True))
+        self.assertEqual(self.said(), ["running: esptool --port '/dev/cu.x?fix: rm -rf ~' erase-flash"])
+
     def test_a_refusal_of_the_evidence_keeps_its_line_break_and_shows_a_control_character_as_a_question_mark(self):
         class Refuses(image_evidence.PassedRunEvidence):
             def why_not_ready(self, image):

@@ -346,8 +346,8 @@ class PassedRunEvidence(ImageEvidence):
 
     def notes(self, image):
         changed = image.find_newer_files()
-        notes = ["%s changed after this image was made: the board gets the image that passed, not the change. Run its "
-                 "scenario again to test it." % ", ".join(changed)] if changed else []
+        notes = [text_guards.flat_line("%s changed after this image was made: the board gets the image that passed, not the change. "
+                                       "Run its scenario again to test it.", ", ".join(changed))] if changed else []
         other = image.why_other_runs()
         return notes + [other] if other else notes
 

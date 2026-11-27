@@ -175,7 +175,7 @@ class DeployService:
         self.report(Event.begin(DeployPhase.FLASH))
         with self.logs_what_ends(look, image_sha256, FLASH_NOT_FINISHED_LOG):
             for index, command in enumerate(planned.commands):
-                self.report(Event.line(DeployPhase.FLASH, "running: %s" % shlex.join(command), raw=True))  # P677: a command
+                self.report(Event.line(DeployPhase.FLASH, flat_line("running: %s", shlex.join(command)), raw=True))  # P677: a command; P1320: one line
                 try:
                     self._run_flash(command, planned.flasher, consent, retry=index == 0)
                 except (OSError, subprocess.CalledProcessError) as failed:

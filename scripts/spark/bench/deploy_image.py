@@ -203,9 +203,9 @@ class DeployFlowService:
         if not self.asked.dry_run:
             return None
         for command in planned.commands:
-            self.say(DeployPhase.PLAN, "would run: %s" % shlex.join(command), raw=True)  # P677: a command a person may run
+            self.say(DeployPhase.PLAN, flat_line("would run: %s", shlex.join(command)), raw=True)  # P677: a command a person may run; P1320: on one line
         self.say(DeployPhase.PLAN, "board: not looked at: run look.py")
-        self.say(DeployPhase.PLAN, WATCH % shlex.join(self.service.platform.make_connection(planned.mpremote, self.asked.port, self.outside.run).repl_command()),
+        self.say(DeployPhase.PLAN, flat_line(WATCH, shlex.join(self.service.platform.make_connection(planned.mpremote, self.asked.port, self.outside.run).repl_command())),
                  raw=True)
         return EXIT_OK
 
