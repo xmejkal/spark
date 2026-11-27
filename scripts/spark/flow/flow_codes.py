@@ -521,6 +521,18 @@ LEFT_OUT_NOTES = frozenset((NOT_DONE_NOTE, NO_SHEET_NOTE))
 STATION_NOTES = {NO_PICKS_NOTE: "no needs or picks behind it", NO_MODEL_NOTE: "no simulation",
                  UNSEEN_NOTE: "spark cannot see it", MAY_CHANGE_NOTE: "done, may change"}
 STATION_NOTES_BY_PHASE = {(NO_MODEL_NOTE, SIMULATE): "no Wokwi model of this board"}
+#: Gate A's row "Tested before the board" (P1220, D10): the fact it reads, NO_MODEL_NOTE for a board Wokwi has no model of,
+#: and the row's words by fact. The words of a run that failed are RUN_FAILED_NOW's, with the log's
+#: name. The row is data only: no code refuses on it, and an empty `shut_by` never means that gate A is open.
+GATE_A_SAYS = {RUN_FAILED: RUN_FAILED_NOW, IMAGE_TESTED: "A run passed on this image.",
+               IMAGE_OLDER: "Your firmware changed after the image, so no run tested it as it is now.",
+               IMAGE_UNTESTED: "No run tested this image.",
+               NO_SIM_FILES: "No run tested this image: the project has no simulation files.",
+               NO_MODEL_NOTE: "No simulator run: none covers this board."}
+#: The row when spark cannot read the runs (the image or a log is missing or unreadable): `shut_by` is null.
+GATE_A_CANNOT_TELL = "Spark cannot tell. The simulation phase says why."
+#: The row's label in the NOW box and in `flow.py show`, beside ON THE BOARD.
+TESTED_LABEL = "TESTED BEFORE THE BOARD"
 NOTED_PHASE = "%s (%s)"
 #: The plain name of each phase on the page's station line (P1119, the canvas of 2026-11-25). A phase not here shows its word.
 PHASE_NAMES = {IDEA: "Idea", NEEDS: "Needs", PARTS: "Parts", REQUIREMENTS: "Parts list", BUILD: "Board files",
