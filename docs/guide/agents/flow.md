@@ -59,9 +59,9 @@ The words of a phase:
 | `mark` | the glyph a page shows for the status |
 | `by` | who does the phase: `you`, `claude` or `your terminal` |
 | `says` | sentences for a person. A value nobody recorded reads `unknown` |
-| `offers` | `{key, label, effect, makes_stale}`: a next step, with the four keys under this table. `flow.py` runs none |
+| `offers` | `{key, label, effect, makes_stale, part}`: a next step, with the five keys under this table. `flow.py` runs none |
 
-An offer has four keys ([P829](https://github.com/xmejkal/spark/issues/1187)):
+An offer has five keys ([P829](https://github.com/xmejkal/spark/issues/1187)):
 
 - `key`: the step, such as `pick:light:led-red-5mm`, `requirements` or `build`.
 - `label`: the words of its button, such as `Build the board`.
@@ -72,6 +72,7 @@ An offer has four keys ([P829](https://github.com/xmejkal/spark/issues/1187)):
 - `makes_stale`: the phases the step can make out of date. It lists only the phases that hold something now. With
   requirements.json there, a pick names `requirements`. Write the parts list names `build` when `.spark/build.json` is
   there and `breadboard` when breadboard.md is there. A build names none.
+- `part`: a pick's part, by the name its label quotes, else `null`. The page labels the pick's radio with it ([P1067](https://github.com/xmejkal/spark/issues/1565)).
 
 A `null` status means spark does not judge the phase, and `says` tells where it stands. The idea is `ok` and says the goal (`your goal is “…”`) when the brief (`.spark/project.json`) holds a goal that is not blank, whatever the rest of the brief holds ([P1142](https://github.com/xmejkal/spark/issues/1677)). It has `null` and says the brief holds no goal when there is none, and `null` and `the brief cannot be read (<why>)` when the file cannot be read. The goal is shown as the brief writes it, and `Privacy` masks paths and secret values only. A
 hand-written project (requirements.json and no needs file) has `null` for its needs and parts, and says so. A project
@@ -324,10 +325,9 @@ with `, needs you` after the command for a step with `needs_person` or `needs_ye
 ## A page request
 
 `flow.py run-request` runs the step that the person asked for on the page ([P829](https://github.com/xmejkal/spark/issues/1187)).
-The request is one file, `.spark/page-request.json` in the project. It names one offer, or several picks, one per need
-([P1067](https://github.com/xmejkal/spark/issues/1565)). `flow.py run-request --help` says its shape and its refusals.
-Claude writes the file from the page's request, as the page sent it. Never write a key or a `seen` of your own into it,
-and never join or split the picks of one request.
+The request is one file, `.spark/page-request.json`: one offer, or several picks, one per need
+([P1067](https://github.com/xmejkal/spark/issues/1565)); `flow.py run-request --help` says its shape and its refusals.
+Write it as the page sent it: never a key or a `seen` of your own, and never join or split its picks.
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" run-request --project . --json

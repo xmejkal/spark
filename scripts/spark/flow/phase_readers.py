@@ -37,9 +37,10 @@ MARKS = {OK: (None, "✓"), PROBLEMS: ("problems", "✗"), COULD_NOT_RUN: ("coul
 NOT_SIMULATED_SAYS = {firmware_codes.NO_SIM_TOML: [flow_codes.NO_SIM_MESSAGE],
                       firmware_codes.NO_IMAGE: [flow_codes.NO_IMAGE_MESSAGE, flow_codes.SCENARIO_HINT]}
 #: Value: one offer of a phase: its key (`pick:soil:x-led`), its label (the words of its button), its effect (plain
-#: sentences that name every write taking it makes), `makes_stale`, the phases it can make out of date (P829), and `step`,
-#: the NextStep that runs it (offer_steps, P1030). The JSON of `data` holds the first four: the step is in `next`.
-Offer = namedtuple("Offer", "key label effect makes_stale step")
+#: sentences that name every write taking it makes), `makes_stale`, the phases it can make out of date (P829), `step`,
+#: the NextStep that runs it (offer_steps, P1030), and `part`, the name of a pick's part, else None (P1067: the page's radio
+#: says it). The JSON of `data` holds all but the step, which is in `next`.
+Offer = namedtuple("Offer", "key label effect makes_stale step part", defaults=(None,))
 #: The parts phase offers at most this many picks per need (P976, the PO, 2026-11-21: "so many unrelated things").
 OFFERS_PER_NEED = 3
 #: The verb of the need a board serves (`needs`' board need): a board is a plausible pick for it whatever its words.
@@ -54,8 +55,8 @@ class Phase(namedtuple("Phase", "phase status mark by says offers")):
     its glyph from MARKS, who does it, what it says (sentences for a person; a null value reads `unknown`) and its Offers."""
 
     def to_dict(self):
-        return dict(self._asdict(), offers=[dict(key=offer.key, label=offer.label, effect=offer.effect, makes_stale=list(offer.makes_stale))
-                                            for offer in self.offers])
+        return dict(self._asdict(), offers=[dict(key=offer.key, label=offer.label, effect=offer.effect, makes_stale=list(offer.makes_stale),
+                                                 part=offer.part) for offer in self.offers])
 
 
 class PhaseReader:
@@ -315,7 +316,7 @@ def pick_offer(project, need, candidate, listed, notes):
     said = [flow_codes.PICK_MESSAGE % (candidate_label(candidate), need), reserve_sentence(need, candidate)] + notes
     said += [] if listed else [flow_codes.LIST_PROJECT_MESSAGE]
     return Offer(key, label, " ".join(said + [flow_codes.PICK_HISTORY_MESSAGE]), makes_stale(project, flow_codes.PICK),
-                 offer_steps.pick_step(project, need, pick_id, candidate_label(candidate)))
+                 offer_steps.pick_step(project, need, pick_id, candidate_label(candidate)), candidate_label(candidate))
 
 
 def pick_need(key):

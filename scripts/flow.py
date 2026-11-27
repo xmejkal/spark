@@ -27,8 +27,9 @@ offers. With a goal in the brief (.spark/project.json), the idea is ok and says 
 that cannot be read, it has none and says so. A hand-written project (requirements.json and no needs) has none for its
 needs and parts, and so has a project whose last need was dropped, which says so. Written firmware and a simulated image
 have none, because what their sentences say is for you to judge. An offer is a key, such as pick:soil:x-led, with a
-label (the words of its button, such as Build the board), its effect (plain sentences that name every write it makes)
-and makes_stale (the phases it can make out of date, only those that hold something now). flow.py show runs no offer.
+label (the words of its button, such as Build the board), its effect (plain sentences that name every write it makes),
+makes_stale (the phases it can make out of date, only those that hold something now) and part (a pick's part, else
+null). flow.py show runs no offer.
 The guide (P977) starts the text: NOW, the phase to act on now, its sentence and the key of its offer, or next: and the
 op of the step of a now phase that holds no offer, with needs you for a step the person takes (P1034), then DONE and
 LATER (with nothing open, the line that says so stands in place of NOW). One line per phase comes after it. With --json,

@@ -1720,10 +1720,19 @@ class TheOfferStepTest(FlowTest):
         self.assertEqual(lines[at:at + 3][:2], ["  " + NO_MODEL, "  SET ASIDE: soil"])
         self.assertIn("idea:", lines[at + 2])
 
-    def test_the_offers_in_data_keep_their_four_keys_and_no_step(self):
+    def test_the_offers_in_data_keep_their_five_keys_and_no_step(self):
         said, _ = show(with_needs(a_built_project(), SOIL))
         self.assertEqual({tuple(offer) for phase in said["data"]["phases"] for offer in phase["offers"]},
-                         {("key", "label", "effect", "makes_stale")})
+                         {("key", "label", "effect", "makes_stale", "part")})
+
+    def test_a_pick_offer_in_data_names_its_part_and_every_other_offer_null(self):
+        """P1067 (D22: each fact on the page is in show): the page labels a pick's radio by its part."""
+        said, _ = show(with_needs(a_built_project(), SOIL))
+        parts = {offer["key"]: offer["part"] for phase in said["data"]["phases"] for offer in phase["offers"]}
+        self.assertEqual(parts["pick:soil:x-many"], "A soil probe")
+        self.assertEqual({key: part for key, part in parts.items() if not key.startswith("pick:")},
+                         {key: None for key in parts if not key.startswith("pick:")})
+        self.assertIn("build", parts)
 
 
 def a_simulate_now(project, *scenarios):

@@ -291,11 +291,23 @@ LAST_REQUEST_SAYS = "Your last request, %s: %s."
 #: The last request's words when its offer is no longer on the page (the review of #1619): by its kind, else one sentence.
 LAST_REQUEST_KINDS = {PICK: "a pick", WRITE_REQUIREMENTS: "the parts list", BUILD_BOARD: "the build"}
 LAST_REQUEST_OTHER = "a step this page no longer offers"
+#: Several picks in one Send (P1067, the P1038 design of 2026-11-23): each need's radios, "not now" first; the Send of the
+#: picks named by the count and their needs (PICKS_SAID: one, many), with CHOOSE_FIRST under it while none is chosen; the
+#: Send box's last line; the wait; an ok answer; and the last request's words when its picks left the page.
+NOT_NOW = "not now"
+PICKS_SAID = ("%d pick (%s)", "%d picks (%s)")
+SEND_PICKS = "Send %s"
+CHOOSE_FIRST = "Choose a part first."
+PICKS_TOGETHER_MESSAGE = "Spark checks the picks together. If one fails, spark saves none."
+WAITING_PICKS_SAYS = "Sent at %s: %s. Nothing has run yet. To run it, type /spark:page in Claude Code."
+LAST_REQUEST_PICKS = "your picks"
 NEW_STATE = "Reload to see the new state."
 #: What the page says when a step ran ok, by its kind: what it did and what is not done yet.
 RAN_OK_SAYS = {PICK: "Saved as the pick. Nothing is built yet. " + NEW_STATE,
                WRITE_REQUIREMENTS: "The parts list is written. Nothing is built yet. " + NEW_STATE,
                BUILD_BOARD: "The board builds. It is not wired, not flashed and not simulated yet. " + NEW_STATE}
+#: Several picks that ran ok (P1067): not a kind, so it stays out of RAN_OK_SAYS.
+RAN_OK_PICKS_SAYS = "Saved as the picks. Nothing is built yet. " + NEW_STATE
 #: A step of another kind that ran ok, with spark's own line (`ran <label>: ok`); the page sends no other kind today.
 RAN_OTHER_SAYS = "Spark says: %s. " + NEW_STATE
 #: The note after an ok answer that has one: a build that built while its simulation could not run (P1008), or the
@@ -308,6 +320,9 @@ REFUSED_SAYS = {"request_stale": "Nothing ran. The project changed after you cli
                 "request_not_offered": "Nothing ran. This button is no longer offered. Reload the page.",
                 "request_in_chat": "Nothing ran. This step is asked in the chat: tell Claude.",
                 "request_malformed": "Nothing ran. The request could not be read. Reload the page and click again."}
+#: The refusals of a request of several picks (P1067): as REFUSED_SAYS, but one that spark no longer offers.
+REFUSED_PICKS_SAYS = "Nothing ran. Spark no longer offers one of these picks. Reload this page."
+REFUSED_PICKS = dict(REFUSED_SAYS, request_not_offered=REFUSED_PICKS_SAYS)
 #: The mark of a request that ran nothing: a dash, grey.
 NOT_RUN_MARK = "–"
 #: The head of the NOW box's block of a chat offer (P1122): plain bold text, never a button. Under it the tell stands in a
