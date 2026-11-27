@@ -201,6 +201,9 @@ How to read this page:
 - `op:check-firmware`
   - Effects: none, it only reads. Data keys: project, imports, modules, tests.
   - Summary: Check the firmware for free: its imports and the project's own tests, with no sim/ and no board.
+- `op:run-scenario`
+  - Effects: writes. Data keys: project, scenario, log, ran.
+  - Summary: Run one scenario in Wokwi. A run spends Wokwi CI minutes.
 
 ### bench
 

@@ -30,9 +30,11 @@ from spark.firmware.firmware_scenario import RunScenario  # noqa: E402
 from spark.operation_catalogue import CATALOGUE  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 
-#: The simulator a paid run finds: a name only, because the fake `run` starts nothing.
+#: The simulator a paid run finds. The fake `run` starts nothing; should a change bypass it, this command is Python that
+#: exits 97 at once, never a wokwi-cli on the PATH.
+HARMLESS = [sys.executable, "-c", "raise SystemExit(97)"]
 SIMULATOR = tool_finder.Tool("wokwi-cli", "simulator", {"account_env": "WOKWI_CLI_TOKEN",
-                                                       "needs_account": "a Wokwi token in WOKWI_CLI_TOKEN"}, ["wokwi-cli"])
+                                                       "needs_account": "a Wokwi token in WOKWI_CLI_TOKEN"}, HARMLESS)
 READY_MATCHED = '[s] Expected text matched: "ready"\n'
 
 
@@ -170,7 +172,7 @@ class ThePaidRunTest(RunScenarioCase):
     def test_the_run_starts_wokwi_cli_through_the_world_s_run(self):
         run = fake_run(0, "ready\n", READY_MATCHED)
         self.assertEqual(self.cli(run=run, token="t")[0], 0)
-        self.assertEqual(run.ran[0][:3], ["wokwi-cli", str(self.project / "sim"), "--scenario"])
+        self.assertEqual(run.ran[0][:len(HARMLESS) + 2], HARMLESS + [str(self.project / "sim"), "--scenario"])
 
     def test_the_caveat_of_a_pass_is_in_the_text_once_and_a_note_in_json(self):
         caveat = "passed, but it has no set-control step"

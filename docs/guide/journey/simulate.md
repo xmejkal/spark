@@ -27,7 +27,7 @@ the-button-lights-the-led.scenario.yaml: passed
 log: sim/runs/the-button-lights-the-led.log
 ```
 
-If a step names a component that `sim/diagram.json` does not hold, the command stops with exit 2 before it spends a Wokwi minute. `--dry-run` makes the checks that cost nothing, with no token and no run, and writes nothing. The command puts MicroPython and `firmware/` into one flash image and waits for the firmware's `ready` line. Then it
+Since [P1078](https://github.com/xmejkal/spark/issues/1582) the text starts with a status line (`✓ run-scenario: ok. <name>: passed`), and `--json` prints one envelope. If a step names a component that `sim/diagram.json` does not hold, the command stops with exit 2 before it spends a Wokwi minute. `--dry-run` makes the checks that cost nothing, with no token and no run, and writes nothing. The command puts MicroPython and `firmware/` into one flash image and waits for the firmware's `ready` line. Then it
 runs the steps and writes the log with its date ([P130](https://github.com/xmejkal/spark/issues/64)). The diagram the
 build writes wires the board's serial port to Wokwi's serial monitor, so a scenario's `wait-serial` hears the firmware
 ([P190](https://github.com/xmejkal/spark/issues/142)). The ready contract and the scenario's form are on

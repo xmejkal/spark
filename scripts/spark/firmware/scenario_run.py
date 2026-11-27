@@ -1,6 +1,7 @@
 """
 One run of one scenario in a project's sim/ (moved from run_scenario.py, P685): the checks that cost nothing, the image,
-wokwi-cli and the log. run_scenario.py is its CLI. The log's words and their reader are in scenario_steps.py.
+wokwi-cli and the log. `firmware_scenario.RunScenario` is its Operation and run_scenario.py its CLI (P1078). The log's words and
+their reader are in scenario_steps.py.
 """
 
 import datetime

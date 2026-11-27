@@ -164,7 +164,7 @@ that it could not run. A person, CI and the mutation tester run the same command
 
 ```sh
 python3 tools/mutate.py tests/mutations/p130-wokwi-harness.json --copy                     # one table
-python3 tools/mutate.py tests/mutations/*.json --for scripts/run_scenario.py --copy        # one file or folder
+python3 tools/mutate.py tests/mutations/*.json --for scripts/spark/firmware/firmware_scenario.py --copy        # one file or folder
 changed=$(git diff --name-only <the wave's first commit>^..HEAD)                       # a sweep's files
 python3 tools/mutate.py tests/mutations/*.json --for $changed --copy                       # a sweep
 python3 tools/mutate.py tests/mutations/*.json --copy                                      # every row
