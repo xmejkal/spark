@@ -144,7 +144,7 @@ class TheConverterInputComesFromThePartRecordsTest(unittest.TestCase):
         self.assertIsNone(why)
         self.assertEqual(files["wokwi-mapping.json"], {
             "onboard_led": {"wokwiType": "wokwi-led", "pins": {"A": "A", "K": "C"}, "attrs": {"color": "red"}},
-            "onboard_button": {"wokwiType": "wokwi-pushbutton", "pins": {"A": "1.l", "B": "2.l"}, "attrs": {"color": "green"}}})
+            "onboard_button": {"wokwiType": "wokwi-pushbutton-6mm", "pins": {"A": "1.l", "B": "2.l"}, "attrs": {"color": "green"}}})
         self.assertEqual([[(member["componentId"], member["pinName"]) for member in net["members"]] for net in files["netlist.json"]["nets"]],
                          [[("Mcu", "D13"), ("onboard_led", "A")], [("Mcu", "D14"), ("onboard_button", "A")],
                           [("Mcu", "GND1"), ("onboard_led", "K"), ("onboard_button", "B")]])
@@ -183,7 +183,7 @@ class ABoardOnlyBuildWiresThemTest(unittest.TestCase):
         diagram = json.loads((workdir / "sim" / "diagram.json").read_text())
         self.assertEqual(diagram["author"], "generated from netlist.json")
         self.assertEqual([(part["id"], part["type"]) for part in diagram["parts"]],
-                         [("mcu", "board-esp32-s3-devkitc-1"), ("onboard_led", "wokwi-led"), ("onboard_button", "wokwi-pushbutton")])
+                         [("mcu", "board-esp32-s3-devkitc-1"), ("onboard_led", "wokwi-led"), ("onboard_button", "wokwi-pushbutton-6mm")])
         self.assertEqual([connection[:2] for connection in diagram["connections"]],
                          [["mcu:21", "onboard_led:A"], ["mcu:47", "onboard_button:1.l"], ["mcu:GND.1", "onboard_led:C"],
                           ["mcu:GND.1", "onboard_button:2.l"], ["mcu:TX", "$serialMonitor:RX"], ["mcu:RX", "$serialMonitor:TX"]])

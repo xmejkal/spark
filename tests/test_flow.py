@@ -657,6 +657,17 @@ def a_project_built_with_no_simulation(code="board_not_in_wokwi", status="could-
     return project
 
 
+def a_project_built_with_no_simulation_now():
+    """The same build as a_project_built_with_no_simulation's, recorded as the build ends it since P1207 (D11): the
+    simulation stage skipped with board_not_in_wokwi, and the record ok."""
+    project = a_built_project()
+    record = BuildRecordStore(project).read()
+    record["stages"] = [{"name": "board", "status": "ok"}, {"name": "build", "status": "ok"},
+                        {"name": "simulation", "status": "skipped", "code": "board_not_in_wokwi"}]
+    BuildRecordStore(project, clock=FakeClock()).write({key: value for key, value in record.items() if key not in ("schema", "at")})
+    return project
+
+
 def a_firmware(project):
     (project / "firmware").mkdir()
     (project / "firmware" / "main.py").write_text("print(1)\n")
@@ -713,6 +724,31 @@ class TheGuideTest(FlowTest):
             "stations": stations(("idea", "done", None), ("needs", "done", "not-done"), ("parts", "done", "not-done"),
                                  ("requirements", "done", "no-picks"), ("build", "done", "no-model"), ("breadboard", "now", None),
                                  ("firmware", "now", None), ("simulate", "later", "no-model"), ("deploy", "later", None))})
+
+    def test_a_new_record_of_a_board_wokwi_has_no_model_of_gives_the_same_guide_and_exits_0(self):
+        """P1207 (D11): the build now ends the simulation stage skipped with board_not_in_wokwi and the record ok. The guide
+        is the old record's, `flow.py show` exits 0, and the build phase says why there is no simulation."""
+        old, new = a_project_built_with_no_simulation(), a_project_built_with_no_simulation_now()
+        (said, code), old_guide = show(new), show(old)[0]["data"]["guide"]
+        guide = said["data"]["guide"]
+        self.assertEqual(guide.pop("wired"), {"sheet_at": sheet_at(new), "deploy_at": None})  # each fixture keeps its own sheet
+        old_guide.pop("wired")
+        self.assertEqual(guide, old_guide)
+        self.assertEqual((code, statuses(said)["build"], said["data"]["stands_at"]), (0, None, "firmware"))
+        self.assertEqual(says(said, "build")[-1], "No simulation: Wokwi has no model of this board. You test it on the real board.")
+
+    def test_a_new_board_only_record_of_a_board_wokwi_has_no_model_of_is_done_once_with_the_board_only_sentence(self):
+        project = a_built_project(OK, {"board": "ok", "parts": "skipped", "schematic": "skipped", "footprint": "skipped",
+                                       "build": "skipped", "simulation": "skipped"})
+        (project / "breadboard.md").unlink()
+        record = BuildRecordStore(project).read()
+        record["stages"][-1]["code"] = "board_not_in_wokwi"
+        BuildRecordStore(project, clock=FakeClock()).write({key: value for key, value in record.items() if key not in ("schema", "at")})
+        said, code = show(project)
+        guide = said["data"]["guide"]
+        self.assertEqual((code, guide["now"]["phase"], guide["no_simulation"]), (0, "firmware", NO_MODEL))
+        self.assertEqual(guide["done"], ["idea", "requirements (no needs or picks behind it)", "build (no simulation)"])
+        self.assertEqual(says(said, "build"), ["board only: nothing to wire, no board was built"])
 
     def test_the_project_stands_where_the_guide_says_now(self):
         """P1030: one rule says where a project stands, the guide's now phase, in data.stands_at too."""

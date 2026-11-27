@@ -62,8 +62,9 @@ ENDS_AS = {
     ("build", "BOARD_ONLY_ENDING"): ("board_only", "skipped"),
     ("simulation", "CONVERTER_MISSING_ENDING"): ("tool_missing", "could-not-run"),
     ("simulation", "FACT_MISSING_ENDING"): ("simulation_fact_missing", "could-not-run"),
-    # P977: a board Wokwi has no model of has its own code, so the flow's guide can pass that build and no other
-    ("simulation", "NO_WOKWI_PART_TYPE_ENDING"): ("board_not_in_wokwi", "could-not-run"),
+    # P977: a board Wokwi has no model of has its own code, so the flow's guide can pass that build and no other.
+    # P1207 (D11): the stage is skipped with that code, never could-not-run, so the build exits 0
+    ("simulation", "NO_WOKWI_PART_TYPE_ENDING"): ("board_not_in_wokwi", "skipped"),
     ("simulation", "CHIP_NOT_COMPILED_ENDING"): ("chip_not_compiled", "could-not-run"),
     ("simulation", "TIMED_OUT_ENDING"): ("stage_timed_out", "could-not-run"),
     ("simulation", "CONVERTER_LACKS_PART_ENDING"): ("converter_lacks_part", "could-not-run"),

@@ -69,13 +69,16 @@ that Wokwi has no part for needed the person's typed yes at every flash (P1029).
 `grants/direct_flashing_disallowed` is in the store, no grant answers such a deploy. The person deletes it to allow
 direct flashing again.
 
-### `skipped` — the fourth word, and only `check_all` has it
+### `skipped` — the fourth word, for a check or a stage
 
 "I was not asked" is not "I was asked and could not look". A check whose inputs were never
 supplied is `skipped`; a check that was given what it needs and still could not examine the thing
 is `could-not-run`. Conflating them is how a review calls itself complete while its flagship check
 was never run — which happened here, because a documented command passed five paths and got two
 wrong.
+
+A build stage is `skipped` too when there is nothing for it to do: the stages of a board-only design, a simulation whose
+every part's record skips it, and since P1207 the simulation of a board that Wokwi has no model of. A skip is never a pass.
 
 ### `needs-measurement` and `advisory` — findings that do not change the outcome
 

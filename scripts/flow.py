@@ -34,8 +34,9 @@ The guide (P977) starts the text: NOW, the phase to act on now, its sentence and
 op of the step of a now phase that holds no offer, with needs you for a step the person takes (P1034), then DONE and
 LATER (with nothing open, the line that says so stands in place of NOW). One line per phase comes after it. With --json,
 next holds the step of that offer, raw (P1030), or the step of the simulate or the deploy (P1034), and an empty next
-means: read data.guide.now. A build that stopped only because Wokwi has no model of its board (board_not_in_wokwi) is
-counted as done there, and the guide says there is no simulation.
+means: read data.guide.now. When Wokwi has no model of the board, the build ends its simulation stage skipped with the
+code board_not_in_wokwi and exits 0 (P1207). The guide counts that build as done and says there is no simulation. An
+older record of such a build, with the stage could-not-run, is counted as done too and keeps exit 2 until the next build.
 
 The deploy phase reads the newest board log in sim/runs/board/: its time, image, verdict and cause, never its port or
 console text (P1043). Only ready seen on the image the project holds now is ok. Ready unknown is partial, and ready not

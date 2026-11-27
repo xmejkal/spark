@@ -94,7 +94,7 @@ def _built(path):
 
 def _diagram(path):
     diagram = json.loads(path.read_text())
-    lacking = {"wokwi-pushbutton", "wokwi-led"} - {part["type"] for part in diagram.get("parts", [])}
+    lacking = {"wokwi-pushbutton-6mm", "wokwi-led"} - {part["type"] for part in diagram.get("parts", [])}
     if lacking:
         return "no %s in it" % ", ".join(sorted(lacking))
     return None if build_service.wires_in(diagram) else "no wire in it"

@@ -152,7 +152,7 @@ class TheSvgTest(unittest.TestCase):
         # Seen in a render on 2026-10-16 (P268): a change to the picture is a decision, made by updating this number.
         # P949: the keys data-step and data-part, and the dot of each pin used or free, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "64800cebc45098b861a511c5b436b764c33310e76e1ad7cd5f22c110a0c61e0e")  # P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex, pill 7 clear of the rail signs; PR 4b: a caption per part outside its body, at its left edge (the review of PR #1379), seen in a render on 2026-11-20
+                         "3a804635f651ab378fc47aa90a843deff18227db9b3d2ae3da0f26c3c8f008ad")  # P1240: the 6 mm button over the gap in e12, e14, f12, f14, seen in Chrome on 2026-11-27. Before it, P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex, pill 7 clear of the rail signs; PR 4b: a caption per part outside its body, at its left edge (the review of PR #1379), seen in a render on 2026-11-20
 
     def test_no_jumper_bends_on_a_hole(self):
         # The refuter (P268): a bend on a hole of another group looks like a joint that is not there.
@@ -265,7 +265,7 @@ class TheRecordBoardSvgTest(unittest.TestCase):
         # and the dot of each pin used or free, seen in a render on 2026-11-20. P946: the FireBeetle drawn from the old
         # page's group (no glow, each word upright or sideways on the sheet), BAT on the RX edge, and no "row side not verified" in the note, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "9b6aceacfe058a6b1fc01ef3502466322512f847f5d4c8f78af999ce5651209a")  # P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex; PR 4b: the pads in the steps' words read bottom to top, a caption per part and its note line, seen in a render on 2026-11-20
+                         "97cafe0e2ecaefdc0cd5c41a685bd8304496b9d24f15cc567c689da957b48e5b")  # P1240: the 6 mm button over the gap in e30, e32, f30, f32, seen in Chrome on 2026-11-27. Before it, P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex; PR 4b: the pads in the steps' words read bottom to top, a caption per part and its note line, seen in a render on 2026-11-20
 
     def test_the_board_is_drawn_from_its_record_s_picture_with_its_credit(self):
         board = next(group for group in self.root.findall("svg:g", NS) if group.get("data-part") == wiring_steps.THE_BOARD)

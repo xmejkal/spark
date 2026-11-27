@@ -109,7 +109,8 @@ NOT_ROUTED_ENDING = StageEnding(build_codes.NOT_ROUTED, PROBLEMS,
                                 "tscircuit skips routing entirely when one net is unroutable, and that does not raise")
 CONVERTER_MISSING_ENDING = StageEnding(build_codes.TOOL_MISSING, COULD_NOT_RUN, "%s")
 FACT_MISSING_ENDING = StageEnding(build_codes.SIMULATION_FACT_MISSING, COULD_NOT_RUN, "%s")
-NO_WOKWI_PART_TYPE_ENDING = StageEnding(build_codes.BOARD_NOT_IN_WOKWI, COULD_NOT_RUN,
+#: A board Wokwi has no model of (P1207, D11): the stage had nothing to simulate, so it is skipped and the build exits 0.
+NO_WOKWI_PART_TYPE_ENDING = StageEnding(build_codes.BOARD_NOT_IN_WOKWI, SKIPPED,
                                         "the board record names no wokwi_part_type")
 CHIP_NOT_COMPILED_ENDING = StageEnding(build_codes.CHIP_NOT_COMPILED, COULD_NOT_RUN, "%s")
 #: A limit of the converter's mapping, not a defect in the design (audit B11): the converter's words follow.
