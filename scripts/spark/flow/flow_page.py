@@ -77,6 +77,7 @@ def page_words(phases):
     meanings = {str(code): meaning for code, meaning in request_codes.CODES.items()}
     marks = {status: MARKS[status][1] for status in (OK, PROBLEMS, COULD_NOT_RUN)}
     return {"offers": offers, "keep": keep, "send": flow_codes.SEND, "cancel": flow_codes.CANCEL, "copy": flow_codes.COPY, "copied": flow_codes.COPIED_SAYS,
+            "copied_line": flow_codes.COPIED_LINE_SAYS,
             "withdraw": flow_codes.WITHDRAW, "command": flow_codes.PAGE_COMMAND, "waiting": flow_codes.WAITING_SAYS,
             "now_button": flow_codes.NOW_BUTTON,
             "withdrawn": flow_codes.WITHDRAWN_SAYS, "waiting_for": flow_codes.WAITING_FOR, "last_request": flow_codes.LAST_REQUEST_SAYS,
@@ -186,7 +187,7 @@ class FlowHtmlPage:
              ".now>p:first-child::before{content:\"\";display:inline-block;width:8px;height:8px;"
              "margin-right:var(--space-s);border:2px solid var(--now-halo);border-radius:50%;vertical-align:1px}"
              ".next{font-size:var(--size-heading)}.muted,#request{color:var(--muted)}"
-             ".ask code{display:block;margin:var(--space-s) 0;padding:var(--space-s) var(--space-m);background:var(--bg);"
+             ".ask code,.run code{display:block;margin:var(--space-s) 0;padding:var(--space-s) var(--space-m);background:var(--bg);"
              "color:var(--ink);border:1px solid var(--line);border-radius:var(--radius-button);overflow-wrap:anywhere}"
              ".plane-amber{color:var(--amber-ink);background:var(--amber-plane);"
              "border-left:3px solid var(--amber-ink);padding:0 var(--space-s)}.plane-red{color:var(--red-ink);"

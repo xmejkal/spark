@@ -316,8 +316,8 @@ class GuideHtmlSection:
 
     def _now(self, page):
         """The NOW box (P1062): its phase and who acts, ON THE BOARD (`page.deployed`, only after a deploy), NEXT, the guide's
-        sentence, with the step link and the hooks of the sendable offer the now names (`sendable_now`), and the chat offer's
-        block (`_ask`). Gate A's row stands after ON THE BOARD (`_tested`, P1220). With no now, the line that says nothing is
+        sentence, with the step link and the hooks of the sendable offer the now names (`sendable_now`), the deploy's line to
+        type (`_run`, P1286) and the chat offer's block (`_ask`). Gate A's row stands after ON THE BOARD (`_tested`, P1220). With no now, the line that says nothing is
         open (P1043, read with `.get`) and the row, or nothing."""
         now = page.guide["now"]
         if not now:
@@ -332,7 +332,7 @@ class GuideHtmlSection:
         hooks = ' data-key="%s"%s' % (_text(offer["key"]), _makes_stale(offer)) if offer else ""
         lines.append('<p class="next"%s><strong>%s</strong> %s%s</p>' % (
             hooks, _text(flow_codes.NEXT_ACT_LABEL), _text(now["says"]), self._step_link(page)))
-        return "\n".join(['<div class="now">'] + lines + self._ask(now) + ["</div>"])
+        return "\n".join(['<div class="now">'] + lines + self._run(now) + self._ask(now) + ["</div>"])
 
     @staticmethod
     def _tested(page):
@@ -340,6 +340,15 @@ class GuideHtmlSection:
         guide's `gate_a.says`, as `flow.py show` prints it. [] when the guide holds no `gate_a` or holds null: it decides nothing."""
         gate_a = page.guide.get("gate_a")
         return ['<p class="tested"><strong>%s</strong> %s</p>' % (_text(flow_codes.TESTED_LABEL), _text(gate_a["says"]))] if gate_a else []
+
+    @staticmethod
+    def _run(now):
+        """The deploy's line to type (P1286, `now.command`, read with `.get`), under NEXT and before the chat offer's block:
+        LINE_TO_TYPE_LABEL in bold and the line in a code box, where the owner's script puts Copy; or, with no line, the
+        sentence `now.no_command`, muted. Nothing on every other now."""
+        if now.get("command"):
+            return ['<div class="run"><strong>%s</strong> <code>%s</code></div>' % (_text(flow_codes.LINE_TO_TYPE_LABEL), _text(now["command"]))]
+        return ['<p class="muted">%s</p>' % _text(now["no_command"])] if now.get("no_command") else []
 
     @staticmethod
     def _ask(now):

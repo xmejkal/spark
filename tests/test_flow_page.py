@@ -41,13 +41,17 @@ from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture, pa
 from spark.flow.page_sections import TICK, shown_phase, word_of  # noqa: E402
 from spark.flow.offer_steps import build_step  # noqa: E402
 from spark.flow.phase_readers import MARKS, Offer, Phase  # noqa: E402
-from spark.flow.show_flow import read_flow  # noqa: E402
+from spark.flow.show_flow import privacy_for, read_flow  # noqa: E402
+from spark.core.renderers import copy_line  # noqa: E402
+from spark.core.result import NextStep  # noqa: E402
+from spark.flow.flow_codes import LINE_TO_TYPE_LABEL, NO_LINE_TO_TYPE_SAYS  # noqa: E402
 from spark.flow.flow_codes import WIRED_BUILD_MESSAGE, WIRED_SHEET_MESSAGE, WIRED_STEP_MESSAGE  # noqa: E402
 from spark.flow.wired_board import day_of  # noqa: E402
 from spark.flow.fingerprint import FILES, fingerprint_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
 from test_flow import MAY_NOTE, SHARED, SOIL, WIRED_PICK, FlowTest, in_prague, with_needs  # noqa: E402
 from spark.flow.write_flow_page import FlowPageStore, PageParts, write_kept_page, WriteFlowPage, kept_pictures, kept_wiring, write_page  # noqa: E402
+from spark.flow.write_flow_page import masked_page  # noqa: E402
 
 #: The built fixture test_flow.py builds its projects from.
 BUILT = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
@@ -1682,6 +1686,46 @@ class TheGuideSectionTest(unittest.TestCase):
 
     def test_the_guide_adds_no_script_and_loads_only_the_font(self):
         assert_spark_s_script_only(self, guide_page(a_guide(), PageWiring([(1, "x")], [], [], None)))
+
+    def test_the_deploy_s_line_draws_its_run_block_after_next_and_before_the_ask_block(self):
+        # P1286: the label in bold and the line in a code box, escaped, with no hook that sends; the owner's script adds Copy
+        line = '"$HOME"/spark/scripts/look.py --project "$HOME"\'/a&b\''
+        now = dict(a_guide()["now"], phase="deploy", offer=None, chat_offer="look-at-board", command=line, no_command=None)
+        section = guide_lines(guide_page(a_guide(now=now)))[1]
+        block = '<div class="run"><strong>%s</strong> <code>%s</code></div>' % (LINE_TO_TYPE_LABEL, html.escape(line))
+        self.assertIn("&amp;", block)
+        self.assertEqual(section.count('class="run"'), 1)
+        self.assertIn(block, section)
+        self.assertLess(section.index('<p class="next"'), section.index(block))
+        self.assertLess(section.index(block), section.index('<div class="ask"'))
+        self.assertNotIn(NO_LINE_TO_TYPE_SAYS, section)
+        self.assertNotIn("data-makes-stale", section)
+
+    def test_with_no_line_the_now_box_says_why_and_draws_no_run_block(self):
+        now = dict(a_guide()["now"], phase="deploy", offer=None, command=None, no_command=NO_LINE_TO_TYPE_SAYS)
+        section = guide_lines(guide_page(a_guide(now=now)))[1]
+        self.assertIn('<p class="muted">%s</p>' % html.escape(NO_LINE_TO_TYPE_SAYS), section)
+        self.assertNotIn('class="run"', section)
+        for now in (a_guide()["now"], dict(a_guide()["now"], command=None, no_command=None)):
+            self.assertNotIn('class="run"', guide_page(a_guide(now=now)))
+            self.assertNotIn(NO_LINE_TO_TYPE_SAYS, guide_page(a_guide(now=now)))
+
+    def test_the_page_s_two_masks_leave_the_line_as_built(self):
+        # P1286: write_page masks the data with the secrets, then the rendered page with the paths: the line stays as
+        # copy_line built it, with no `~` and no `<project>`. HOME is a resolved temp folder, never the person's.
+        home = Path(tempfile.mkdtemp()).resolve()
+        project, scripts = home / "a&b", home / "spark" / "scripts"
+        project.mkdir()
+        scripts.mkdir(parents=True)
+        (scripts / "look.py").write_text("")
+        with mock.patch.dict(os.environ, {"HOME": str(home), "SPARK_HOME": str(home / ".local" / "share" / "spark")}):
+            line = copy_line(NextStep("look", ["--project", str(project)], "why"), home, privacy_for(project), scripts)
+            now = dict(a_guide()["now"], phase="deploy", offer=None, command=line, no_command=None)
+            page = FlowPage("t", [a_phase("one").to_dict()], "one", [], [], None, None, None, a_guide(now=now))
+            paths = privacy_for(project, secrets=())
+            text = paths.masked(FlowHtmlPage().text(masked_page(page, privacy_for(project), paths)))
+        self.assertEqual(line, '"$HOME"/spark/scripts/look.py --project "$HOME"\'/a&b\'')
+        self.assertIn("<code>%s</code>" % html.escape(line), text)
 
 
 class TheGuideThroughWritePageTest(unittest.TestCase):

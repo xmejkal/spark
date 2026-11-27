@@ -414,26 +414,28 @@ class PageView {
         this.confirm(row, this.picks.textContent, lines.concat(shared, this.words.picks_together), () => this.requests.sendPicks(keys));
     }
     /**
-     * P1122: one Copy in each chat offer's block, after its tell. A click writes the tell, the block's `code` text, to the
-     * clipboard and then says `copied`. It never sends and never touches the channel, and it is not among `buttons`, so a
-     * waiting request leaves it as it is.
+     * P1122: one Copy in each chat offer's block, after its tell, and P1286: one in the deploy's run block, after its line to
+     * type. A click writes the block's `code` text to the clipboard and then says `copied`, or `copied_line` for the run
+     * block. It never sends and never touches the channel, and it is not among `buttons`, so a waiting request leaves it as
+     * it is.
      */
     drawAsks() {
-        this.doc.querySelectorAll(".ask[data-key]").forEach((block) => {
+        this.doc.querySelectorAll(".ask[data-key], .run").forEach((block) => {
             const tell = block.querySelector("code");
             if (!tell)
                 return;
-            const made = this.button(this.words.copy, () => this.copyTell(tell.textContent, made));
+            const said = block.getAttribute("class") === "run" ? this.words.copied_line : this.words.copied;
+            const made = this.button(this.words.copy, () => this.copyTell(tell.textContent, made, said));
             block.appendChild(this.doc.createTextNode(" "));
             block.appendChild(made);
         });
     }
-    copyTell(tell, made) {
+    copyTell(tell, made, said) {
         const clipboard = this.win.navigator && this.win.navigator.clipboard;
         if (!clipboard)
             return Promise.resolve();
         return clipboard.writeText(tell).then(() => {
-            made.textContent = this.words.copied;
+            made.textContent = said;
         }, () => { });
     }
     /** The confirm box in `item`: its title, its lines, Send, which closes it and does `send`, and Cancel. */

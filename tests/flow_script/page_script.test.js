@@ -25,7 +25,8 @@ const WORDS = {
             "pick:light:led-red-5mm": { label: "Pick “Red LED” for light", says: ["Saves “Red LED” as the pick."] },
             "pick:display:oled-128": pick("display", "OLED 128"), "pick:display:lcd-1602": pick("display", "LCD 1602"),
             "pick:button:tactile-6mm": pick("button", "Tactile 6 mm"), "pick:button:tactile-12mm": pick("button", "Tactile 12 mm") },
-  send: "Send", cancel: "Cancel", copy: "Copy", copied: "Copied: paste it in Claude Code.", withdraw: "Withdraw", command: "/spark:page",
+  send: "Send", cancel: "Cancel", copy: "Copy", copied: "Copied: paste it in Claude Code.",
+  copied_line: "Copied: paste it in your own terminal.", withdraw: "Withdraw", command: "/spark:page",
   intro: "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page.",
   waiting: "Sent at %s. Nothing has run yet. To run it, type /spark:page in Claude Code.",
   withdrawn: "Withdrawn. If Claude had already started it, its answer shows here.",
@@ -94,8 +95,9 @@ class FakeElement {
  * section (P1062), whose NOW box holds the NOW line. With `ask`, the NOW box also holds a chat offer's block with that tell
  * (P1122), and the window's clipboard keeps what is written to it. With `needs`, the parts fold holds NEEDS' rows, each
  * `<li class="need" data-need>` with its picks, after the build's row (P1067); a pick's row says its part and what you have
- * (P1135). `words` is the words block (P1135: WORDS, unless a test gives a need a keep word). */
-function fakeWindow(db, owner = true, nowKey = "build", guide = true, ask = null, needs = false, words = WORDS) {
+ * (P1135). `words` is the words block (P1135: WORDS, unless a test gives a need a keep word). With `line`, the NOW box holds
+ * the deploy's run block with that line to type, before the chat offer's block (P1286). */
+function fakeWindow(db, owner = true, nowKey = "build", guide = true, ask = null, needs = false, words = WORDS, line = null) {
   const body = new FakeElement("body", { "data-fingerprint": "0123456789ab", "data-written": "2026-11-21T15:40:00+01:00" });
   const intro = body.appendChild(new FakeElement("p", { class: "intro" }));
   const section = guide ? new FakeElement("section", { id: "guide" }) : null;
@@ -103,6 +105,11 @@ function fakeWindow(db, owner = true, nowKey = "build", guide = true, ask = null
   const now = body.appendChild(new FakeElement("p", { "data-key": nowKey, "data-makes-stale": "" }));
   now.appendChild(new FakeElement("#text")).textContent = nowKey === "build" ? " " + BUILD_NOW : " Tell Claude a pick for each.";
   const offer = body.appendChild(new FakeElement("li", { "data-key": "build", "data-makes-stale": "" }));
+  const run = line === null ? null : body.appendChild(new FakeElement("div", { class: "run" }));
+  if (run) {
+    run.appendChild(new FakeElement("strong")).textContent = "In your own terminal";
+    run.appendChild(new FakeElement("code")).textContent = line;
+  }
   const block = ask === null ? null : body.appendChild(new FakeElement("div", { class: "ask", "data-key": "look-at-board" }));
   if (block) {
     block.appendChild(new FakeElement("strong")).textContent = "Ask Claude";
@@ -129,7 +136,7 @@ function fakeWindow(db, owner = true, nowKey = "build", guide = true, ask = null
     createTextNode: (text) => ({ text }),
     getElementById: (id) => (id === "spark-words" ? wordsBlock : null),
     querySelector: (selector) => ({ ".intro": intro, "#guide": section }[selector] || null),
-    querySelectorAll: (selector) => ({ "[data-makes-stale]": [now, offer, ...picks], ".ask[data-key]": block ? [block] : [] }[selector] || []),
+    querySelectorAll: (selector) => ({ "[data-makes-stale]": [now, offer, ...picks], ".ask[data-key], .run": [run, block].filter(Boolean) }[selector] || []),
   };
   const user = owner === null ? null : { isOwner: async () => owner };
   const uses = { db, user };
@@ -137,7 +144,7 @@ function fakeWindow(db, owner = true, nowKey = "build", guide = true, ask = null
   const win = { document, crypto: globalThis.crypto, navigator: { clipboard },
                 claude: { use: async (name) => (name in uses ? uses[name] : null) } };
   if (section) body.appendChild(section);
-  return { win, made, offer, now, body, intro, section, block, clipboard, list, picks };
+  return { win, made, offer, now, body, intro, section, block, run, clipboard, list, picks };
 }
 
 /** Fake: the Artifact database, in memory: the rows written and deleted, and the watches. `refuse` names a verb that rejects. */
@@ -428,6 +435,34 @@ test("P1122: from disk or for a viewer a chat offer's block gets no Copy, and it
     assert.equal(await script.start(win), null);
     assert.deepEqual(made, []);
     assert.deepEqual(block.children.map((child) => child.textContent), ["Ask Claude", TELL]);
+  }
+});
+
+const LINE = '"$HOME"/spark/scripts/look.py --project "$HOME"/lamp --no-simulation';
+
+test("P1286: the deploy's run block gets its own Copy, which copies the line and says to paste it in your own terminal", async () => {
+  const db = fakeDb();
+  const { win, made, block, run, clipboard } = fakeWindow(db, true, "build", true, TELL, false, WORDS, LINE);
+  await script.start(win);
+  const copyOf = (holder) => holder.children.filter((child) => child.tag === "button");
+  assert.deepEqual([copyOf(run).length, copyOf(block).length], [1, 1]);
+  assert.equal(run.children[3], copyOf(run)[0], "after the label and the line");
+  await copyOf(run)[0].click();
+  assert.deepEqual(clipboard.written, [LINE]);
+  assert.equal(copyOf(run)[0].textContent, "Copied: paste it in your own terminal.");
+  await copyOf(block)[0].click();
+  assert.deepEqual(clipboard.written, [LINE, TELL]);
+  assert.equal(copyOf(block)[0].textContent, "Copied: paste it in Claude Code.");
+  assert.equal(db.rows.size, 0, "nothing is sent");
+  assert.equal(buttons(made).filter((each) => each.textContent.startsWith("Copied")).length, 2);
+});
+
+test("P1286: from disk or for a viewer the run block gets no Copy, and its line stays to select", async () => {
+  for (const [db, owner] of [[null, true], [fakeDb(), false]]) {
+    const { win, made, run } = fakeWindow(db, owner, "build", true, null, false, WORDS, LINE);
+    assert.equal(await script.start(win), null);
+    assert.deepEqual(made, []);
+    assert.deepEqual(run.children.map((child) => child.textContent), ["In your own terminal", LINE]);
   }
 });
 
