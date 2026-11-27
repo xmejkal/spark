@@ -17,6 +17,7 @@ from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
 from spark.flow import deploy_reading, flow_codes, offer_steps
 from spark.flow.no_model import stops_only_for_no_model
+from spark.flow.pick_notes import COMPUTE, candidate_label, pick_id_of, pick_notes
 from spark.records import record_kind, records_codes, store
 from spark.records.brief import Brief
 from spark.core.errors import CodedMessageError
@@ -38,15 +39,14 @@ MARKS = {OK: (None, "✓"), PROBLEMS: ("problems", "✗"), COULD_NOT_RUN: ("coul
 NOT_SIMULATED_SAYS = {firmware_codes.NO_SIM_TOML: [flow_codes.NO_SIM_MESSAGE],
                       firmware_codes.NO_IMAGE: [flow_codes.NO_IMAGE_MESSAGE, flow_codes.SCENARIO_HINT]}
 #: Value: one offer of a phase: its key (`pick:soil:x-led`), its label (its button's words), its effect (sentences that
-#: name every write it makes), `makes_stale` (P829), `step`, its NextStep (P1030), and a pick's `part` (P1067) and `have`
-#: (`sheet.have_of`, P1135), else None. The JSON of `data` holds all but the step, which is in `next`.
-Offer = namedtuple("Offer", "key label effect makes_stale step part have", defaults=(None, None))
+#: name every write it makes), `makes_stale` (P829), `step`, its NextStep (P1030), a pick's `part` (P1067) and `have`
+#: (`sheet.have_of`, P1135), else None, and a pick's `notes` (`pick_notes`, P1180), else (). The JSON of `data` holds all
+#: but the step, which is in `next`.
+Offer = namedtuple("Offer", "key label effect makes_stale step part have notes", defaults=(None, None, ()))
 #: Value (P1135): a need of the parts phase that counts: its id, `picked` (its picks by name) and `says`, its own lines.
 PartsNeed = namedtuple("PartsNeed", "need picked says")
 #: The parts phase offers at most this many picks per need (P976, the PO, 2026-11-21: "so many unrelated things").
 OFFERS_PER_NEED = 3
-#: The verb of the need a board serves (`needs`' board need): a board is a plausible pick for it whatever its words.
-COMPUTE = "compute"
 #: The file whose presence says a phase holds something now, for `makes_stale`.
 HELD_FILES = {flow_codes.REQUIREMENTS: Path(REQUIREMENTS_FILE), flow_codes.BUILD: BUILD_RECORD_FILE,
               flow_codes.BREADBOARD: Path(sheet.SHEET)}
@@ -58,7 +58,7 @@ class Phase(namedtuple("Phase", "phase status mark by says offers needs", defaul
 
     def to_dict(self):
         return dict(self._asdict(), offers=[dict(key=offer.key, label=offer.label, effect=offer.effect, makes_stale=list(offer.makes_stale),
-                                                 part=offer.part, have=offer.have) for offer in self.offers],
+                                                 part=offer.part, have=offer.have, notes=list(offer.notes)) for offer in self.offers],
                     needs=None if self.needs is None else [need._asdict() for need in self.needs])
 
 
@@ -200,11 +200,6 @@ def reserve_sentence(need, candidate):
     return flow_codes.RESERVE_MESSAGE % (owned, label, need) if owned else flow_codes.TO_GET_MESSAGE
 
 
-def candidate_label(candidate):
-    """The part's own name, or its id when its record names none."""
-    return candidate.get("label") or candidate["id"] or candidate["entry"]
-
-
 def is_listed(project):
     """True when the project is on the person's list, False when it is not, None when the list cannot be read: then the
     build's history sentence is left out and the build is still offered."""
@@ -220,11 +215,6 @@ def other_pick_sentence(plan, need, problems):
     other = problems[0]
     return flow_codes.NO_NEW_PICK_MESSAGE % (need, ", ".join(plan.needs_picking(other["subject"], need)) or "another need",
                                              plan.name_of(other["subject"]), other["sentence"])
-
-
-def pick_id_of(candidate):
-    """The id a pick of `candidate` names: its record's, or its drawer entry's key."""
-    return candidate["id"] or candidate["entry"]
 
 
 def is_plausible(need, candidate):
@@ -265,8 +255,8 @@ def left_out_lines(need, more, refused):
 
 def need_picks(project, need, plan, listed):
     """(the pick Offers of one matched `need`, its says lines), P976: its plausible candidates in the matcher's order, but
-    its current pick and those `plan` refuses, at most OFFERS_PER_NEED. A need with candidates and none plausible, or one
-    whose pick another need's pick refuses, gets no offers and one line that says why."""
+    its current pick and those `plan` refuses, at most OFFERS_PER_NEED, each with its notes (P1180). A need with candidates
+    and none plausible, or one whose pick another need's pick refuses, gets no offers and one line that says why."""
     plausible = [candidate for candidate in need["candidates"] if is_plausible(need, candidate)]
     if need["candidates"] and not plausible:
         return [], [flow_codes.NO_PLAUSIBLE_MESSAGE % need["need"]]
@@ -279,28 +269,16 @@ def need_picks(project, need, plan, listed):
         elif problems:
             return [], [other_pick_sentence(plan, need["need"], problems)]
         else:
-            offered.append(pick_offer(project, need["need"], candidate, listed, pick_notes(project, plan, need, candidate, changes)))
+            offered.append(pick_offer(project, need["need"], candidate, listed, freed_sentences(plan, need, changes))
+                           ._replace(notes=pick_notes(project, plan, need, candidate)))
     return offered[:OFFERS_PER_NEED], left_out_lines(need["need"], len(offered) - OFFERS_PER_NEED, refused)
 
 
-def pick_notes(project, plan, need, candidate, changes):
-    """The sentences the project's `needs.PickPlan` gives of a pick of `candidate` for the matched `need`, with its drawer
-    `changes`: a hold it lets go says whose it was (`freed`), and a board the parts list would refuse says so (P991)."""
+def freed_sentences(plan, need, changes):
+    """The effect's sentences of what a pick for the matched `need` lets go, by the project's `needs.PickPlan` and the pick's
+    drawer `changes`: a hold it lets go says whose it was (`freed`)."""
     of_old, unpicked = plan.freed(changes, need["need"])
-    refusal = board_file_refusal(project, plan, need, candidate)
-    return (([flow_codes.FREES_MESSAGE] if of_old else []) + ([flow_codes.FREES_UNPICKED_MESSAGE] if unpicked else [])
-            + ([flow_codes.NO_BOARD_FILE_MESSAGE % candidate_label(candidate)] if refusal else []))
-
-
-def board_file_refusal(project, plan, need, candidate):
-    """The sentence with which the parts list would refuse a pick of `candidate` for a compute `need` (P991), or None: only for a
-    drawer entry that is no record spark knows, and only when the refusal names it — with a board picked by another need,
-    the parts list places that board and refuses nothing; with two, it asks for one board. None for any other pick."""
-    pick = plan.resolve(pick_id_of(candidate)) if need["does"] == COMPUTE else None
-    if not pick or "entry" not in pick:
-        return None
-    problems = need_requirements.board_problems(plan.after(need["need"], pick), plan.known, plan.entries, project)
-    return next((problem["sentence"] for problem in problems if problem["subject"] == pick["entry"]), None)
+    return ([flow_codes.FREES_MESSAGE] if of_old else []) + ([flow_codes.FREES_UNPICKED_MESSAGE] if unpicked else [])
 
 
 def picked_names(plan, need):
@@ -310,12 +288,12 @@ def picked_names(plan, need):
             for pick in need.get("pick") or []]
 
 
-def pick_offer(project, need, candidate, listed, notes):
-    """The Offer to pick `candidate` for `need`, one the project's `needs.PickPlan` does not refuse. `notes` are the
-    sentences `pick_notes` gave of it. `listed` says whether the project is on the person's list."""
+def pick_offer(project, need, candidate, listed, freed):
+    """The Offer to pick `candidate` for `need`, one the project's `needs.PickPlan` does not refuse. `freed` are the
+    sentences `freed_sentences` gave of it. `listed` says whether the project is on the person's list."""
     pick_id = pick_id_of(candidate)
     key, label = "%s:%s:%s" % (flow_codes.PICK, need, pick_id), flow_codes.PICK_LABEL % (candidate_label(candidate), need)
-    said = [flow_codes.PICK_MESSAGE % (candidate_label(candidate), need), reserve_sentence(need, candidate)] + notes
+    said = [flow_codes.PICK_MESSAGE % (candidate_label(candidate), need), reserve_sentence(need, candidate)] + freed
     said += [] if listed else [flow_codes.LIST_PROJECT_MESSAGE]
     return Offer(key, label, " ".join(said + [flow_codes.PICK_HISTORY_MESSAGE]), makes_stale(project, flow_codes.PICK),
                  offer_steps.pick_step(project, need, pick_id, candidate_label(candidate)), candidate_label(candidate),
@@ -347,8 +325,7 @@ def owed_facts(plan, key):
     them; [] when spark has no readable record of it."""
     path = plan.paths.get(("part", key))
     record = record_kind._parse(path) if path else None
-    passed = need_requirements.LAYOUT_FACTS + need_requirements.SIMULATION_FACTS  # P996: neither refuses the parts list
-    return [fact for fact in record_kind.owes(record) if fact not in passed] if isinstance(record, dict) else []
+    return need_requirements.blocking_facts(record_kind.owes(record)) if isinstance(record, dict) else []
 
 
 def named_pick(plan, key):

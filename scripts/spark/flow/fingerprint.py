@@ -21,11 +21,17 @@ FILES = (needs.FILE, Path(REQUIREMENTS_FILE), BUILD_RECORD_FILE)
 SHORT = 12
 
 
+def read_offer(offer):
+    """An Offer as the fingerprint reads it: its key, effect and makes_stale, and a pick's notes when it has some (P1180), so
+    a store change that adds or drops a note makes an older page's request stale, and an offer with none reads as before."""
+    said = {"key": offer.key, "effect": offer.effect, "makes_stale": list(offer.makes_stale)}
+    return dict(said, notes=list(offer.notes)) if offer.notes else said
+
+
 def fingerprint_of(project, phases):
-    """The sha256, in hex, of the offers of `phases` (each Phase's key, effect and makes_stale, as canonical JSON) and of
-    each of FILES in `project`, in that order."""
-    offers = [{"key": offer.key, "effect": offer.effect, "makes_stale": list(offer.makes_stale)}
-              for phase in phases for offer in phase.offers]
+    """The sha256, in hex, of the offers of `phases` (each as `read_offer` reads it, as canonical JSON) and of each of FILES
+    in `project`, in that order."""
+    offers = [read_offer(offer) for phase in phases for offer in phase.offers]
     digest = hashlib.sha256()
     digest.update(json.dumps(offers, sort_keys=True, ensure_ascii=False).encode("utf-8"))
     for name in FILES:

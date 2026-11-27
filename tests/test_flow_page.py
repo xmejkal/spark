@@ -9,6 +9,7 @@ It covers `flow_page`, `write_flow_page`, `show_flow.read_flow` and the keep ste
 
 import contextlib
 import datetime
+import hashlib
 import html
 import html.parser
 import io
@@ -40,8 +41,9 @@ from spark.breadboard import before_power, sheet  # noqa: E402
 from spark.flow.flow_page import FlowHtmlPage, FlowPage, PageWiring, Picture, page_words  # noqa: E402
 from spark.flow.page_sections import TICK, shown_phase, word_of  # noqa: E402
 from spark.flow.offer_steps import build_step  # noqa: E402
-from spark.flow.phase_readers import MARKS, Offer, Phase  # noqa: E402
-from spark.flow.show_flow import read_flow  # noqa: E402
+from spark.flow.phase_readers import MARKS, Offer, PartsNeed, Phase  # noqa: E402
+from spark.flow.show_flow import need_lines, read_flow  # noqa: E402
+from spark.records.folder_walk import MISSING  # noqa: E402
 from spark.flow import flow_codes  # noqa: E402
 from spark.flow.flow_codes import WIRED_BUILD_MESSAGE, WIRED_SHEET_MESSAGE, WIRED_STEP_MESSAGE  # noqa: E402
 from spark.flow.wired_board import day_of  # noqa: E402
@@ -1970,9 +1972,10 @@ def a_need_phase(says=("1 of 2 needs picked",), status="partial"):
     (P1135), neither picked."""
     def pick(need, part):
         return {"key": "pick:%s:%s" % (need, part), "label": "Pick %s for %s" % (part, need), "effect": "Saves %s." % part,
-                "makes_stale": ["requirements"], "part": part, "have": "in your drawer"}
+                "makes_stale": ["requirements"], "part": part, "have": "in your drawer", "notes": []}
     offers = [pick("light", "led-red"), pick("button", "tact-6mm"), pick("light", "led-green"), pick("button", "tact-12mm"),
-              {"key": "needs-drop:light", "label": "Drop the light need", "effect": "Drops it.", "makes_stale": [], "part": None, "have": None}]
+              {"key": "needs-drop:light", "label": "Drop the light need", "effect": "Drops it.", "makes_stale": [], "part": None, "have": None,
+               "notes": []}]
     needs = [{"need": need, "picked": [], "says": []} for need in ("light", "button")]
     return dict(a_phase("parts", status, says=says).to_dict(), offers=offers, needs=needs)
 
@@ -2185,14 +2188,18 @@ def wired_effect(own):
     return " ".join([WIRED_PICK, own] + SHARED[1:])
 
 
+#: The note of a pick spark has no board file for (P1180).
+NO_BOARD_FILE = "Spark cannot build from it: no board file."
+
+
 def a_picked_phase():
     """A parts phase dict (P1135): button picked “Tactile 6 mm”, with one more pick and a line of its own, and board not
-    picked, with a pick spark has no board file for and one it has."""
-    def pick(need, part, name, effect):
+    picked, with a pick spark has no board file for, which says so in its note (P1180), and one it has."""
+    def pick(need, part, name, effect, notes=()):
         return {"key": "pick:%s:%s" % (need, part), "label": "Pick “%s” for %s" % (name, need), "effect": effect,
-                "makes_stale": ["requirements"], "part": name, "have": "in your drawer"}
+                "makes_stale": ["requirements"], "part": name, "have": "in your drawer", "notes": list(notes)}
     offers = [pick("button", "tact-12mm", "Tactile 12 mm", wired_effect("Saves “Tactile 12 mm” as the pick.")),
-              pick("board", "beetle", "Beetle", wired_effect("Saves “Beetle” as the pick. Spark cannot build from this pick: it has no board file for “Beetle”.")),
+              pick("board", "beetle", "Beetle", wired_effect("Saves “Beetle” as the pick."), [NO_BOARD_FILE]),
               dict(pick("board", "c6", "XIAO C6", wired_effect("Saves “XIAO C6” as the pick.")), have="to get")]
     needs = [{"need": "button", "picked": ["Tactile 6 mm"], "says": ["Not shown for button: 1 more pick."]},
              {"need": "board", "picked": [], "says": []}]
@@ -2230,8 +2237,8 @@ class TheLessTextTest(unittest.TestCase):
         self.assertEqual(self.parts.count("Not shown for button"), 1)
 
     def test_a_pick_s_row_reads_its_part_and_what_you_have_and_keeps_its_board_file_line(self):
-        self.assertIn('<li data-key="pick:board:beetle" data-makes-stale="requirements">Beetle (in your drawer)<p class="muted">'
-                      'Spark cannot build from this pick: it has no board file for “Beetle”.</p></li>', self.parts)
+        self.assertIn('<li data-key="pick:board:beetle" data-makes-stale="requirements">Beetle (in your drawer)<p class="muted" '
+                      'id="note-pick:board:beetle">Spark cannot build from it: no board file.</p></li>', self.parts)
         self.assertIn('<li data-key="pick:board:c6" data-makes-stale="requirements">XIAO C6 (to get)</li>', self.parts)
         for said in ("Saves “Beetle”", html.escape(WIRED_PICK), MAY_NOTE):
             self.assertNotIn(said, before_developer(self.text))
@@ -2247,8 +2254,8 @@ class TheLessTextTest(unittest.TestCase):
     def test_the_developer_fold_keeps_every_key_label_and_effect_and_a_pick_s_have(self):
         inside = developer(self.text)
         beetle = a_picked_phase()["offers"][1]
-        self.assertIn("<li><code>pick:board:beetle</code> Pick “Beetle” for board (in your drawer): %s</li>" % html.escape(beetle["effect"]),
-                      inside)
+        self.assertIn("<li><code>pick:board:beetle</code> Pick “Beetle” for board (in your drawer): %s %s</li>"
+                      % (html.escape(beetle["effect"]), NO_BOARD_FILE), inside)
         self.assertIn("<li><code>build</code> Build the board: Builds it.</li>", inside)
 
     def test_a_pick_s_send_box_says_the_shared_lines_apart_and_keep_names_a_picked_need_s_part(self):
@@ -2257,6 +2264,56 @@ class TheLessTextTest(unittest.TestCase):
             WIRED_PICK, "Saves “XIAO C6” as the pick."] + SHARED[1:] + ["These steps may be marked out of date: requirements."])
         self.assertEqual(words["keep"], {"button": "keep “Tactile 6 mm”"})
         self.assertEqual(page_words([a_need_phase()])["keep"], {})
+
+
+class ThePickNotesOnThePageTest(unittest.TestCase):
+    """P1180 (council P1251: "page and show render pick_notes from one place"): a pick's notes stand muted in its row, after
+    its own lines in its Send box and after its effect in the developer fold, and the fingerprint reads them."""
+
+    NOTES = ("Spark needs more facts about it: ask Claude.", "You may not have it: check your drawer.")
+
+    def phase(self, notes=NOTES):
+        """The parts Phase of one light need with two picks, the first with `notes`."""
+        offers = [Offer("pick:light:x-a", "Pick “A” for light", "Saves “A”.", ("requirements",), None, "A", "to get", notes),
+                  Offer("pick:light:x-b", "Pick “B” for light", "Saves “B”.", ("requirements",), None, "B", "in your drawer")]
+        return Phase("parts", "partial", "◐", "you", ["0 of 1 needs picked"], offers, [PartsNeed("light", [], [])])
+
+    def test_the_row_and_show_s_line_say_the_same_notes_and_a_pick_with_none_has_no_line(self):
+        parts = parts_fold(order_page(phases=[self.phase().to_dict()]))
+        self.assertIn('<li data-key="pick:light:x-a" data-makes-stale="requirements">A (to get)<p class="muted" id="note-pick:light:x-a">'
+                      '%s</p></li>' % " ".join(self.NOTES), parts)
+        self.assertIn('<li data-key="pick:light:x-b" data-makes-stale="requirements">B (in your drawer)</li>', parts)
+        self.assertIn("        pick:light:x-a: %s" % " ".join(self.NOTES), need_lines(self.phase()))
+
+    def test_the_send_box_says_the_wired_line_the_pick_s_own_its_note_then_the_shared_ones(self):
+        says = page_words([a_picked_phase()])["offers"]["pick:board:beetle"]["says"]
+        self.assertEqual(says, [WIRED_PICK, "Saves “Beetle” as the pick.", NO_BOARD_FILE] + SHARED[1:]
+                         + ["These steps may be marked out of date: requirements."])
+
+    def test_the_words_of_a_pick_with_notes_name_them_and_of_one_with_none_do_not(self):
+        offers = page_words([a_picked_phase()])["offers"]
+        self.assertEqual(offers["pick:board:beetle"]["notes"], [NO_BOARD_FILE])
+        self.assertNotIn("notes", offers["pick:board:c6"])
+
+    def test_a_pick_on_the_now_line_says_its_notes_under_it_and_its_row_leaves_the_fold(self):
+        """The PR refuter's finding 1: the parts fold leaves out the NOW line's offer, so its notes stand under NEXT."""
+        now = {"phase": "parts", "by": ["you"], "says": "Pick a part for light.", "offer": "pick:light:x-a", "needs": ["light"],
+               "steps": None}
+        text = order_page(guide=a_guide(now=now), phases=[self.phase().to_dict()])
+        box = text.split('<div class="now">')[1].split("</div>")[0]
+        self.assertIn('<p class="muted" id="note-pick:light:x-a">%s</p>' % " ".join(self.NOTES), box)
+        self.assertEqual(text.count('id="note-pick:light:x-a"'), 1, "the note stands once, under NEXT, not in the fold")
+        none = order_page(guide=a_guide(now=dict(now, offer="pick:light:x-b")), phases=[self.phase().to_dict()])
+        self.assertNotIn('id="note-pick:light:x-b"', none)
+
+    def test_the_fingerprint_reads_a_pick_s_notes_and_an_offer_with_none_as_before(self):
+        project = Path(tempfile.mkdtemp())
+        self.assertNotEqual(fingerprint_of(project, [self.phase()]), fingerprint_of(project, [self.phase(notes=())]))
+        offers = [{"key": offer.key, "effect": offer.effect, "makes_stale": list(offer.makes_stale)} for offer in self.phase(()).offers]
+        digest = hashlib.sha256(json.dumps(offers, sort_keys=True, ensure_ascii=False).encode("utf-8"))
+        for _name in FILES:
+            digest.update(hashlib.sha256(MISSING).digest())
+        self.assertEqual(fingerprint_of(project, [self.phase(notes=())]), digest.hexdigest())
 
 
 class TheNowBoxAtThePartsTest(FlowTest):

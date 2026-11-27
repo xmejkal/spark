@@ -16,10 +16,10 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
 
 - `phases`: the nine phases in order, `idea`, `needs`, `parts`, `requirements`, `build`, `breadboard`, `firmware`,
   `simulate` and `deploy`. Each is `{phase, status, mark, by, says, offers, needs}`.
-- `fingerprint`: the sha256 of the current offers (each `key`, `effect` and `makes_stale`, as canonical JSON) and of
-  `.spark/needs.json`, `requirements.json` and `.spark/build.json`. It changes when one of these files changes, or when
-  an offer changes: a pick's effect changes with the drawer count. No other file of the project changes it, except through
-  an offer. The page carries its first 12 hex digits ([P829](https://github.com/xmejkal/spark/issues/1187)).
+- `fingerprint`: the sha256 of the current offers (each `key`, `effect` and `makes_stale`, and a pick's `notes` when it
+  has some, as canonical JSON) and of `.spark/needs.json`, `requirements.json` and `.spark/build.json`. It changes when
+  one of these files changes, or when an offer changes: a pick's effect changes with the drawer count, and its notes
+  with an unsure entry or a store record. No other file of the project changes it, except through an offer. The page carries its first 12 hex digits ([P829](https://github.com/xmejkal/spark/issues/1187)).
 - `stands_at`: the phase of `guide.now`, kept for old readers. Read `guide.now.phase`: it is the same phase, by one rule
   ([P1030](https://github.com/xmejkal/spark/issues/1510)). It is `null` when no phase is open (the deploy is `ok`), or with a phase list a test swaps in.
 - `guide` ([P977](https://github.com/xmejkal/spark/issues/1407)): what the person does now. `now` is `{phase, by, says,
@@ -60,10 +60,10 @@ The words of a phase:
 | `mark` | the glyph a page shows for the status |
 | `by` | who does the phase: `you`, `claude` or `your terminal` |
 | `says` | sentences for a person. A value nobody recorded reads `unknown` |
-| `offers` | `{key, label, effect, makes_stale, part, have}`: a next step, with the six keys under this table. `flow.py` runs none |
+| `offers` | `{key, label, effect, makes_stale, part, have, notes}`: a next step, with the seven keys under this table. `flow.py` runs none |
 | `needs` | the parts phase's needs that count, each `{need, picked, says}` (under the offer's keys); `null` on every other phase |
 
-An offer has six keys ([P829](https://github.com/xmejkal/spark/issues/1187)):
+An offer has seven keys ([P829](https://github.com/xmejkal/spark/issues/1187)):
 
 - `key`: the step, such as `pick:light:led-red-5mm`, `requirements` or `build`.
 - `label`: the words of its button, such as `Build the board`.
@@ -71,6 +71,7 @@ An offer has six keys ([P829](https://github.com/xmejkal/spark/issues/1187)):
 - `makes_stale`: the phases the step can make out of date. It lists only the phases that hold something now. With requirements.json there, a pick names `requirements`. Write the parts list names `build` when `.spark/build.json` is there and `breadboard` when breadboard.md is there. A build names none.
 - `part`: a pick's part, by the name its label quotes, else `null` ([P1067](https://github.com/xmejkal/spark/issues/1565)).
 - `have`: what the person has of a pick's part, in the breadboard sheet's words: `yours` (this project holds a piece), `in your drawer` (a count, `many` or a count nobody gave) or `to get`; else `null` ([P1135](https://github.com/xmejkal/spark/issues/1670)). The page's row of a pick says `<part> (<have>)`.
+- `notes`: a pick's notes, plain sentences in this order, `[]` for none and for every other offer ([P1180](https://github.com/xmejkal/spark/issues/1722)): spark cannot build from it (no board file), its record lacks a fact the parts list needs, its record is broken, spark cannot simulate it yet, and the person may not have it. Pass them on and never parse them: their facts are on the `parts.py --match` row (`owes`, `broken`, `unsure`) and in the board-file refusal. `flow.py show` says them on a line of its own under the need's line, and the page says them muted under the pick.
 
 A need of `needs` (P1135) has its id, `picked` (its picks by name, `[]` for none) and `says`, its own lines, which are not in the phase's `says`. A parts phase with `problems` or `could-not-run` has `needs: null`, and one with no need `[]`. A need's pick offers are the phase's, by the need in their key. `guide.now.needs` is another key: a list of ids. `flow.py show --help` and `flow.py page --help` say each verb's job in its Operation's own words.
 
@@ -135,9 +136,8 @@ an owned drawer entry with none, so the first offers are what spark can build fr
 `picked`, such as `["MH-ET LIVE 2.9 Inch E-paper Module, …"]`. The text and the page say it as `✓ picked “…”.`, with ", "
 between two picks. A drawer entry is named by the record it says it is, else by its label. A pick offer for a `compute` need whose
 candidate is no record spark knows asks the parts list's own rule (`need_requirements.board_problems`) with the pick
-made. When that refusal names the candidate, the effect says `Spark cannot build from this pick: it has no board file
-for “Beetle ESP32 Microcontroller”.` before the history sentence. A board that another need picks is the board the
-parts list places, so then the offer says nothing. An offer for a need that does not compute never says it.
+made. When that refusal names the candidate, the offer's first note says `Spark cannot build from it: no board file.`
+(P1180; the effect no longer says it). A board that another need picks is the board the parts list places, so then the offer says nothing. An offer for a need that does not compute never says it.
 
 The build phase reads `.spark/build.json`. If the folder of `check_spine.py --keep` is a project, the build writes this
 file and lists it under `kept`. It holds the build's `status`, its `stages`, the `requirements` file (`null` after a build of the reference design, and the build phase says so, P1095), its sha256, whether this build wrote `dist/` (`dist_written`, which `check_all` reads, P816; when it is false and a `dist/` is there, the build phase says the last build did not write it, P1088) and the
@@ -171,11 +171,11 @@ steps, NEXT ends in the link "One at a time: start at step N", the wiring sectio
 project stands at" is not drawn; a page from a caller that gives no guide keeps it.
 
 Then come three folds, each a `<details class="fold" data-fold="NAME">` with a one-line summary, open only while its job is NOW: the parts
-(`parts`: the parts phase's mark, word and lines, then one row per entry of `needs` with something to show: its name, `✓ picked “…”.` in `<p class="picked" id="picked-NEED">` when it is picked, its picks, each `<part> (<have>)` with the line that spark cannot build from it, muted, then the need's own lines, muted; then the parts list and the build, each its label alone, P1135), the wiring
+(`parts`: the parts phase's mark, word and lines, then one row per entry of `needs` with something to show: its name, `✓ picked “…”.` in `<p class="picked" id="picked-NEED">` when it is picked, its picks, each `<part> (<have>)` with its notes, muted, in `<p class="muted" id="note-KEY">` (P1180; a pick on the NOW line has its row there, under NEXT, and not in the fold), then the need's own lines, muted; then the parts list and the build, each its label alone, P1135), the wiring
 (`wiring`, when the project holds a `requirements.json`, [P828](https://github.com/xmejkal/spark/issues/1186); open when `now.with_wiring` is true) and
 the pictures (`pictures`, open with the wiring). Then the bench note, and last the developer fold (`developer`), always closed: the guide's DONE and LATER lines, muted, as `data.guide.done` and `later` say them (so every label of `show` stands in the page's text, D22), then each phase
 closed under its heading (the phase name, a mark and a status word), with who does it, what it says and its offers' keys, labels, a pick's `have` in parentheses, and effects as
-text (a step's effect stands only here and in its Send box), then the marks and the line that names each record whole. No mark shows a tick for a status that is not ok. In "Before you power it", the host requirements of one part that
+text, a pick's after its notes (a step's effect stands only here and in its Send box), then the marks and the line that names each record whole. No mark shows a tick for a status that is not ok. In "Before you power it", the host requirements of one part that
 stand together are one item, with the part's name once. It has the lines "Before you power it" first, then
 the wiring steps, one connection each, which a person can follow to wire a breadboard. When the project is not built, or
 was built from other requirements, the section shows no steps and says why in the refusal's own words. A failure that is not the sheet's own refusal gives one fixed sentence: run the build again. The sentence about the Breadboard picture shows only when that picture is drawn. The pictures
@@ -276,7 +276,7 @@ only once the delete is done says "Withdrawn. If Claude had already started it, 
 watching that request's answer. The script watches the latest request by `at`, and ignores a snapshot older than the
 page's own request, then the row `answers/<id>`.
 
-Several picks go in one row ([P1067](https://github.com/xmejkal/spark/issues/1565)). Each need's row in the parts fold, `<li class="need" data-need="…">`, is a radiogroup named by the need: "not now" first and checked, then a native radio per pick, labelled by its row's text, `<part> (<have>)` (P1135). On a picked need the first radio reads "keep “…”" (the words block's `keep`), and the group's `aria-describedby` points at its `picked-NEED` line. Every other offer's `<li>` becomes its button alone, and the NOW line keeps its sentence. A pick's Send box opens with the wired sentence on a board that can be wired (P1044), then says its own sentences, then the others every pick of the project says (the list sentence and the history sentence); a Send of several picks says a shared one once, after the picks' own lines. The browser keeps one choice per need, and a choice sends nothing. After the need rows one teal Send names the chosen picks, "Send 2 picks (display, button)", grey with "Choose a part first." under it while none is chosen.
+Several picks go in one row ([P1067](https://github.com/xmejkal/spark/issues/1565)). Each need's row in the parts fold, `<li class="need" data-need="…">`, is a radiogroup named by the need: "not now" first and checked, then a native radio per pick, labelled by its row's text, `<part> (<have>)` (P1135), and described by its note line, `aria-describedby="note-KEY"`, when it has one (P1180). On a picked need the first radio reads "keep “…”" (the words block's `keep`), and the group's `aria-describedby` points at its `picked-NEED` line. Every other offer's `<li>` becomes its button alone, and the NOW line keeps its sentence. A pick's Send box opens with the wired sentence on a board that can be wired (P1044), then says its own sentences and its notes (P1180), then the others every pick of the project says (the list sentence and the history sentence); a Send of several picks says a shared one once, after the picks' own lines, but a note stays on its pick's line, because a note says "it". The browser keeps one choice per need, and a choice sends nothing. After the need rows one teal Send names the chosen picks, "Send 2 picks (display, button)", grey with "Choose a part first." under it while none is chosen.
 Its box says each pick, a line two picks share once, and "Spark checks the picks together. If one fails, spark saves none." Its Send writes the row with `keys`, the chosen keys in the page's order, in place of `key`. While it waits the radios are grey and keep their choice, back after "Could not send" or Withdraw. The NOW line's pick keeps its one-click button.
 
 The answer row holds `flow.py run-request`'s `data` unchanged ([a page request](#a-page-request)). The script says it in

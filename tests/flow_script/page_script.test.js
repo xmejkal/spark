@@ -70,6 +70,8 @@ class FakeElement {
   get firstChild() { return this.children[0] || null; }
   get lastChild() { return this.children[this.children.length - 1] || null; }
   getAttribute(name) { return Object.prototype.hasOwnProperty.call(this.attributes, name) ? this.attributes[name] : null; }
+  get id() { return this.attributes.id || ""; }  // P1180: the id property reads and writes the id attribute, as in the DOM
+  set id(value) { this.attributes.id = String(value); }
   setAttribute(name, value) { this.attributes[name] = String(value); }
   addEventListener(kind, act) { this.listeners[kind] = act; }
   appendChild(child) { child.parentNode = this; this.children.push(child); return child; }
@@ -94,8 +96,9 @@ class FakeElement {
  * section (P1062), whose NOW box holds the NOW line. With `ask`, the NOW box also holds a chat offer's block with that tell
  * (P1122), and the window's clipboard keeps what is written to it. With `needs`, the parts fold holds NEEDS' rows, each
  * `<li class="need" data-need>` with its picks, after the build's row (P1067); a pick's row says its part and what you have
- * (P1135). `words` is the words block (P1135: WORDS, unless a test gives a need a keep word). */
-function fakeWindow(db, owner = true, nowKey = "build", guide = true, ask = null, needs = false, words = WORDS) {
+ * (P1135). `words` is the words block (P1135: WORDS, unless a test gives a need a keep word). `notes` gives a pick's row its
+ * muted note line, `<p id="note-KEY">`, after its text (P1180). */
+function fakeWindow(db, owner = true, nowKey = "build", guide = true, ask = null, needs = false, words = WORDS, notes = {}) {
   const body = new FakeElement("body", { "data-fingerprint": "0123456789ab", "data-written": "2026-11-21T15:40:00+01:00" });
   const intro = body.appendChild(new FakeElement("p", { class: "intro" }));
   const section = guide ? new FakeElement("section", { id: "guide" }) : null;
@@ -117,6 +120,7 @@ function fakeWindow(db, owner = true, nowKey = "build", guide = true, ask = null
     for (const key of keys) {
       const item = inner.appendChild(new FakeElement("li", { "data-key": key, "data-makes-stale": "requirements" }));
       item.appendChild(new FakeElement("#text")).textContent = PARTS[key] + " (in your drawer)";
+      if (notes[key]) item.appendChild(new FakeElement("p", { class: "muted", id: "note-" + key })).textContent = notes[key];
       picks.push(item);
     }
   }
@@ -449,8 +453,8 @@ function choose(made, radio) {
 const OLED = "pick:display:oled-128";
 const TACTILE = "pick:button:tactile-6mm";
 const TWO_PICKS = "2 picks (display, button)";
-async function aPicksPage(db = fakeDb()) {
-  const page = fakeWindow(db, true, "build", true, null, true);
+async function aPicksPage(db = fakeDb(), words = WORDS, notes = {}) {
+  const page = fakeWindow(db, true, "build", true, null, true, words, notes);
   const asked = await script.start(page.win);
   const radio = (key) => radiosOf(page.made).find((each) => each.value === key);
   const sendRow = page.list.children[page.list.children.length - 1];
@@ -500,6 +504,29 @@ test("P1067: the Send box says each pick, a line they share once, and that spark
   assert.equal(box.attributes.role, "group");
   assert.deepEqual(box.children.map((child) => child.textContent), ["Send " + TWO_PICKS,
     "Pick “OLED 128” for display: Saves “OLED 128” as the pick.", "Pick “Tactile 6 mm” for button: Saves “Tactile 6 mm” as the pick.",
+    STALE, "Spark checks the picks together. If one fails, spark saves none.", "Send", "Cancel"]);
+});
+
+// P1180: a pick's notes, as page_words writes them: in its says after its own line, and in its notes.
+const UNSURE = "You may not have it: check your drawer.";
+const noted = (offer) => Object.assign({}, offer, { says: [offer.says[0], UNSURE].concat(offer.says.slice(1)), notes: [UNSURE] });
+const NOTED_WORDS = Object.assign({}, WORDS, { offers: Object.assign({}, WORDS.offers, { [OLED]: noted(WORDS.offers[OLED]),
+                                                                                       [TACTILE]: noted(WORDS.offers[TACTILE]) }) });
+
+test("P1180: a pick's radio is described by its row's note line, and a pick with no note has no description", async () => {
+  const { radio } = await aPicksPage(fakeDb(), NOTED_WORDS, { [OLED]: UNSURE });
+  assert.equal(radio(OLED).attributes["aria-describedby"], "note-" + OLED);
+  assert.equal(radio(TACTILE).attributes["aria-describedby"], undefined);
+});
+
+test("P1180: a note two chosen picks share stays on each pick's line, never among the shared lines", async () => {
+  const { made, radio, sendRow, sendPicks } = await aPicksPage(fakeDb(), NOTED_WORDS, { [OLED]: UNSURE, [TACTILE]: UNSURE });
+  choose(made, radio(OLED));
+  choose(made, radio(TACTILE));
+  sendPicks.click();
+  assert.deepEqual(sendRow.children[2].children.map((child) => child.textContent), ["Send " + TWO_PICKS,
+    "Pick “OLED 128” for display: Saves “OLED 128” as the pick. " + UNSURE,
+    "Pick “Tactile 6 mm” for button: Saves “Tactile 6 mm” as the pick. " + UNSURE,
     STALE, "Spark checks the picks together. If one fails, spark saves none.", "Send", "Cancel"]);
 });
 

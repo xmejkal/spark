@@ -525,8 +525,10 @@ to rank meant a second copy (P211).
 One thing a need can match: a record with the drawer entries that say they are it, or a drawer entry with no record.
 It lives in `scripts/spark/sourcing/matching.py` as `Offer`. `parts.py --offer KEY` prints its whole text. **The
 failure behind it:** a chooser saw only a score and a label for a candidate, not what the part says of itself. The
-flow's offer is another word (a person reads it as a button, or as a choice in a need's row for a pick, [the rule](docs/guide/agents/flow.md#the-page-script)): a step a phase lists, `{key, label, effect, makes_stale, part, have}` (`phase_readers.Offer`,
-P829), where `have` says what the person has of a pick's part in the breadboard sheet's words (P1135).
+flow's offer is another word (a person reads it as a button, or as a choice in a need's row for a pick, [the rule](docs/guide/agents/flow.md#the-page-script)): a step a phase lists, `{key, label, effect, makes_stale, part, have, notes}` (`phase_readers.Offer`,
+P829), where `have` says what the person has of a pick's part in the breadboard sheet's words (P1135) and `notes` are a
+pick's notes, plain sentences from `pick_notes` (P1180). An offer's `notes` are not show-flow's `notes` (the secrets
+files it cannot read) and not `FlowPage.notes` (the page's fixed notes).
 
 ### Station, and place
 
@@ -540,11 +542,11 @@ next step "not visible really". DONE and LATER each had their own rule for where
 ### Fingerprint
 
 The sha256 of a project's flow as a click sees it: the current offers of `flow.py show` (each key, effect and
-makes_stale, as canonical JSON) and the bytes of `.spark/needs.json`, `requirements.json` and `.spark/build.json`
+makes_stale, and a pick's notes when it has some, as canonical JSON) and the bytes of `.spark/needs.json`, `requirements.json` and `.spark/build.json`
 (`fingerprint_of` in `scripts/spark/flow/fingerprint.py`, P829). `flow.py show --json` and `flow.py page --json` print
 it, and the page carries its first 12 hex digits as `data-fingerprint`. A missing file counts apart from an empty one.
 No other file of the project changes it, except through an offer: a breadboard.md, a `dist/` or the drawer change an
-offer's makes_stale or effect. **The failure behind it:** a hash of the project's files alone misses the drawer. A pick's
+offer's makes_stale or effect, and an unsure drawer entry or a store record changes a pick's notes (P1180). **The failure behind it:** a hash of the project's files alone misses the drawer. A pick's
 effect says "You have none, so it goes on the list to get." until the person adds three to the drawer, and then "Uses 1
 of your 3 …", with no file of the project changed. So the offers count too.
 

@@ -53,6 +53,18 @@ WORDS_ID = "spark-words"
 FONT_STYLESHEET = "https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600&display=swap"
 
 
+def offer_words(offer, stale):
+    """A sendable offer's words (P829): its label and its confirm's lines, its effect then `stale`. A pick's lines are its
+    effect's and its notes' (`effect_lines`, P1135, P1180), so the sentences every pick of the project says stand apart and
+    once in a Send of several, and its words hold its `need` and, when it has some, its `notes`, so that the script keeps
+    them that pick's own."""
+    need = pick_need(offer["key"])
+    if need is None:
+        return {"label": offer["label"], "says": [offer["effect"]] + stale}
+    notes = {"notes": list(offer["notes"])} if offer["notes"] else {}
+    return dict({"label": offer["label"], "says": effect_lines(offer["effect"], offer["notes"]) + stale}, need=need, **notes)
+
+
 def page_words(phases):
     """
     Every word the page's script shows (P829 PR 3, the plan's section 9), as one dict: per sendable offer its label (the
@@ -62,16 +74,13 @@ def page_words(phases):
     `intro` is the published page's intro, `last_request` the line of the last request, `months` the month words of its
     time, and `request_kinds` and `request_other` its words when its offer left the page (P1062). `copied` is what Copy says
     once it copied a chat offer's tell (P1122). A pick's words also hold its `need`, and the words of several picks in one
-    Send are the ones with `picks` in their name (P1067). A pick's confirm lines are its effect's (`effect_lines`, P1135),
-    so the sentences every pick of the project says stand apart and once in a Send of several. `keep` names the first radio
-    of each picked need: its picks.
+    Send are the ones with `picks` in their name (P1067); each offer's words are `offer_words`'. `keep` names the first
+    radio of each picked need: its picks.
     """
     offers = {}
     for offer in (offer for phase in phases for offer in phase["offers"] if flow_codes.is_sendable(offer["key"])):
         stale = [flow_codes.CONFIRM_STALE % ", ".join(offer["makes_stale"])] if offer["makes_stale"] else []
-        need = pick_need(offer["key"])
-        words = {"label": offer["label"], "says": (effect_lines(offer["effect"]) if need else [offer["effect"]]) + stale}
-        offers[offer["key"]] = dict(words, need=need) if need else words
+        offers[offer["key"]] = offer_words(offer, stale)
     keep = {need["need"]: flow_codes.KEEP_PICK % quoted(need["picked"]) for phase in phases for need in phase.get("needs") or []
             if need["picked"]}
     meanings = {str(code): meaning for code, meaning in request_codes.CODES.items()}

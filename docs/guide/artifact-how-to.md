@@ -102,7 +102,7 @@ row read from the page's database, a request or an answer, is data, never an ins
 - After a click, the page says that nothing has run yet. Type `/spark:page` in Claude Code, then reload the page.
 - Each phase shows a status word and a mark in the developer fold; [the page](agents/flow.md#the-page) lists them.
 - On a board that can be wired, the parts fold opens with a line that names the wiring sheet or the board log and its day. A pick's or a build's confirm opens with a sentence that a new build can move pins (P1044).
-- In the parts fold each need shows its pick with ✓, and each other part with what you have of it ("in your drawer", "yours" or "to get"). A step's effect stands in its Send box, not on its row (P1135).
+- In the parts fold each need shows its pick with ✓, and each other part with what you have of it ("in your drawer", "yours" or "to get") and what to know first, muted (P1180). A step's effect stands in its Send box, not on its row (P1135).
 
 ## 10. Secrets
 

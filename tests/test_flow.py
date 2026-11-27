@@ -35,9 +35,9 @@ import flow  # noqa: E402
 from fakes import FakeClock, FakeOutsideWorld, FakeTextFileWriter  # noqa: E402
 from spark.build.build_record import BUILD_RECORD_FILE, EARLIER_DIST, BuildRecordStore, sha256_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
-from spark.flow.phase_readers import Offer, Phase, SimulateReader  # noqa: E402
+from spark.flow.phase_readers import Offer, PartsNeed, Phase, SimulateReader  # noqa: E402
 from spark.breadboard.sheet import have_of  # noqa: E402
-from spark.flow.flow_codes import board_file_line, effect_lines, picked_sentence  # noqa: E402
+from spark.flow.flow_codes import effect_lines, picked_sentence  # noqa: E402
 from spark.flow import flow_codes  # noqa: E402
 from spark.flow import flow_page, run_request  # noqa: E402
 from spark.flow import deploy_reading  # noqa: E402
@@ -45,7 +45,7 @@ from spark.bench import board_log  # noqa: E402
 from spark.flow.deploy_reading import DeployState  # noqa: E402
 from spark.flow.guide import NO_IMAGE_FACT, ImageFact, chat_offer_of, guide_of, job_offer, names_at, requirements_now  # noqa: E402
 from spark.flow.guide import stations_of, who_and_sentence  # noqa: E402
-from spark.flow.show_flow import ShowFlow, flow_and_guide, read_flow  # noqa: E402
+from spark.flow.show_flow import ShowFlow, flow_and_guide, need_lines, read_flow  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.outcomes import OK, PROBLEMS  # noqa: E402
@@ -1344,8 +1344,8 @@ class RecordFirstOffersTest(FlowTest):
     person owns with a record is offered first, each need's pick is named, and an offer says when spark cannot build from
     its pick."""
 
-    #: The start of the sentence an offer says when spark cannot build from its pick.
-    CANNOT = "Spark cannot build from this pick"
+    #: The note a pick says when spark cannot build from it (P1180: a note of its own, no longer a sentence of its effect).
+    CANNOT = "Spark cannot build from it: no board file."
 
     def entry(self, key, fields):
         (self.home / "drawer" / (key + ".json")).write_text(json.dumps(dict({"schema": 1, "label": key, "count": 1}, **fields)))
@@ -1354,13 +1354,21 @@ class RecordFirstOffersTest(FlowTest):
         """A board the person owns with no board file, plausible by its words, as the walk's DFR0575 was."""
         self.entry("beetle", {"label": "Beetle ESP32 Microcontroller", "function": [{"does": "compute", "what": "microcontroller"}]})
 
-    def board_effects(self, other_needs):
-        """{key: effect} of the board need's pick offers, in a project with `other_needs` beside the board need."""
+    def board_offers(self, other_needs):
+        """The board need's pick offers, in a project with `other_needs` beside the board need."""
         self.a_drawer_board()
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm",
                              [{"id": "board", "does": "compute", "what": "microcontroller"}] + other_needs)
-        return {offer["key"]: offer["effect"] for offer in next(phase for phase in show(project)[0]["data"]["phases"]
-                                                                if phase["phase"] == "parts")["offers"] if offer["key"].startswith("pick:board:")}
+        return [offer for offer in next(phase for phase in show(project)[0]["data"]["phases"]
+                                        if phase["phase"] == "parts")["offers"] if offer["key"].startswith("pick:board:")]
+
+    def board_effects(self, other_needs):
+        """{key: effect} of the board need's pick offers, in a project with `other_needs` beside the board need."""
+        return {offer["key"]: offer["effect"] for offer in self.board_offers(other_needs)}
+
+    def board_notes(self, other_needs):
+        """{key: notes} of the board need's pick offers (P1180), as `board_effects` reads them."""
+        return {offer["key"]: offer["notes"] for offer in self.board_offers(other_needs)}
 
     def test_an_owned_record_is_offered_before_owned_entries_with_no_record(self):
         for key in ("e-1", "e-2", "e-3"):
@@ -1372,30 +1380,31 @@ class RecordFirstOffersTest(FlowTest):
         self.assertEqual(offers(said, "parts"), ["pick:probe:r-tag", "pick:probe:e-1", "pick:probe:e-2"])
 
     def test_a_drawer_board_with_no_board_file_says_its_pick_cannot_be_built_from(self):
-        effects = self.board_effects([])
-        # P991 review: in plain words, with the part's name, before the history sentence
-        self.assertIn("Spark cannot build from this pick: it has no board file for “Beetle ESP32 Microcontroller”.", effects["pick:board:beetle"])
+        effects, notes = self.board_effects([]), self.board_notes([])
+        # P991 review: in plain words; P1180: as the pick's note, so its effect keeps no copy
+        self.assertIn(self.CANNOT, notes["pick:board:beetle"])
+        self.assertNotIn(self.CANNOT, effects["pick:board:beetle"])
         self.assertTrue(effects["pick:board:beetle"].endswith(". May note the choice in your history."))
-        self.assertEqual([key for key, effect in effects.items() if self.CANNOT in effect], ["pick:board:beetle"],
+        self.assertEqual([key for key, said in notes.items() if said], ["pick:board:beetle"],
                          "a board spark has a file for says nothing of one")
 
     def test_a_drawer_board_says_nothing_when_another_need_picks_the_board(self):
         # the walk's state: the button need picks the C6, so the parts list places the C6 as the board (one board pick)
-        effects = self.board_effects([{"id": "button", "does": "input", "what": "button", "pick": [{"board": "xiao-esp32-c6"}]}])
-        self.assertIn("pick:board:beetle", effects)
-        self.assertNotIn(self.CANNOT, effects["pick:board:beetle"])
+        notes = self.board_notes([{"id": "button", "does": "input", "what": "button", "pick": [{"board": "xiao-esp32-c6"}]}])
+        self.assertIn("pick:board:beetle", notes)
+        self.assertEqual(notes["pick:board:beetle"], [])
 
     def test_a_drawer_board_says_nothing_when_two_boards_are_picked_elsewhere(self):
         # the refusal is then "pick one board", whose subject is no drawer entry
-        effects = self.board_effects([{"id": "button", "does": "input", "what": "button", "pick": [{"board": "xiao-esp32-c6"}]},
-                                      {"id": "led", "does": "indicate", "what": "light", "pick": [{"board": "firebeetle2-esp32s3"}]}])
-        self.assertIn("pick:board:beetle", effects)
-        self.assertNotIn(self.CANNOT, effects["pick:board:beetle"])
+        notes = self.board_notes([{"id": "button", "does": "input", "what": "button", "pick": [{"board": "xiao-esp32-c6"}]},
+                                  {"id": "led", "does": "indicate", "what": "light", "pick": [{"board": "firebeetle2-esp32s3"}]}])
+        self.assertIn("pick:board:beetle", notes)
+        self.assertEqual(notes["pick:board:beetle"], [])
 
     def test_an_entry_with_no_record_for_a_need_that_does_not_compute_says_nothing_of_a_board_file(self):
         self.entry("e-1", {"function": [{"does": "sense", "what": "zorbleflux"}]})
         said, _ = show(with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": "probe", "does": "sense", "what": "zorbleflux"}]))
-        self.assertNotIn(self.CANNOT, offer_of(said, "pick:probe:e-1")["effect"])
+        self.assertEqual(offer_of(said, "pick:probe:e-1")["notes"], [])
 
     def test_a_drawer_board_offered_for_a_need_that_does_not_compute_says_nothing_of_a_board_file(self):
         # the review of PR #1448: the board need picks the drawer board; the button offer of it is no board pick
@@ -1404,7 +1413,7 @@ class RecordFirstOffersTest(FlowTest):
         said, _ = show(with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
             {"id": "board", "does": "compute", "what": "microcontroller", "pick": [{"entry": "beetle"}]},
             {"id": "button", "does": "input", "what": "button"}]))
-        self.assertNotIn(self.CANNOT, offer_of(said, "pick:button:beetle")["effect"])
+        self.assertEqual(offer_of(said, "pick:button:beetle")["notes"], [])
 
     def test_a_refused_owned_record_is_named_with_who_holds_it(self):
         # the review of PR #1448 (the PO: "even if taken"): the owned C6 held by two other projects is named, not only counted
@@ -1426,6 +1435,64 @@ class RecordFirstOffersTest(FlowTest):
         # P1135: each need's `picked`, by the names a person reads; show's need line puts the pick first (TheNeedLinesTest)
         self.assertEqual({need: picked for need, (picked, _lines) in needs_of(said).items()},
                          {"soil": ["A soil probe"], "wet": ["A soil probe"], "dry": [], "two": ["A soil probe", "Spare probe from the shed"]})
+
+
+class ThePickNotesTest(FlowTest):
+    """P1180 (the PO: "its still way too much text"): a pick's notes, each from one fact of its row of `needs.match`, in one
+    order: spark cannot build from it, its record needs more facts, it is broken, spark cannot simulate it (only when the
+    parts list takes it), and the person was not sure they have it. Each is a plain sentence, never in the effect."""
+
+    OWED, BROKEN = "Spark needs more facts about it: ask Claude.", "Its record is broken: ask Claude."
+    NO_STANCE, UNSURE = "Spark cannot simulate this part yet.", "You may not have it: check your drawer."
+
+    def notes(self, without=(), entry=None, **changed):
+        """The notes of the pick of x-led for a light need: spark's red LED in the catalog without the keys `without` and
+        with `changed`, owned once by a drawer entry with the fields `entry`, so it is offered first."""
+        led = json.loads((ROOT / "parts" / "led-red-5mm.json").read_text())
+        record = dict({key: value for key, value in led.items() if key not in without}, id="x-led", **changed)
+        (self.home / "catalog" / "x-led.json").write_text(json.dumps(record))
+        (self.home / "drawer" / "led.json").write_text(json.dumps(dict({"schema": 1, "label": "a red LED", "count": 1,
+                                                                        "is": {"part": "x-led"}}, **(entry or {}))))
+        said, _ = show(with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": "light", "does": "indicate", "what": "light"}]))
+        return offer_of(said, "pick:light:x-led")["notes"]
+
+    def test_a_record_that_owes_nothing_has_no_note(self):
+        self.assertEqual(self.notes(), [])
+
+    def test_a_record_that_owes_only_its_outline_has_no_note(self):
+        self.assertEqual(self.notes(without=("body_mm",)), [])
+
+    def test_a_record_that_owes_a_stop_fact_needs_more_facts(self):
+        self.assertEqual(self.notes(without=("pin_order_proof",)), [self.OWED])
+
+    def test_a_broken_record_says_so(self):
+        self.assertEqual(self.notes(footprint=5), [self.BROKEN])
+
+    def test_a_record_that_owes_only_its_simulation_cannot_be_simulated(self):
+        self.assertEqual(self.notes(without=("simulation",)), [self.NO_STANCE])
+
+    def test_a_record_that_owes_a_stop_fact_and_its_simulation_only_needs_more_facts(self):
+        # the parts list refuses it, so what it cannot simulate does not matter yet
+        self.assertEqual(self.notes(without=("pin_order_proof", "simulation")), [self.OWED])
+
+    def test_a_broken_record_that_owes_its_simulation_is_only_broken(self):
+        self.assertEqual(self.notes(without=("simulation",), footprint=5), [self.BROKEN])
+
+    def test_an_unsure_entry_says_to_check_the_drawer(self):
+        self.assertEqual(self.notes(entry={"unsure": True}), [self.UNSURE])
+
+    def test_the_notes_stand_in_one_order(self):
+        self.assertEqual(self.notes(without=("pin_order_proof",), entry={"unsure": True}, footprint=5),
+                         [self.OWED, self.BROKEN, self.UNSURE])
+
+    def test_every_offer_in_data_has_notes_and_one_that_is_no_pick_none(self):
+        said, _ = show(with_needs(a_built_project(), SOIL))
+        notes = {offer["key"]: offer["notes"] for phase in said["data"]["phases"] for offer in phase["offers"]}
+        self.assertIn("build", notes)
+        self.assertEqual({key: said for key, said in notes.items() if not key.startswith("pick:")},
+                         {key: [] for key in notes if not key.startswith("pick:")})
+        # the store's soil probes owe the facts a circuit needs
+        self.assertEqual(notes["pick:soil:x-many"], [self.OWED])
 
 
 #: The three sentences every pick of an unlisted project on a board that can be wired says, as a person reads them (P1135).
@@ -1509,12 +1576,6 @@ class ThePartsNeedsTest(FlowTest):
         self.assertIn("You have none, so it goes on the list to get.", lines[1])
         self.assertEqual(effect_lines("Saves it. May note the choice in your history."), ["Saves it.", MAY_NOTE])
 
-    def test_the_board_file_line_is_found_in_an_effect_that_holds_it_and_in_no_other(self):
-        cannot = "Spark cannot build from this pick: it has no board file for “Beetle”."
-        saves = "Saves “Beetle” as the pick for the board need in this project."
-        self.assertEqual(board_file_line(" ".join((saves, cannot, MAY_NOTE))), cannot)
-        self.assertIsNone(board_file_line(" ".join((saves, MAY_NOTE))))
-
     def test_the_picked_sentence_names_each_pick_in_quotes(self):
         self.assertEqual(picked_sentence(["A", "B"]), "picked “A”, “B”.")
 
@@ -1535,13 +1596,18 @@ class TheNeedLinesTest(FlowTest):
     def test_the_parts_line_ends_at_the_count_and_each_need_s_line_follows_it(self):
         lines = self.lines()
         at = lines.index(self.PARTS_LINE.replace("1 of 2", "2 of 3").replace(" (you)", ", set aside: odd (you)"))
-        self.assertEqual(lines[at + 1:at + 4], [
+        # P1180 (Q5): a pick's notes stand on their own line under its need's line; the store's probes owe facts
+        owed = "Spark needs more facts about it: ask Claude."
+        self.assertEqual(lines[at + 1:at + 7], [
             "      soil: ✓ picked “A soil probe”. Not shown for soil, refused: %s.%s offers: pick:soil:x-unknown (in your drawer)"
             % (HELD, LIST),
+            "        pick:soil:x-unknown: " + owed,
             "      odd: ✓ picked “A soil probe”.",
             "      wet: Not shown for wet, refused: %s.%s offers: pick:wet:x-many (in your drawer), pick:wet:x-unknown (in your drawer)"
-            % (HELD, LIST)])
-        self.assertTrue(lines[at + 4].startswith("  "), lines[at + 4])
+            % (HELD, LIST),
+            "        pick:wet:x-many: " + owed,
+            "        pick:wet:x-unknown: " + owed])
+        self.assertTrue(lines[at + 7].startswith("  "), lines[at + 7])
         self.assertFalse([line for line in lines if line.startswith("      offers: pick:")])
 
     def test_a_need_with_nothing_to_say_has_no_line(self):
@@ -1555,6 +1621,16 @@ class TheNeedLinesTest(FlowTest):
         self.assertEqual(len(now), 1)
         self.assertTrue(now[0].startswith("  NOW (parts): 1 need has no part yet: wet. Pick a part for each, or ask Claude to set "
                                           "one aside."), now[0])
+
+    def test_a_pick_with_notes_says_them_on_a_line_under_its_need_s_line_and_one_with_none_has_none(self):
+        # P1180: the line holds the offer's notes as they are, its key first
+        notes = ("Spark needs more facts about it: ask Claude.", "You may not have it: check your drawer.")
+        offers = [Offer("pick:soil:x-a", "Pick “A” for soil", "Saves “A”.", (), None, "A", "to get", notes),
+                  Offer("pick:soil:x-b", "Pick “B” for soil", "Saves “B”.", (), None, "B", "in your drawer")]
+        phase = Phase("parts", None, "○", "you", [], offers, [PartsNeed("soil", [], [])])
+        self.assertEqual(need_lines(phase), [
+            "      soil: offers: pick:soil:x-a (to get), pick:soil:x-b (in your drawer)",
+            "        pick:soil:x-a: Spark needs more facts about it: ask Claude. You may not have it: check your drawer."])
 
 
 class FingerprintTest(FlowTest):
@@ -1963,7 +2039,7 @@ class TheOfferStepTest(FlowTest):
     def test_the_offers_in_data_keep_their_six_keys_and_no_step(self):
         said, _ = show(with_needs(a_built_project(), SOIL))
         self.assertEqual({tuple(offer) for phase in said["data"]["phases"] for offer in phase["offers"]},
-                         {("key", "label", "effect", "makes_stale", "part", "have")})
+                         {("key", "label", "effect", "makes_stale", "part", "have", "notes")})
 
     def test_a_pick_offer_in_data_names_its_part_and_every_other_offer_null(self):
         """P1067 (D22: each fact on the page is in show): the page labels a pick's radio by its part."""

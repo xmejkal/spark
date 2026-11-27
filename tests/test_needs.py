@@ -2437,6 +2437,15 @@ class TheRequirementsFileTest(unittest.TestCase):
     def written(self, project):
         return json.loads((project / "requirements.json").read_text())
 
+    def test_the_blocking_facts_leave_out_the_outline_and_the_simulation_and_refuse(self):
+        # P1180: the one rule that the parts list, the requirements phase and a pick's notes read
+        owed = ["body_mm", "simulation", "pin_order_proof"]
+        self.assertEqual(need_requirements.blocking_facts(owed), ["pin_order_proof"])
+        self.assertEqual(need_requirements.blocking_facts(["body_mm", "simulation"]), [])
+        self.assertTrue(need_requirements.refuses(owed, False))
+        self.assertTrue(need_requirements.refuses([], True))
+        self.assertFalse(need_requirements.refuses(["body_mm", "simulation"], False))
+
     def text(self, argv):
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
