@@ -735,7 +735,7 @@
    "key": "op:check-firmware",
    "op": "check-firmware",
    "area": "firmware",
-   "summary": "Check the firmware for free: its imports and the project's own tests, with no sim/ and no board.",
+   "summary": "Check the firmware for free: its imports, the project's own tests and the pin names against firmware/pins.py, with no sim/ and no board.",
    "effects": [
     "writes"
    ],
@@ -744,6 +744,7 @@
     "imports",
     "modules",
     "tests",
+    "pin_map",
     "written"
    ],
    "network": false

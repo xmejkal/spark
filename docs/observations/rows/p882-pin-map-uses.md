@@ -13,7 +13,7 @@ only: the plan check's fixes, the delegated council's fixes (2026-11-27) and wha
 | 6 | the data shape belongs to the Value | council A1, A3 | acted | `PinMapUses.line_from(data, missing_only=False)` is the one reader of the shape and the one template; checks_reading only tests currency. `missing_only` is a keyword of it, so the flow needs no second method |
 | 7 | the sentences a person reads | council W1 to W8 | acted | the finding, fix, line, place and parse-error sentences are as the council gave them; `pin_findings` and `line_from` tests pin each |
 | 8 | the pin line shows twice in `flow.py show` | council A4 | acted | on purpose: in the free checks' line and as the firmware phase's first line. Named in the PR body. `test_the_free_checks_line_says_the_pin_line_too_so_it_shows_twice_on_purpose` |
-| 9 | one read of the check record per show | plan check, lens point 2; review refuter 4 | dropped because | one show takes 0.21 s instead of 0.15 s (median of five), which a person does not notice. The times are in the PR body |
+| 9 | one read of the check record per show | plan check, lens point 2; review refuter 4 | rejected | dropped because one show takes 0.21 s instead of 0.15 s (median of five), which a person does not notice. The times are in the PR body |
 | 10 | one `ast` reader of firmware files; sleep_calls shares the loop and the rebinding rule | council | raised | a card: [P1328 #1906](https://github.com/xmejkal/spark/issues/1906) |
 | 11 | the text view prints no assumptions | council | raised | a card: [P1329 #1907](https://github.com/xmejkal/spark/issues/1907) |
 | 12 | a scope-aware module-alias rule | council | raised | a card, Idea: [P1330 #1908](https://github.com/xmejkal/spark/issues/1908) |

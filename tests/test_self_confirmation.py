@@ -135,6 +135,8 @@ MAY_READ = {
     "codes.CODES": AGREEMENT + ": its keys against the module's own constants (the core's codes, P442)",
     "breadboard_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and the one it shares with board_codes (P692)",
     "sheet.REFUSALS": PINNED,
+    "firmware_codes.PIN_MAP_NAME_MISSING": AGREEMENT + ": the variant's word and meaning against its parent's, which the variant must equal (P935, P882)",
+    "firmware_codes.PIN_MAP_NAME_MISSING_NO_MAP": PINNED + ": its fix is compared with the literal sentence in the same test, and its word and meaning with its parent (P882)",
     "firmware_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and the five it shares with board_codes (P684)",
     "check_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and no code shared with another table (P693)",
     "codes.CRASH": "a planted crash's code: the Code the core gives a crash, which the refresh's condition keeps out by name (P1035 PR 2)",
