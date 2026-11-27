@@ -280,7 +280,8 @@ The FireBeetle 2 ESP32-C6 was the first board made this way ([P999](https://gith
    a pin last).
    With no kept definition the guard says nothing, and the converter refuses the pin with its own words.
 6. A known gap: a devkit that names a pin by a word, as the C6 devkit names GPIO16 and GPIO17 `TX` and `RX`, passes the
-   guard, and the converter still refuses `"16"`. The assigner keeps signals off those pins.
+   guard, and the converter still refuses `"16"`. The assigner takes those pins last (a cost of 40), and a signal
+   pinned there by name passes the guard too ([P1312](https://github.com/xmejkal/spark/issues/1888)).
 
 Wokwi custom boards exist but are a browser-only feature (F1 → "Load custom board file"):
 `wokwi.toml` has no board key, and the simulator loads boards from a bundle Wokwi hosts. Getting
