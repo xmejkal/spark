@@ -42,6 +42,7 @@ from spark.flow.page_sections import TICK, shown_phase, word_of  # noqa: E402
 from spark.flow.offer_steps import build_step  # noqa: E402
 from spark.flow.phase_readers import MARKS, Offer, Phase  # noqa: E402
 from spark.flow.show_flow import read_flow  # noqa: E402
+from spark.flow import flow_codes  # noqa: E402
 from spark.flow.flow_codes import WIRED_BUILD_MESSAGE, WIRED_SHEET_MESSAGE, WIRED_STEP_MESSAGE  # noqa: E402
 from spark.flow.wired_board import day_of  # noqa: E402
 from spark.flow.fingerprint import FILES, fingerprint_of  # noqa: E402
@@ -2146,10 +2147,10 @@ class TheSliceOneOrderTest(unittest.TestCase):
                           "ok_picks": "Saved as the picks. Nothing is built yet. Reload to see the new state.",
                           "last_request_picks": "your picks", "needs_join": ", ", "label_join": ": ",
                           "no_pick_saved": "No pick was saved."})
-        not_offered = "the request names a step that spark does not offer now, so nothing ran"
+        not_offered = "the request names a step that spark cannot run now, so nothing ran"
         self.assertEqual(words["refused_picks"], dict(words["refused"], **{
-            not_offered: "Nothing ran. Spark no longer offers one of these picks. Reload this page."}))
-        self.assertEqual(words["refused"][not_offered], "Nothing ran. This button is no longer offered. Reload the page.")
+            not_offered: "Nothing ran. Spark cannot save one of these picks now. Reload this page and choose again."}))
+        self.assertEqual(words["refused"][not_offered], "Nothing ran. Spark cannot run this step now. Reload this page to see the steps you can ask for.")
 
     def test_the_need_of_a_pick_offer_s_key(self):
         from spark.flow.phase_readers import pick_need
@@ -2274,6 +2275,51 @@ def words_of(text):
     return json.loads(scripts_of(text)[0][1])
 
 
+class PersonReads(html.parser.HTMLParser):
+    """What a person reads of a page (P1138): its text nodes outside <style> and <script>, and each aria-label, alt and title."""
+
+    def __init__(self, text):
+        super().__init__()
+        self.said, self._hidden = [], 0
+        self.feed(text)
+
+    def handle_starttag(self, tag, attrs):
+        self._hidden += tag in ("style", "script")
+        self.said += [value for name, value in attrs if name in ("aria-label", "alt", "title") and value]
+
+    def handle_endtag(self, tag):
+        self._hidden -= tag in ("style", "script")
+
+    def handle_data(self, data):
+        self.said += [] if self._hidden else [data]
+
+
+def strings_of(value):
+    """Every string value in a module's value, through dicts, lists, tuples and namedtuples; a key is not a value."""
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        return [each for item in value.values() for each in strings_of(item)]
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return [each for item in value for each in strings_of(item)]
+    return []
+
+
+class ThePersonsWordTest(unittest.TestCase):
+    """P1138: a person reads "button", never the code word "offer". The code word stays in the developer fold."""
+    OFFER = re.compile(r"\boffer", re.I)
+
+    def test_no_offer_outside_the_developer_fold(self):
+        text = FlowHtmlPage().text(sample_page())
+        page = [each for each in PersonReads(before_developer(text)).said if self.OFFER.search(each)]
+        words = [each for each in strings_of(words_of(text)) if self.OFFER.search(each)]
+        codes = [(name, each) for name, value in vars(flow_codes).items() if not name.startswith("_") and name != "DEVELOPER_HEADING"
+                 for each in strings_of(value) if self.OFFER.search(each)]
+        self.assertEqual((page, words, codes), ([], [], []))
+        self.assertRegex(developer(text), self.OFFER)
+        self.assertIn(flow_codes.BUTTON_WORD, words_of(text)["intro"])
+
+
 class ThePageScriptTest(unittest.TestCase):
     """P829 PR 3: the page holds one inert words block and one script; without them it is the page before the script."""
 
@@ -2333,14 +2379,14 @@ class ThePageScriptTest(unittest.TestCase):
                          ("Your last request, %s: %s.", "Jan", "Nov", 12))
         # the review of #1619: a request whose offer left the page is said by its kind's words, never by a part of its key
         self.assertEqual(words["request_kinds"], {"pick": "a pick", "requirements": "the parts list", "build": "the build"})
-        self.assertEqual(words["request_other"], "a step this page no longer offers")
+        self.assertEqual(words["request_other"], "a step this page no longer shows")
         self.assertNotIn("page_from", words)
         self.assertEqual((words["not_sent"], words["not_withdrawn"]), ("Could not send. Nothing ran.", "Could not withdraw. The request still waits."))
         self.assertEqual(words["refused"], {
             "the project changed after the page was read, so nothing ran":
                 "Nothing ran. The project changed after you clicked. Reload this page and click again.",
-            "the request names a step that spark does not offer now, so nothing ran":
-                "Nothing ran. This button is no longer offered. Reload the page.",
+            "the request names a step that spark cannot run now, so nothing ran":
+                "Nothing ran. Spark cannot run this step now. Reload this page to see the steps you can ask for.",
             "the request names a step that is asked in the chat, never from the page, so nothing ran":
                 "Nothing ran. This step is asked in the chat: tell Claude.",
             "the request file is missing, is no regular file or no JSON object, holds an id, key or seen that cannot be read, or "
