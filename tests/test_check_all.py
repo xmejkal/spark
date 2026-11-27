@@ -893,7 +893,7 @@ class TheFolderBoardIsCheckedTest(unittest.TestCase):
         _, answer = self._answer(car)
         self.assertEqual(self._boards(answer), ["boards       1 definition(s): firebeetle2-esp32s3"])
         self.assertEqual(loader.read(car / "requirements.json").get("board"), "firebeetle2-esp32s3")
-        self.assertEqual(check.folder_board(check.CheckedFolder.at(car)), loader.read(car / "requirements.json")["board"])
+        self.assertEqual(check.folder_boards(check.CheckedFolder.at(car)), [loader.read(car / "requirements.json")["board"]])
 
     def test_a_folder_in_no_project_checks_the_board_its_requirements_name(self):
         bare = Path(tempfile.mkdtemp())
@@ -901,6 +901,42 @@ class TheFolderBoardIsCheckedTest(unittest.TestCase):
         _, answer = self._answer(bare)
         self.assertEqual(self._boards(answer), ["boards       1 definition(s): xiao-esp32-c6"])
         self.assertIsNone(answer["project"])
+
+    def test_two_requirements_files_check_both_boards(self):
+        # "the car and its remote": rail_loads_in globs *requirements.json, so the boards do too
+        self._requirements(self.project, {"board": "firebeetle2-esp32s3"})
+        (self.project / "remote.requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6"}))
+        _, answer = self._answer(self.project)
+        self.assertEqual(self._boards(answer), ["boards       2 definition(s): firebeetle2-esp32s3, xiao-esp32-c6"])
+
+    def test_a_file_that_names_no_board_takes_the_selection_beside_another_that_does(self):
+        (self.project / "boards").mkdir()
+        (self.project / "boards" / "active.json").write_text(json.dumps({"schema": 1, "board": "firebeetle2-esp32s3"}))
+        self._requirements(self.project, {"parts": []})
+        (self.project / "remote.requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6"}))
+        _, answer = self._answer(self.project)
+        self.assertEqual(self._boards(answer), ["boards       2 definition(s): firebeetle2-esp32s3, xiao-esp32-c6"])
+
+    def test_a_sub_folder_with_a_broken_file_says_its_own_sentence(self):
+        self._requirements(self.project, {"board": "xiao-esp32-c6"})
+        car = self.project / "car"
+        car.mkdir()
+        self._requirements(car, "{not json")
+        _, answer = self._answer(car)
+        boards = self._boards(answer)
+        self.assertEqual(boards[0], "boards       3 definition(s): firebeetle2-esp32s3, shelf-board, xiao-esp32-c6")
+        self.assertEqual(len(boards), 2, boards)
+        self.assertIn(str(car), boards[1])
+
+    def test_a_sub_folder_whose_board_is_no_text_says_its_own_sentence(self):
+        self._requirements(self.project, {"board": "xiao-esp32-c6"})
+        car = self.project / "car"
+        car.mkdir()
+        self._requirements(car, {"board": 5})
+        _, answer = self._answer(car)
+        boards = self._boards(answer)
+        self.assertEqual(len(boards), 2, boards)
+        self.assertTrue(boards[1].startswith("boards       not resolved (") and str(car) in boards[1], boards)
 
     def test_a_broken_requirements_file_checks_every_board_and_names_the_file(self):
         self._requirements(self.project, "{not json")

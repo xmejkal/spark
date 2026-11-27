@@ -369,46 +369,59 @@ def first_matches(root, patterns):
     return []
 
 
-def folder_board(checked):
+def folder_boards(checked):
     """
-    The id of the folder's board (P1325), or None: the `board` of the folder's requirements.json, else the project's
-    board (D35, P988). It is the board the build of the folder uses: `loader.load` reads `wanted.get("board")` of the
-    folder's own requirements file (loader.py:466), so a sub-folder's board wins over its project's. None for no board
-    named, and for a requirements.json that cannot be read: every board is checked then, and the note says why.
+    The ids of the folder's boards (P1325), as a list: each `*requirements.json` of the folder names one in its `board`
+    (a folder can hold several, the car and its remote, as `rail_loads_in` reads them), and a file that names none takes
+    the project's board (D35, P988). The build of the folder reads the folder's own file (loader.py:466), so a
+    sub-folder's board wins over its project's. Empty when no file and no project names a board. A requirements file
+    that cannot be read, or whose `board` is no text, is a DesignError with its own sentence.
     """
-    try:
-        return board_records.requirements_board(checked.folder) or board_records.marked_board(checked.project)[0]
-    except board_records.BoardError:
-        return None
+    marked = board_records.marked_board(checked.project)[0]
+    boards = []
+    for requirements in sorted(Path(checked.folder).glob("*requirements.json")):
+        named = loader.read(requirements).get("board")
+        if named is not None and not isinstance(named, str):
+            raise loader.DesignError("%s holds %r where one board id belongs", requirements, named,
+                                     code=design_codes.REQUIREMENTS_FIELD_WRONG)
+        boards.append(named or marked)
+    return list(dict.fromkeys(board for board in boards or [marked] if board))
 
 
-def boards_to_verify(checked, board=None):
+def boards_to_verify(checked, boards):
     """
-    The ids of the boards vendor-truth verifies without `--boards` (P1325): the folder's board when it has a record,
-    else every board available (the project's, the shelf's and the library's), as before. A shelf board the build never
-    uses is no input. `board` is the folder's board when the caller has it already.
+    The ids of the boards vendor-truth verifies without `--boards` (P1325): those of `boards` (the folder's boards)
+    that have a record, else every board available (the project's, the shelf's and the library's), as before. A shelf
+    board the build never uses is no input.
     """
     every = board_records.available(checked.project)
-    board = board or folder_board(checked)
-    return [board] if board in every else every
+    return sorted(board for board in boards if board in every) or every
 
 
 def discover_boards(checked, found, notes):
     """
-    Add the boards to verify for `checked` to `found` and say them in `notes`, both in place: the folder's board when it
-    has a record, else every board of its project (P1325). The board library knows where board definitions are; a glob
+    Add the boards to verify for `checked` to `found` and say them in `notes`, both in place: the folder's boards that
+    have a record, else every board of its project (P1325). The board library knows where board definitions are; a glob
     does not, and guessing is how the selection file ended up being checked against a vendor header it does not have.
-    The folder's board is read once. A folder that names no board, or one with no record, gets a second `boards` note
-    that says why every board was taken.
+    The folder's boards are read once. When every board was taken, or one of the folder's boards has no record, a second
+    `boards` line gives the reason (`not resolved (...)`).
     """
-    project, board = checked.project, folder_board(checked)
+    project = checked.project
     try:
-        ids = boards_to_verify(checked, board)
+        reason = None
+        try:
+            boards = folder_boards(checked)
+        except (loader.DesignError, board_records.BoardError) as broken:  # the folder's own file says why
+            boards, reason = [], broken
+        ids = boards_to_verify(checked, boards)
         definitions = [str(board_records.definition_path(project, board_id)) for board_id in ids]
         if definitions:
             found["boards"] = definitions
             notes.append("%-12s %d definition(s): %s" % ("boards", len(definitions), ", ".join(ids)))
-        board_records.definition_path(project, board)
+        if reason:
+            raise reason
+        for board in boards or [None]:
+            board_records.definition_path(project, board)
     except Exception as broken:  # noqa: BLE001 - a project with no board chosen is a normal state
         notes.append("%-12s not resolved (%s)" % ("boards", broken))
 
