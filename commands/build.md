@@ -63,7 +63,12 @@ itself), holds the board alone and needs no converter. A full build whose every 
 cannot show; the closing line is `the chain runs end to end; every part is skipped from the simulation, so the diagram holds none
 of the project's parts`, exit 0, and the store notes no build (P778). A board whose record names no Wokwi part builds the
 same way: its simulation stage is `skipped` with the code `board_not_in_wokwi`, the closing line adds that code's
-meaning, and the run exits 0 (P1207). Test that firmware on the board itself.
+meaning, and the run exits 0 (P1207). Test that firmware on the board itself. A design that wires a pad whose GPIO the
+board's kept Wokwi definition lacks, such as the FireBeetle 2 ESP32-C6's D3 (GPIO14) on its stand-in, builds the same way:
+its simulation stage is `skipped` with the code `pin_not_in_wokwi_part`, before the converter runs, its detail names each
+such signal, pad, GPIO and Wokwi part, and the closing line adds that code's meaning, which starts `not simulated` (P999).
+Move the signal to a pad the Wokwi part has with a `"signals"` entry, as the code's fix says, and build again; the
+assigner may then put the next signal on that pad, so pin each signal the build names.
 
 A scenario presses `onboard_button` and waits for the line the firmware prints, then releases it:
 

@@ -1,0 +1,74 @@
+[
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "P999: the guard's filter never finds a pin the Wokwi part lacks (test_build_service.APinTheWokwiPartLacksStopsTheSimulationTest pinned-on-D3 test)",
+  "find": "             for assignment in assignments if assignment[\"gpio\"] not in part.gpios]",
+  "replace": "             for assignment in assignments if assignment[\"gpio\"] in ()]"
+ },
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "P999: the RECORDED gate is dropped, so a definition spark has not kept makes every pin lack (test_build_service.APinTheWokwiPartLacksStopsTheSimulationTest not-kept test)",
+  "find": "    if part.state != RECORDED:\n        return None\n    said = ",
+  "replace": "    said = "
+ },
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "P999: build() does not call pin_not_in_wokwi_part (test_build_service.APinTheWokwiPartLacksStopsTheSimulationTest pinned-on-D3 test)",
+  "find": "            stopped = no_wokwi_part(board) or pin_not_in_wokwi_part(board, board_inputs.assignments)",
+  "replace": "            stopped = no_wokwi_part(board)"
+ },
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "P999: build() gives the guard no pin map (test_build_service.APinTheWokwiPartLacksStopsTheSimulationTest pinned-on-D3 test)",
+  "find": "            stopped = no_wokwi_part(board) or pin_not_in_wokwi_part(board, board_inputs.assignments)",
+  "replace": "            stopped = no_wokwi_part(board) or pin_not_in_wokwi_part(board, [])"
+ },
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "P999: the stand-in sentence drops the pad label (test_build_service.APinTheWokwiPartLacksStopsTheSimulationTest, the whole sentence)",
+  "find": "PIN_NOT_IN_STAND_IN = (\"%(signal)s on %(pin)s (GPIO%(gpio)d): Wokwi has no",
+  "replace": "PIN_NOT_IN_STAND_IN = (\"%(signal)s (GPIO%(gpio)d): Wokwi has no"
+ },
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "P999: the sentence names the board's id, not its Wokwi part type (test_build_service.APinTheWokwiPartLacksStopsTheSimulationTest, the whole sentence)",
+  "find": "    lines = [said % dict(assignment, part=board[\"wokwi_part_type\"],",
+  "replace": "    lines = [said % dict(assignment, part=board[\"id\"],"
+ },
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "P999: a board that is no stand-in is said to be one (test_build_service.APinTheWokwiPartLacksStopsTheSimulationTest no-stand-in test)",
+  "find": "    said = PIN_NOT_IN_STAND_IN if part.is_stand_in else PIN_NOT_IN_PART",
+  "replace": "    said = PIN_NOT_IN_STAND_IN"
+ },
+ {
+  "file": "scripts/spark/build/stages.py",
+  "name": "P999: a pin the Wokwi part lacks ends the simulation could-not-run, so the build exits 2 (test_build_service.APinTheWokwiPartLacksStopsTheSimulationTest pinned-on-D3 test, SKIPPED and verdict 0)",
+  "find": "PIN_NOT_IN_WOKWI_PART_ENDING = StageEnding(build_codes.PIN_NOT_IN_WOKWI_PART, SKIPPED, \"%s\")",
+  "replace": "PIN_NOT_IN_WOKWI_PART_ENDING = StageEnding(build_codes.PIN_NOT_IN_WOKWI_PART, COULD_NOT_RUN, \"%s\")"
+ },
+ {
+  "file": "scripts/spark/build/build_board.py",
+  "name": "P999: every_part_skipped's closing line says its code's meaning, not its own line (test_check_spine.AnAllSkippedSimulationKeepsTheBuildTest keep-their-words test)",
+  "find": "    meaning = None if skipped[0] == build_codes.EVERY_PART_SKIPPED else build_codes.CODES.get(skipped[0])",
+  "replace": "    meaning = build_codes.CODES.get(skipped[0])"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P999: every skipped simulation alone says every part is skipped (test_flow.ThePhasesTest pin-the-Wokwi-part-lacks test)",
+  "find": "            return self.phase(None, says + [skipped_simulation_line(record)], offers)",
+  "replace": "            return self.phase(None, says + [flow_codes.SIMULATION_SKIPPED_MESSAGE], offers)"
+ },
+ {
+  "file": "scripts/spark/flow/no_model.py",
+  "name": "P999: the flow's rule says every part is skipped for every code (test_flow.ThePhasesTest pin-the-Wokwi-part-lacks test)",
+  "find": "    return build_codes.CODES[code]\n",
+  "replace": "    return flow_codes.SIMULATION_SKIPPED_MESSAGE\n"
+ },
+ {
+  "file": "scripts/spark/flow/no_model.py",
+  "name": "P999: the flow's rule says every_part_skipped's meaning, not the every-part line (test_flow.ThePhasesTest every-part-and-unknown-code test)",
+  "find": " or code == build_codes.EVERY_PART_SKIPPED or ",
+  "replace": " or "
+ }
+]

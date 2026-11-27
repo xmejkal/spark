@@ -379,6 +379,8 @@ A footprint, a Wokwi part or a chip that is **not the real thing**, recorded as 
 drawn as a JST because nobody had drawn the XT30 was once *measured*, and the tool reported a real
 sounding defect about a part that is not on the board. A placeholder's findings are not dropped —
 they become one `could-not-run` each, which is the difference between "not yet" and "fine".
+A Wokwi stand-in board is a devkit with the same chip, used where Wokwi has no part for the board. Its definition is
+kept in the store, and the build names a pin that the stand-in lacks (`pin_not_in_wokwi_part`, P999).
 
 ### `host_parts` and `host_requirements`
 

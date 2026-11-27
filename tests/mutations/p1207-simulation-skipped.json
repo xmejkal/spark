@@ -25,9 +25,9 @@
  },
  {
   "file": "scripts/spark/build/build_board.py",
-  "name": "P1207: the closing line of a board with no Wokwi part says every part is skipped (test_build_service closing-line test)",
-  "find": "build_codes.BOARD_NOT_IN_WOKWI: \"; \" + build_codes.BOARD_NOT_IN_WOKWI.meaning}",
-  "replace": "build_codes.BOARD_NOT_IN_WOKWI: EVERY_PART_SKIPPED_LINE}"
+  "name": "P1207, P999: a skipped code other than every_part_skipped says every part is skipped in the closing line (test_build_service closing-line test, test_check_spine.AnAllSkippedSimulationKeepsTheBuildTest not-simulated-first test); P999's row for the same defect is this one",
+  "find": "    meaning = None if skipped[0] == build_codes.EVERY_PART_SKIPPED else build_codes.CODES.get(skipped[0])",
+  "replace": "    meaning = None"
  },
  {
   "file": "scripts/spark/flow/run_request.py",
