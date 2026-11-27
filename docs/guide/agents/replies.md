@@ -169,7 +169,7 @@ and a note names the key that fits now: ask the person again with that key. Afte
 ## The research run
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/research.py --part <id> --project . --json
+${CLAUDE_PLUGIN_ROOT}/scripts/research.py --part '<id>' --project . --json
 ```
 
 It reads the record from the project's `parts/` or the person's shelf, never from spark's library. `data.gaps` lists

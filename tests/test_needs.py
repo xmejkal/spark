@@ -3539,7 +3539,7 @@ class TheIdeaCommandTest(unittest.TestCase):
         flagged = [line for line in lines if any(op in line for op in ("--audit", "--function-set", "--fact-set", "--offer"))]
         self.assertTrue(flagged)
         for line in flagged:
-            self.assertIn("--project <project>", line, line)
+            self.assertRegex(line, r"--project '?<project>'?", line)  # P1256: quoted in a block, still bare in a line of prose
         for line in lines:
             if any(op in line for op in ("--needs-set", "--match", "--pick", "--requirements", "--step", "--tally")):
                 self.assertNotIn("--project", line, "--needs-set and --match take the project as their argument: " + line)
@@ -3548,9 +3548,9 @@ class TheIdeaCommandTest(unittest.TestCase):
         idea = " ".join((ROOT / "commands" / "idea.md").read_text().split())
         self.assertIn("M, C and L at their start, and S as soon as the project's folder is chosen", idea)
         self.assertIn("the questions before it are not counted", idea)
-        self.assertIn("scripts/parts.py --step <project> S", idea)
+        self.assertIn("scripts/parts.py --step '<project>' S", idea)
         self.assertIn("## T — the tally", idea)
-        self.assertIn("scripts/parts.py --tally <project>", idea)
+        self.assertIn("scripts/parts.py --tally '<project>'", idea)
 
     def test_section_l_and_the_build_page_say_what_a_later_run_keeps(self):
         idea = " ".join((ROOT / "commands" / "idea.md").read_text().split())
