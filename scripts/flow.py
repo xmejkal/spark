@@ -39,8 +39,8 @@ flow.py show never runs the checks. The page draws the same line, grey only when
 free checks are current and ok (data.guide.simulation.grey).
 
 The deploy phase reads the newest board log in sim/runs/board/: its time, image, verdict and cause, never its port or
-console text (P1043). Only ready seen on the image the project holds now is ok. Ready unknown is partial, and ready not
-seen is problems. Firmware newer than that image, an image that differs from the last deploy's, or no image makes it
+console text (P1043). Only ready seen on the image the project holds now is ok. Ready unknown is partial (DONE then says firmware (written), but not for a lost board after ready), and
+ready not seen is problems. Firmware newer than that image, an image that differs from the last deploy's, or no image makes it
 stale, and stale wins over problems. The says line keeps the verdict. With the deploy ok, guide.now is null and
 guide.no_open_phase says why. data.deploy holds the logged deploy: at, image, verdict, cause, fact and read_back.
 From the On the board station on, guide.gate_a (P1220) is gate A's one free condition: shut_by lists run-failed while a run

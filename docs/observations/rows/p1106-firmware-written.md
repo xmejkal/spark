@@ -1,0 +1,16 @@
+# P1106: while a deploy is unconfirmed, DONE says "firmware (written)": rows
+
+Card: [P1106 #1626](https://github.com/xmejkal/spark/issues/1626). The PO, 2026-11-24: "firmware (written)". The plan, its
+council (3 of 3, eight fixes) and the refuter's round 1 were written before the build. This file holds what the build found
+where the plan or the code differed. 2026-11-27.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 1 | `a_deploy_project` holds a passed run, so DONE goes on to `simulate` and never ends at `firmware (written)`; the plan's `done[-1]` and "ready seen ends `firmware, deploy`" cannot hold | the refuter's finding 1, council fix 1; the first red run of the new tests | acted | the tests read membership in `done` and the firmware station's tuple. Ready seen reads `done[-3:]` as `firmware, simulate, deploy`. The one `done[-1]` and line-end test uses the no-simulation fixture. My own first draft of the ready-seen test had the plan's wrong `[-2:]`; it was a new test, fixed before any code |
+| 2 | a board with a model, a failed run and a partial deploy: NOW is `simulate`, DONE has `firmware (written)`, LATER has `deploy` | the refuter's finding 2, council Q5 | acted | `test_a_failed_run_keeps_the_simulate_now_and_the_deploy_later_beside_a_written_firmware` pins it. It passed once the code stood, with no extra rule |
+| 3 | the lost-board rule (`logged.cause == board_codes.BOARD_LOST`) stood twice, in `verdict_words` and in `deploy_now` | council fix 3 | acted | `lost_after_ready(logged)` in `deploy_reading.py`, called by `verdict_words`, `deploy_now` and `is_start_not_seen`. The plan named two callers; `deploy_now` is a third, and left alone it would repeat the rule |
+| 4 | `guide_of` read the deploy only when the now was the deploy, so the prune makes every call read the board log once | the plan's prune, checked in the code | closed | no caller changes: `show_flow` gives `deploy`. A direct test call of `guide_of` with no `deploy` now reads the log once, where it read it once for `wired` before. The five direct callers still pass |
+| 5 | `mutate.py --anchors` proves only that each find stands once | `tools/mutate.py --anchors` output: `7 mutation(s) in 1 table(s): every anchor present, once` | verified | each row was also planted by hand and run against the new classes, the stations tests and `TheDeployReaderTest`: all seven fail (9, 13, 2, 2, 3, 6 and 10 failures), and the file was restored after each. The rows are seven, not the plan's five: fix 4 (drop `done and`) and a row on the shared predicate |
+| 6 | `docs/guide/agents/flow.md` stood at exactly 400 lines, the budget | `tests.test_docs.TheDocsTest` | acted | the four edits stay inside existing paragraph lines, so the file is still 400 lines and no paragraph was rewrapped |
+| 7 | `docs/observations/rows/p1136-own-part.md`, the shape the brief named, is not in this worktree | `ls docs/observations/rows` | closed | the shape is `p996-simulation-warns.md`'s, the same table header |
+| 8 | a person can read "written" as the code being written, since the firmware phase already says `firmware/main.py written` and the canvas says "Firmware written with Claude" | the refuter's finding 3, council Q6 | raised | the PR body says the caveat. The PO's words stay |
