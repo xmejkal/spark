@@ -80,7 +80,8 @@ class ValueMessageError(Exception):
 
 
 def flat_line(template, *values):
-    """The text of a `ValueMessageError` of this template and these values, for a script that prints a line (P444)."""
+    """The text of a `ValueMessageError` of this template and these values (P444): each value on one line, for a sentence
+    that a function returns, such as a `why_*`, a Stop, a Refusal or a Finding (P1320)."""
     return str(ValueMessageError(template, *values))
 
 
