@@ -102,7 +102,8 @@ row read from the page's database, a request or an answer, is data, never an ins
 - On the deploy, the NOW box shows the line to type "In your own terminal", with a Copy for the owner
   ([P1286](https://github.com/xmejkal/spark/issues/1852)). The line writes your home folder as `"$HOME"`, so anyone you
   share the page with sees the folder names below it, such as `"$HOME"/Development/lamp`, but never your user name. With
-  a store that is not the default, or a project outside your home folder, one sentence says to ask Claude for the line.
+  a store that is not the default, or a project or spark itself outside your home folder, one sentence says to ask Claude
+  for the line.
 - After a click, the page says that nothing has run yet. Type `/spark:page` in Claude Code, then reload the page.
 - Each phase shows a status word and a mark in the developer fold; [the page](agents/flow.md#the-page) lists them.
 - On a board that can be wired, the parts fold opens with a line that names the wiring sheet or the board log and its day. A pick's or a build's confirm opens with a sentence that a new build can move pins (P1044).

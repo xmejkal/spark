@@ -366,7 +366,7 @@ NOT_RUN_MARK = "–"
 #: The NOW box's blocks to copy: a bold head (never a button) over a code box, and the owner's COPY, which never sends. A chat
 #: offer's (P1122) holds its tell; the deploy's run block (P1286, O4), also in `flow.py show`, its line, else NO_LINE_TO_TYPE_SAYS.
 ASK_CLAUDE, COPIED_SAYS = "Ask Claude", "Copied: paste it in Claude Code."
-LINE_TO_TYPE_LABEL, COPIED_LINE_SAYS, NO_LINE_TO_TYPE_SAYS = "In your own terminal", "Copied: paste it in your own terminal.", "Ask Claude in the chat for this step's line: spark shows it here only for the default store and a project in your home folder."
+LINE_TO_TYPE_LABEL, COPIED_LINE_SAYS, NO_LINE_TO_TYPE_SAYS = "In your own terminal", "Copied: paste it in your own terminal.", "Ask Claude in the chat for this step's line: spark shows it here only for the default store, with the project and spark itself in your home folder."
 
 #: The page of the project (P827): its code when the file cannot be written, the words a status has no word for, and the
 #: bench note. This page does not look at the board, and the note says so.
