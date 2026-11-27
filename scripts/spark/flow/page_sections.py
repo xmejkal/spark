@@ -374,7 +374,8 @@ class PartsHtmlFold:
 
     def text(self, page):
         """The parts fold (P1062): the parts phase's says in order (P1044's wired line first), one row per need with its
-        picks in the reading's order (`pick_need`), then the other sendable offers, the parts list and the build. Each is a
+        picks in the reading's order (`pick_need`), its `data-need` the script's (P1067), then the other sendable offers, the
+        parts list and the build. Each is a
         hooked row, but the one on the NOW line. Open while the parts are NOW. Nothing with no parts phase and no row."""
         phase = next((each for each in page.phases if each["phase"] == flow_codes.PARTS), None)
         on_now = (sendable_now(page) or {}).get("key")
@@ -383,7 +384,8 @@ class PartsHtmlFold:
             needs.setdefault(pick_need(offer["key"]), []).append(offer)
         if phase is None and not needs:
             return ""
-        rows = ['<li class="need"><strong>%s</strong><ul>%s</ul></li>' % (_text(need), "".join(self._hooked(offer) for offer in offers))
+        rows = ['<li class="need" data-need="%s"><strong>%s</strong><ul>%s</ul></li>' % (_text(need), _text(need), "".join(
+                    self._hooked(offer) for offer in offers))
                 for need, offers in needs.items() if need is not None]
         rows += [self._hooked(offer) for offer in needs.get(None, [])]
         said = list(dict.fromkeys(phase["says"])) if phase else []  # a line the phase says for every need stands once

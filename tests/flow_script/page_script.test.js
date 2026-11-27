@@ -1,6 +1,7 @@
 // The page's script (P829 PR 3): no database or no owner, no button; a send writes the page's fingerprint and a UUID; a
 // second send while one waits writes nothing; a refused write puts the state back; Withdraw deletes the row and still
-// shows an answer that comes; what the status line says, never "done" alone.
+// shows an answer that comes; what the status line says, never "done" alone. P1067: a need's picks are radios, and one
+// Send writes their keys in one row.
 // Run by tests/test_flow_script.py:  node --test tests/flow_script/page_script.test.js
 "use strict";
 
@@ -13,9 +14,14 @@ process.env.TZ = "Europe/Prague";
 const script = require(path.join(__dirname, "..", "..", "scripts", "spark", "flow", "page_script.js"));
 
 // The words as the page's words block holds them: literals, the plan's section 9 and the review's words, not the code's own.
+const STALE = "These steps may be marked out of date: requirements.";
+/** P1067: a pick's words, with its need and its part, as page_words writes them. */
+const pick = (need, part) => ({ label: "Pick “" + part + "” for " + need, says: ["Saves “" + part + "” as the pick.", STALE], need, part });
 const WORDS = {
   offers: { build: { label: "Build the board", says: ["Saves its files in this project."] },
-            "pick:light:led-red-5mm": { label: "Pick “Red LED” for light", says: ["Saves “Red LED” as the pick."] } },
+            "pick:light:led-red-5mm": { label: "Pick “Red LED” for light", says: ["Saves “Red LED” as the pick."] },
+            "pick:display:oled-128": pick("display", "OLED 128"), "pick:display:lcd-1602": pick("display", "LCD 1602"),
+            "pick:button:tactile-6mm": pick("button", "Tactile 6 mm"), "pick:button:tactile-12mm": pick("button", "Tactile 12 mm") },
   send: "Send", cancel: "Cancel", copy: "Copy", copied: "Copied: paste it in Claude Code.", withdraw: "Withdraw", command: "/spark:page",
   intro: "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page.",
   waiting: "Sent at %s. Nothing has run yet. To run it, type /spark:page in Claude Code.",
@@ -36,7 +42,16 @@ const WORDS = {
   refused: { "the project changed after the page was read, so nothing ran":
              "Nothing ran. The project changed after you clicked. Reload this page and click again." },
   marks: { ok: "✓", problems: "✗", "could-not-run": "?", "not-run": "–" },
+  not_now: "not now", picks_said: ["%d pick (%s)", "%d picks (%s)"], send_picks: "Send %s", choose_first: "Choose a part first.",
+  picks_together: "Spark checks the picks together. If one fails, spark saves none.",
+  waiting_picks: "Sent at %s: %s. Nothing has run yet. To run it, type /spark:page in Claude Code.",
+  ok_picks: "Saved as the picks. Nothing is built yet. Reload to see the new state.",
+  last_request_picks: "your picks", needs_join: ", ", label_join: ": ", no_pick_saved: "No pick was saved.",
+  refused_picks: { "the request names a step that spark does not offer now, so nothing ran":
+                   "Nothing ran. Spark no longer offers one of these picks. Reload this page." },
 };
+/** P1067: the needs of the parts fold and their picks, in the page's order. */
+const NEEDS = [["display", ["pick:display:oled-128", "pick:display:lcd-1602"]], ["button", ["pick:button:tactile-6mm", "pick:button:tactile-12mm"]]];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const AT = "2026-11-21T14:40:00.000Z";
 const WAITING = /^Sent at \d\d:\d\d\. Nothing has run yet\. To run it, type \/spark:page in Claude Code\.$/;
@@ -49,6 +64,7 @@ class FakeElement {
     Object.assign(this, { tag, attributes, children: [], listeners: {}, style: {}, textContent: "", hidden: false, disabled: false });
   }
   get tagName() { return this.tag.toUpperCase(); }
+  get firstChild() { return this.children[0] || null; }
   get lastChild() { return this.children[this.children.length - 1] || null; }
   getAttribute(name) { return Object.prototype.hasOwnProperty.call(this.attributes, name) ? this.attributes[name] : null; }
   setAttribute(name, value) { this.attributes[name] = String(value); }
@@ -62,6 +78,10 @@ class FakeElement {
     return child;
   }
   remove() { if (this.parentNode) this.parentNode.children = this.parentNode.children.filter((each) => each !== this); }
+  closest(selector) {  // only "[name]", which is all the script asks
+    for (let at = this; at; at = at.parentNode) if (at.getAttribute && at.getAttribute(selector.slice(1, -1)) !== null) return at;
+    return null;
+  }
   querySelector(tag) { return this.children.find((each) => each.tag === tag) || null; }
   click() { return this.listeners.click(); }
 }
@@ -69,8 +89,9 @@ class FakeElement {
 /** Fake: a page with an intro, one sendable offer and the guide's NOW line of it, and a window whose claude.use gives `db`
  * and a user who is the owner unless `owner` is false (null: no user capability). With `guide`, the page holds the guide's
  * section (P1062), whose NOW box holds the NOW line. With `ask`, the NOW box also holds a chat offer's block with that tell
- * (P1122), and the window's clipboard keeps what is written to it. */
-function fakeWindow(db, owner = true, nowKey = "build", guide = true, ask = null) {
+ * (P1122), and the window's clipboard keeps what is written to it. With `needs`, the parts fold holds NEEDS' rows, each
+ * `<li class="need" data-need>` with its picks, after the build's row (P1067). */
+function fakeWindow(db, owner = true, nowKey = "build", guide = true, ask = null, needs = false) {
   const body = new FakeElement("body", { "data-fingerprint": "0123456789ab", "data-written": "2026-11-21T15:40:00+01:00" });
   const intro = body.appendChild(new FakeElement("p", { class: "intro" }));
   const section = guide ? new FakeElement("section", { id: "guide" }) : null;
@@ -83,6 +104,14 @@ function fakeWindow(db, owner = true, nowKey = "build", guide = true, ask = null
     block.appendChild(new FakeElement("strong")).textContent = "Ask Claude";
     block.appendChild(new FakeElement("code")).textContent = ask;
   }
+  const list = needs ? body.appendChild(new FakeElement("ul")) : null;
+  const picks = [];
+  for (const [need, keys] of needs ? NEEDS : []) {
+    const row = list.appendChild(new FakeElement("li", { class: "need", "data-need": need }));
+    row.appendChild(new FakeElement("strong")).textContent = need;
+    const inner = row.appendChild(new FakeElement("ul"));
+    keys.forEach((key) => picks.push(inner.appendChild(new FakeElement("li", { "data-key": key, "data-makes-stale": "requirements" }))));
+  }
   const words = new FakeElement("script", { id: "spark-words" });
   words.textContent = JSON.stringify(WORDS);
   const made = [];
@@ -92,7 +121,7 @@ function fakeWindow(db, owner = true, nowKey = "build", guide = true, ask = null
     createTextNode: (text) => ({ text }),
     getElementById: (id) => (id === "spark-words" ? words : null),
     querySelector: (selector) => ({ ".intro": intro, "#guide": section }[selector] || null),
-    querySelectorAll: (selector) => ({ "[data-makes-stale]": [now, offer], ".ask[data-key]": block ? [block] : [] }[selector] || []),
+    querySelectorAll: (selector) => ({ "[data-makes-stale]": [now, offer, ...picks], ".ask[data-key]": block ? [block] : [] }[selector] || []),
   };
   const user = owner === null ? null : { isOwner: async () => owner };
   const uses = { db, user };
@@ -100,7 +129,7 @@ function fakeWindow(db, owner = true, nowKey = "build", guide = true, ask = null
   const win = { document, crypto: globalThis.crypto, navigator: { clipboard },
                 claude: { use: async (name) => (name in uses ? uses[name] : null) } };
   if (section) body.appendChild(section);
-  return { win, made, offer, now, body, intro, section, block, clipboard };
+  return { win, made, offer, now, body, intro, section, block, clipboard, list, picks };
 }
 
 /** Fake: the Artifact database, in memory: the rows written and deleted, and the watches. `refuse` names a verb that rejects. */
@@ -399,4 +428,143 @@ test("the script's text holds no markup of a control, no web address and no clos
   for (const word of ["http", "<button", "<input", "<iframe", "onclick", "innerHTML", "</"]) {
     assert.equal(text.toLowerCase().includes(word.toLowerCase()), false, word);
   }
+});
+
+// P1067: several picks in one Send.
+const radiosOf = (made) => made.filter((element) => element.tag === "input");
+const textOf = (label) => label.children.map((child) => (child.tag ? "" : child.text)).join("");
+/** A click on `radio`, as the browser does it: the other radios of its need let go. */
+function choose(made, radio) {
+  radiosOf(made).filter((each) => each.name === radio.name).forEach((each) => { each.checked = each === radio; });
+  radio.listeners.change();
+}
+const OLED = "pick:display:oled-128";
+const TACTILE = "pick:button:tactile-6mm";
+const TWO_PICKS = "2 picks (display, button)";
+async function aPicksPage(db = fakeDb()) {
+  const page = fakeWindow(db, true, "build", true, null, true);
+  const asked = await script.start(page.win);
+  const radio = (key) => radiosOf(page.made).find((each) => each.value === key);
+  const sendRow = page.list.children[page.list.children.length - 1];
+  return Object.assign(page, { db, asked, radio, sendRow, sendPicks: sendRow.children[0], chooseFirst: sendRow.children[1] });
+}
+
+test("P1067: each need gets native radios, not now first and checked, each labelled by its part, and a choice sends nothing", async () => {
+  const { made, list, radio, db } = await aPicksPage();
+  const [display, button] = list.children;
+  assert.deepEqual([display.attributes.role, display.attributes["aria-label"], button.attributes["aria-label"]],
+    ["radiogroup", "display", "button"]);
+  assert.deepEqual(radiosOf(made).map((each) => [each.type, each.name, each.value, each.checked]), [
+    ["radio", "pick:display", "", true], ["radio", "pick:display", OLED, false], ["radio", "pick:display", "pick:display:lcd-1602", false],
+    ["radio", "pick:button", "", true], ["radio", "pick:button", TACTILE, false], ["radio", "pick:button", "pick:button:tactile-12mm", false]]);
+  const labels = made.filter((element) => element.tag === "label");
+  assert.deepEqual(labels.map(textOf), [" not now", " OLED 128", " LCD 1602", " not now", " Tactile 6 mm", " Tactile 12 mm"]);
+  assert.equal(display.children[1], labels[0], "not now stands first, before the need's picks");
+  assert.equal(labels[1].parentNode.children[0], labels[1], "a pick's choice leads its row, as the design draws it");
+  assert.deepEqual([labels[1].style.minHeight, labels[1].style.display], ["var(--button-height)", "inline-flex"]);
+  choose(made, radio(OLED));
+  assert.equal(db.rows.size, 0);
+  assert.deepEqual(buttons(made).map((each) => each.textContent), ["Copy", "Withdraw", "Build the board", "Build the board", "Send 1 pick (display)"]);
+});
+
+test("P1067: Send-picks is disabled and says to choose a part while none is chosen, then names the chosen picks", async () => {
+  const { made, list, radio, sendRow, sendPicks, chooseFirst } = await aPicksPage();
+  assert.equal(list.children.indexOf(sendRow), 2, "after the need rows");
+  assert.equal(sendRow.attributes["data-makes-stale"], "", "a data-makes-stale row, so Send-picks is teal");
+  assert.deepEqual([sendPicks.textContent, sendPicks.disabled, chooseFirst.textContent, chooseFirst.hidden],
+    ["Send", true, "Choose a part first.", false]);
+  choose(made, radio(TACTILE));
+  assert.deepEqual([sendPicks.textContent, sendPicks.disabled, chooseFirst.hidden], ["Send 1 pick (button)", false, true]);
+  choose(made, radio(OLED));
+  assert.equal(sendPicks.textContent, "Send " + TWO_PICKS, "in the page's order");
+  choose(made, radio(""));
+  choose(made, radiosOf(made).filter((each) => each.value === "")[1]);
+  assert.deepEqual([sendPicks.textContent, sendPicks.disabled, chooseFirst.hidden], ["Send", true, false]);
+});
+
+test("P1067: the Send box says each pick, a line they share once, and that spark checks them together", async () => {
+  const { made, radio, sendRow, sendPicks } = await aPicksPage();
+  choose(made, radio(OLED));
+  choose(made, radio(TACTILE));
+  sendPicks.click();
+  const box = sendRow.children[2];
+  assert.equal(box.attributes.role, "group");
+  assert.deepEqual(box.children.map((child) => child.textContent), ["Send " + TWO_PICKS,
+    "Pick “OLED 128” for display: Saves “OLED 128” as the pick.", "Pick “Tactile 6 mm” for button: Saves “Tactile 6 mm” as the pick.",
+    STALE, "Spark checks the picks together. If one fails, spark saves none.", "Send", "Cancel"]);
+});
+
+test("P1067: Send writes one row of the picks' keys and no key, and while it waits the radios keep their choice, disabled", async () => {
+  const { made, radio, db, sendRow, sendPicks } = await aPicksPage();
+  choose(made, radio(OLED));
+  choose(made, radio(TACTILE));
+  sendPicks.click();
+  await sendRow.children[2].children[5].click();
+  const [[name, row]] = [...db.rows.entries()];
+  assert.deepEqual(Object.keys(row), ["id", "keys", "seen", "at"]);
+  assert.deepEqual([name, row.keys, row.seen], ["requests/" + row.id, [OLED, TACTILE], "0123456789ab"]);
+  assert.match(row.id, UUID);
+  assert.match(statusOf(made).textContent, /^Sent at \d\d:\d\d: 2 picks \(display, button\)\. Nothing has run yet\./);
+  assert.deepEqual(radiosOf(made).map((each) => [each.checked, each.disabled]),
+    [[false, true], [true, true], [false, true], [false, true], [true, true], [false, true]]);
+  assert.deepEqual([sendPicks.disabled, sendPicks.title], [true, "Waiting for Claude: " + TWO_PICKS + "."]);
+});
+
+test("P1067: after a send the database refuses, and after Withdraw, the radios come back with the same choices", async () => {
+  const refusing = await aPicksPage(fakeDb("set"));
+  choose(refusing.made, refusing.radio(OLED));
+  assert.equal(await refusing.asked.sendPicks([OLED]), null);
+  assert.equal(statusOf(refusing.made).textContent, "– Could not send. Nothing ran.");
+  assert.deepEqual([refusing.radio(OLED).checked, refusing.radio(OLED).disabled, refusing.sendPicks.disabled], [true, false, false]);
+  const { made, radio, asked, sendPicks } = await aPicksPage();
+  choose(made, radio(TACTILE));
+  const row = await asked.sendPicks([TACTILE]);
+  assert.equal(radio(TACTILE).disabled, true);
+  await buttons(made).find((each) => each.textContent === "Withdraw").click();
+  assert.equal(asked.latest.id, row.id);
+  assert.deepEqual([radio(TACTILE).checked, radio(TACTILE).disabled, sendPicks.disabled], [true, false, false]);
+});
+
+test("P1067: a row of picks waits naming them, its last request says them, and an ok or a refusal says it in the picks' words", () => {
+  const request = { id: "x", keys: [OLED, TACTILE], at: "2026-11-21T10:36:00.000Z" };
+  assert.equal(script.shownState(request, null, WORDS).text,
+    "Sent at 11:36: 2 picks (display, button). Nothing has run yet. To run it, type /spark:page in Claude Code.");
+  assert.equal(script.lastRequest(request, { ran: true, status: "ok", line: "ran x: ok" }, WORDS),
+    "Your last request, 21 Nov 2026, 11:36: 2 picks (display, button). ✓ Saved as the picks. Nothing is built yet. Reload to see the new state.");
+  assert.deepEqual(script.shownState(request, { ran: false, line: "the request names a step that spark does not offer now, so nothing ran" }, WORDS),
+    { mark: "–", text: "Nothing ran. Spark no longer offers one of these picks. Reload this page.", grey: true });
+  assert.equal(script.lastRequest({ id: "y", keys: [OLED, "pick:fan:gone"], at: request.at }, { ran: true, status: "ok", line: "ran x: ok" }, WORDS),
+    "Your last request, 21 Nov 2026, 11:36: your picks. ✓ Saved as the picks. Nothing is built yet. Reload to see the new state.");
+});
+
+test("P1067: on a page with need rows the build and the NOW line still send one key", async () => {
+  for (const which of ["offer", "now"]) {
+    const page = await aPicksPage();
+    const item = page[which];
+    item.children.find((child) => child.tag === "button").click();
+    const box = item.children.find((child) => child.tag === "div");
+    assert.deepEqual(box.children.map((child) => child.textContent), ["Build the board", "Saves its files in this project.", "Send", "Cancel"]);
+    await box.children[2].click();
+    const [[, row]] = [...page.db.rows.entries()];
+    assert.deepEqual([Object.keys(row), row.key], [["id", "key", "seen", "at"], "build"], which);
+  }
+});
+
+test("P1067: a row of a shape the page does not know reads as request_other and breaks nothing", () => {
+  const at = "2026-11-21T10:36:00.000Z";
+  const ok = { ran: true, status: "ok", line: "ran x: ok" };
+  for (const request of [{ id: "x", at }, { id: "x", keys: OLED, at }, { id: "x", keys: { 0: OLED }, at }]) {
+    assert.equal(script.lastRequest(request, ok, WORDS),
+      "Your last request, 21 Nov 2026, 11:36: a step this page no longer offers. ✓ Spark says: ran x: ok. Reload to see the new state.",
+      JSON.stringify(request));
+    assert.match(script.shownState(request, null, WORDS).text, WAITING);
+  }
+});
+
+test("P1067: picks that ran with problems say first that no pick was saved, and one key's problems do not", () => {
+  const problems = { ran: true, status: "problems", line: "the button has no piece left." };
+  assert.deepEqual(script.shownState({ id: "x", keys: [OLED, TACTILE], at: AT }, problems, WORDS),
+    { mark: "✗", text: "No pick was saved. Ran, with problems: the button has no piece left. Reload to see the new state.", grey: false });
+  assert.equal(script.shownState({ id: "x", key: OLED, at: AT }, problems, WORDS).text,
+    "Ran, with problems: the button has no piece left. Reload to see the new state.");
 });

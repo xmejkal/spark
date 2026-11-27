@@ -1,0 +1,104 @@
+[
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1067: two keys of one need run as one pick (test_run_request.SeveralPicksTest.test_two_picks_of_one_need_a_key_that_is_no_pick_or_a_key_not_offered_runs_nothing)",
+  "find": "(None in needs or len(set(needs)) < len(needs))",
+  "replace": "(None in needs)"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1067: a key that is no pick runs in a row of keys (test_run_request.SeveralPicksTest.test_two_picks_of_one_need_a_key_that_is_no_pick_or_a_key_not_offered_runs_nothing)",
+  "find": "(None in needs or len(set(needs)) < len(needs))",
+  "replace": "(len(set(needs)) < len(needs))"
+ },
+ {
+  "file": "scripts/spark/flow/offer_steps.py",
+  "name": "P1067: the joined step keeps only the first offer's pair (test_flow.TheOfferStepTest.test_the_joined_step_of_three_picks_is_the_pick_of_their_pairs_with_pick_parts_s_op_and_effects, test_run_request.SeveralPicksTest.test_four_picks_of_four_needs_run_one_pick_with_the_four_pairs_in_the_row_s_order)",
+  "find": "pairs = [pair for step in steps for pair in step.argv[2:]]",
+  "replace": "pairs = steps[0].argv[2:]"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1067: a row with key and keys both is read (test_run_request.SeveralPicksTest.test_a_row_with_key_and_keys_with_neither_or_with_keys_that_are_no_list_of_text_is_malformed)",
+  "find": "if request is None or (request.key is None) == (request.keys is None):",
+  "replace": "if request is None or (request.key is None and request.keys is None):"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1067: an empty keys is read (test_run_request.SeveralPicksTest.test_a_row_with_key_and_keys_with_neither_or_with_keys_that_are_no_list_of_text_is_malformed)",
+  "find": "isinstance(keys, list) and keys and all(",
+  "replace": "isinstance(keys, list) and all("
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1067: a keys of text is read as its letters (test_run_request.SeveralPicksTest.test_a_row_with_key_and_keys_with_neither_or_with_keys_that_are_no_list_of_text_is_malformed)",
+  "find": "return list(keys) if isinstance(keys, list) and keys",
+  "replace": "return list(keys) if keys"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1067: a key in keys that is no text is read (test_run_request.SeveralPicksTest.test_a_row_with_key_and_keys_with_neither_or_with_keys_that_are_no_list_of_text_is_malformed)",
+  "find": "all(isinstance(key, str) and key for key in keys)",
+  "replace": "all(key for key in keys)"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1067: the answer of several picks names the first key as key (test_run_request.SeveralPicksTest.test_the_answer_of_four_picks_names_their_keys_and_labels_and_no_key)",
+  "find": "\"key\": None if offer is None else offer.key,",
+  "replace": "\"key\": chosen[0].key,"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1067: the answer's label is only the first pick's label (test_run_request.SeveralPicksTest.test_the_answer_of_four_picks_names_their_keys_and_labels_and_no_key)",
+  "find": "label = flow_codes.LABELS_JOIN.join(each.label for each in chosen)",
+  "replace": "label = chosen[0].label"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1067: a refusal of a row of keys names its keys (test_run_request.SeveralPicksTest.test_a_refusal_of_picks_names_no_key_no_label_and_no_text_of_the_row)",
+  "find": "\"keys\": [offer.key] if offer else [],",
+  "replace": "\"keys\": keys_of(request) or [],"
+ },
+ {
+  "file": "scripts/spark/flow/page_sections.py",
+  "name": "P1067: a need's row gets no data-need, so the script cannot group its picks (test_flow_page.TheSliceOneOrderTest.test_each_need_row_carries_its_need_for_the_script_and_the_developer_fold_none)",
+  "find": "'<li class=\"need\" data-need=\"%s\"><strong>%s</strong><ul>%s</ul></li>' % (_text(need), _text(need),",
+  "replace": "'<li class=\"need\"%s><strong>%s</strong><ul>%s</ul></li>' % (\"\", _text(need),"
+ },
+ {
+  "file": "scripts/spark/flow/flow_page.py",
+  "name": "P1067: a pick's words lose its part, so its radio has no label (test_flow_page.TheSliceOneOrderTest.test_a_pick_offer_s_words_hold_its_need_and_its_part_and_the_other_offers_neither)",
+  "find": "dict(words, need=need, part=offer.get(\"part\"))",
+  "replace": "dict(words, need=need, part=None)"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1067: Send-picks is enabled with nothing chosen (page_script.test.js, Send-picks is disabled and says to choose a part)",
+  "find": "this.picks.disabled = Boolean(waiting) || !keys.length;",
+  "replace": "this.picks.disabled = Boolean(waiting);"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1067: Send-picks writes the first pick's key (page_script.test.js, Send writes one row of the picks' keys and no key)",
+  "find": "() => this.requests.sendPicks(keys));",
+  "replace": "() => this.requests.send(keys[0]));"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1067: a row of picks is labelled by its keys (page_script.test.js, a row of picks waits naming them)",
+  "find": "return picksSaid(words, request.keys) || words.last_request_picks;",
+  "replace": "return String(request.keys);"
+ },
+ {
+  "file": "scripts/spark/flow/page_script.js",
+  "name": "P1067: picks that ran with problems do not say that no pick was saved (page_script.test.js, picks that ran with problems say first that no pick was saved)",
+  "find": "const unsaved = isPicks(request) ? words.no_pick_saved + \" \" : \"\";",
+  "replace": "const unsaved = \"\";"
+ },
+ {
+  "file": "scripts/spark/flow/run_request.py",
+  "name": "P1067: a row with key and keys names its key in the refusal (test_run_request.SeveralPicksTest.test_a_row_with_key_and_keys_is_malformed_and_its_answer_names_no_key)",
+  "find": "offer = offers.get(key_of(request)) if request is None or request.keys is None else None",
+  "replace": "offer = offers.get(key_of(request))"
+ }
+]

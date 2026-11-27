@@ -128,7 +128,7 @@
  {
   "file": "scripts/spark/flow/page_script.js",
   "name": "P1062 review: a request whose offer left the page is said by a part of its key (page_script.test.js)",
-  "find": "    const label = labelOf(words, request.key) || own(words.request_kinds, kindOf(request.key)) || words.request_other;",
-  "replace": "    const label = labelOf(words, request.key) || kindOf(request.key);"
+  "find": "    return labelOf(words, request.key) || own(words.request_kinds, kindOf(request.key)) || words.request_other;",
+  "replace": "    return labelOf(words, request.key) || kindOf(request.key);"
  }
 ]

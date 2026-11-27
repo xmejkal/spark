@@ -77,9 +77,9 @@ SYSTEM_FONTS = 'system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif'
 
 def without_script(text):
     """`text` without the script block and the script's hooks (data-makes-stale on a sendable offer, data-key with it on the
-    NOW box's NEXT line, P1062): the page as it was before the script."""
+    NOW box's NEXT line, P1062, and data-need on a need's row, P1067): the page as it was before the script."""
     text = re.sub(r'<p class="next" data-key="[^"]*" data-makes-stale="[^"]*">', '<p class="next">', SCRIPT_BLOCK.sub("", text, count=1))
-    return re.sub(r' data-makes-stale="[^"]*"', "", text)
+    return re.sub(r' data-(makes-stale|need)="[^"]*"', "", text)
 
 
 def scripts_of(text):
@@ -2109,6 +2109,42 @@ class TheSliceOneOrderTest(unittest.TestCase):
                 self.assertIn("<code>needs-drop:light</code> Drop the light need: Drops it.", developer(text))
         self.assertIn('<p class="next" data-key="build"', order_page(guide=a_guide(now=build)))
         self.assertIn('<li data-key="build" data-makes-stale="">Build the board: Builds it.</li>', order_page())
+
+    def test_each_need_row_carries_its_need_for_the_script_and_the_developer_fold_none(self):
+        """P1067: the script groups a need's picks by the row's `data-need`, so a choice per need needs no rule of its own."""
+        text = order_page()
+        for need in ("light", "button"):
+            self.assertEqual(text.count('<li class="need" data-need="%s"><strong>%s</strong><ul>' % (need, need)), 1, need)
+        self.assertNotIn("data-need", developer(text))
+
+    def test_a_pick_offer_s_words_hold_its_need_and_its_part_and_the_other_offers_neither(self):
+        """P1067: the radio of a pick is labelled by its part, and the Send of picks names their needs."""
+        phase = a_need_phase()
+        phase["offers"][0]["part"] = "Red LED"
+        offers = page_words([phase, dict(a_phase("build").to_dict(), offers=[{"key": "build", "label": "Build the board",
+                                                                              "effect": "Builds it.", "makes_stale": []}])])["offers"]
+        self.assertEqual(offers["pick:light:led-red"], {"label": "Pick led-red for light", "says": [
+            "Saves led-red.", "These steps may be marked out of date: requirements."], "need": "light", "part": "Red LED"})
+        self.assertEqual((offers["pick:button:tact-6mm"]["need"], offers["pick:button:tact-6mm"]["part"]), ("button", None))
+        self.assertEqual(offers["build"], {"label": "Build the board", "says": ["Builds it."]})
+
+    def test_the_words_of_several_picks_are_python_s(self):
+        """P1067: the words of the radios, the Send of picks, its box, its wait and its answers, written by Python."""
+        words = page_words([])
+        self.assertEqual({name: words[name] for name in ("not_now", "picks_said", "send_picks", "choose_first", "picks_together",
+                                                          "waiting_picks", "ok_picks", "last_request_picks", "needs_join", "label_join",
+                                                          "no_pick_saved")},
+                         {"not_now": "not now", "picks_said": ["%d pick (%s)", "%d picks (%s)"], "send_picks": "Send %s",
+                          "choose_first": "Choose a part first.",
+                          "picks_together": "Spark checks the picks together. If one fails, spark saves none.",
+                          "waiting_picks": "Sent at %s: %s. Nothing has run yet. To run it, type /spark:page in Claude Code.",
+                          "ok_picks": "Saved as the picks. Nothing is built yet. Reload to see the new state.",
+                          "last_request_picks": "your picks", "needs_join": ", ", "label_join": ": ",
+                          "no_pick_saved": "No pick was saved."})
+        not_offered = "the request names a step that spark does not offer now, so nothing ran"
+        self.assertEqual(words["refused_picks"], dict(words["refused"], **{
+            not_offered: "Nothing ran. Spark no longer offers one of these picks. Reload this page."}))
+        self.assertEqual(words["refused"][not_offered], "Nothing ran. This button is no longer offered. Reload the page.")
 
     def test_the_need_of_a_pick_offer_s_key(self):
         from spark.flow.phase_readers import pick_need

@@ -1680,6 +1680,20 @@ class TheOfferStepTest(FlowTest):
         self.assertEqual({step.op: step.effects for step in steps.values()},
                          {op: tuple(operation.effects) for op, operation in operations.items() if op in ("pick", "build-board", "needs-drop")})
 
+    def test_the_joined_step_of_three_picks_is_the_pick_of_their_pairs_with_pick_parts_s_op_and_effects(self):
+        """P1067: the page's Send of several picks runs one step, built through `picks_step` from the offers' own steps."""
+        from spark.core.cli import values_of
+        from spark.flow import offer_steps
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL)
+        steps = [offer_steps.pick_step(project, need, pick_id, name) for need, pick_id, name in
+                 (("soil", "x-many", "A soil probe"), ("light", "led-red-5mm", "Red LED"), ("board", "xiao-esp32-c6", "XIAO"))]
+        joined = offer_steps.joined_picks(steps)
+        self.assertEqual(joined, offer_steps.picks_step(project, ["soil=x-many", "light=led-red-5mm", "board=xiao-esp32-c6"],
+                                                        "; ".join(step.why for step in steps)))
+        self.assertEqual((joined.op, joined.effects), (PickParts.name, tuple(PickParts.effects)))
+        self.assertEqual(values_of(PickParts(), joined.argv)[0]["project_and_picks"],
+                         [str(project.absolute()), "soil=x-many", "light=led-red-5mm", "board=xiao-esp32-c6"])
+
     def test_the_parts_list_step_parses_with_its_own_operation(self):
         from spark.core.cli import values_of
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", BOARD)
@@ -1742,10 +1756,19 @@ class TheOfferStepTest(FlowTest):
         self.assertEqual(lines[at:at + 3][:2], ["  " + NO_MODEL, "  SET ASIDE: soil"])
         self.assertIn("idea:", lines[at + 2])
 
-    def test_the_offers_in_data_keep_their_four_keys_and_no_step(self):
+    def test_the_offers_in_data_keep_their_five_keys_and_no_step(self):
         said, _ = show(with_needs(a_built_project(), SOIL))
         self.assertEqual({tuple(offer) for phase in said["data"]["phases"] for offer in phase["offers"]},
-                         {("key", "label", "effect", "makes_stale")})
+                         {("key", "label", "effect", "makes_stale", "part")})
+
+    def test_a_pick_offer_in_data_names_its_part_and_every_other_offer_null(self):
+        """P1067 (D22: each fact on the page is in show): the page labels a pick's radio by its part."""
+        said, _ = show(with_needs(a_built_project(), SOIL))
+        parts = {offer["key"]: offer["part"] for phase in said["data"]["phases"] for offer in phase["offers"]}
+        self.assertEqual(parts["pick:soil:x-many"], "A soil probe")
+        self.assertEqual({key: part for key, part in parts.items() if not key.startswith("pick:")},
+                         {key: None for key in parts if not key.startswith("pick:")})
+        self.assertIn("build", parts)
 
 
 def a_simulate_now(project, *scenarios):

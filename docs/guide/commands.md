@@ -221,8 +221,8 @@ sha256 and whose yes it was, then reads the board back and waits for the firmwar
 ### `/spark:page`
 
 The first time, it asks, then publishes `page.html` as a private Artifact and keeps its id in `.spark/page.json`. On
-the page, a button and Send leave a request; type `/spark:page`, and Claude hands it to `flow.py run-request`, which
-runs it only when spark still offers it. Reload the page for the answer. A stale answer means the project changed since
+the page, a button and Send leave a request, and so does one Send of a part chosen for each need (P1067); type
+`/spark:page`, and Claude hands it to `flow.py run-request`, which runs it only when spark still offers it. Reload the page for the answer. A stale answer means the project changed since
 you clicked: reload and click again. Claude runs no step itself. Page: [`commands/page.md`](../../commands/page.md).
 
 ## Skills

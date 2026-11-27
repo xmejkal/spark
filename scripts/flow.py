@@ -27,8 +27,9 @@ offers. With a goal in the brief (.spark/project.json), the idea is ok and says 
 that cannot be read, it has none and says so. A hand-written project (requirements.json and no needs) has none for its
 needs and parts, and so has a project whose last need was dropped, which says so. Written firmware and a simulated image
 have none, because what their sentences say is for you to judge. An offer is a key, such as pick:soil:x-led, with a
-label (the words of its button, such as Build the board), its effect (plain sentences that name every write it makes)
-and makes_stale (the phases it can make out of date, only those that hold something now). flow.py show runs no offer.
+label (the words of its button, such as Build the board), its effect (plain sentences that name every write it makes),
+makes_stale (the phases it can make out of date, only those that hold something now) and part (a pick's part, else
+null). flow.py show runs no offer.
 The guide (P977) starts the text: NOW, the phase to act on now, its sentence and the key of its offer, or next: and the
 op of the step of a now phase that holds no offer, with needs you for a step the person takes (P1034), then DONE and
 LATER (with nothing open, the line that says so stands in place of NOW). One line per phase comes after it. With --json,
@@ -58,17 +59,8 @@ is no UUID in lower case is a bad argument, and nothing is written. Only /spark:
 run-request and the page show each value of the project's secrets files (firmware/*secret*.py, values only) as ***
 (P1060); a secrets file that cannot be read or parsed keeps the page from being written, and show notes the mask is off.
 
-flow.py run-request reads .spark/page-request.json, the page's request {id, key, seen, at}, and deletes it at once. It
-runs the step only when seen is the first 12 hex digits of the fingerprint now, the key is an offer now, its kind
-is pick, requirements or build, and its step names an Operation spark runs from the page. The values come from spark's
-offer's step, never from the request. Else it runs nothing:
-request_malformed (no regular file, no JSON object, an id that is no UUID, a key that is no text, a seen that is not 12
-hex digits, or a file it cannot delete), request_in_chat (a need's drop, or a chat offer: a job only Claude does, such as
-write-firmware), request_stale (the project changed after the page was read), request_not_offered (not an offer now,
-or a kind the page never runs) or request_secrets_unreadable (a secrets file in firmware/ that cannot be read or
-parsed). With --json it prints
-data.for, data.key, data.label, data.ran, data.status, data.mark, data.line and data.fingerprint, the one after the
-run, a refusal too; key and label only of an offer. After a run, write the page again with flow.py page.
+flow.py run-request runs the step the page asked for: flow.py run-request --help says the request's shape and its
+refusals.
 
 The fingerprint is the sha256 of the current offers and of .spark/needs.json, requirements.json and .spark/build.json. It
 changes when an offer or one of these files changes. No other file of the project changes it, except through an offer.
