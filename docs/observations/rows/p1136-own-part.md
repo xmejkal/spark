@@ -13,10 +13,10 @@ holds the raised, verified and acted findings of the build, the Chrome check and
 | 5 | the `is_on_picked_board` docstring and flow.md said the own part "plausibly serves" the need, but `is_plausible` judges the whole board | PR refuter (Opus) | acted | both say the board is a plausible pick for the need |
 | 6 | flow.md no longer said that the text and the page join two picks with ", " | PR refuter (Opus) | acted | said again on the `needs` line, with no new line |
 | 7 | the `✓ picked “…”` line of a need names the board alone, with no own part | PR refuter (Opus) | raised | card [P1308 #1880](https://github.com/xmejkal/spark/issues/1880) |
-| 8 | with two compute needs that pick two boards, both boards' offers for a light say "The board you picked has one." | PR refuter (Opus) | dropped | a basic project has one board, and the parts list asks for one |
-| 9 | the `is_plausible` clause of `is_on_picked_board` never changes the flow's output, since `need_picks` offers only plausible boards | PR refuter (Opus) | dropped | the plan keeps it as the guard for PR B's fold, which offers more; row 5 proves it by a direct call |
-| 10 | the label quotes the own part inside the part's quotes, while `offers[].part` is the name alone | PR lens | dropped | the council's Q3 form; `part` stays a name by Q9 |
-| 11 | `confirm`'s comment says the scroll has no motion, which holds only while the page sets no smooth scroll | PR lens | dropped | the page sets no `scroll-behavior` (PR refuter checked), so it holds |
-| 12 | no mutation row for the `part_words` call in the page row | PR lens | dropped | row 7 drops OWN_PART in `part_words`, which the label and the page row both call, and names the page test |
-| 13 | the canvas's "Your board" badge on the own-part card | the Chrome check | dropped | the council dropped the badge: it belongs with the canvas's cards, a later card |
+| 8 | with two compute needs that pick two boards, both boards' offers for a light say "The board you picked has one." | PR refuter (Opus) | rejected | a basic project has one board, and the parts list asks for one |
+| 9 | the `is_plausible` clause of `is_on_picked_board` never changes the flow's output, since `need_picks` offers only plausible boards | PR refuter (Opus) | rejected | the plan keeps it as the guard for PR B's fold, which offers more; row 5 proves it by a direct call |
+| 10 | the label quotes the own part inside the part's quotes, while `offers[].part` is the name alone | PR lens | rejected | the council's Q3 form; `part` stays a name by Q9 |
+| 11 | `confirm`'s comment says the scroll has no motion, which holds only while the page sets no smooth scroll | PR lens | rejected | the page sets no `scroll-behavior` (PR refuter checked), so it holds |
+| 12 | no mutation row for the `part_words` call in the page row | PR lens | rejected | row 7 drops OWN_PART in `part_words`, which the label and the page row both call, and names the page test |
+| 13 | the canvas's "Your board" badge on the own-part card | the Chrome check | rejected | the council dropped the badge: it belongs with the canvas's cards, a later card |
 | 14 | the canvas's fold of the other parts and its held parts as greyed cards | the Chrome check | raised | P1136 PR B, held by the PO's MVP-first direction of 27 Nov |
