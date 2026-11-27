@@ -1,7 +1,7 @@
 """
 The guide of a project (P977, #1407): from the Phases `show_flow.reading_of` reads, the phase the person acts on now, who
 acts and one sentence for it, where each phase stands (its station, P1119), the phases done and later built from the
-stations, the needs set aside, and why there is no simulation. It reads
+stations, the needs set aside, and why there is no simulation with the free checks' state (P1209, `checks_reading`). It reads
 and never writes. `flow.py show` and `flow.py page` answer it as `data.guide`.
 """
 
@@ -13,7 +13,7 @@ from spark.build.build_record import BuildRecordStore
 from spark.design import entry_origin, needs
 from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
-from spark.flow import deploy_reading, flow_codes, wired_board
+from spark.flow import checks_reading, deploy_reading, flow_codes, wired_board
 from spark.flow.no_model import stops_only_for_no_model
 from spark.flow.phase_readers import REQUIREMENTS_FILE, counted, read_requirements, set_aside
 from spark.core.errors import CodedMessageError
@@ -284,7 +284,8 @@ def stands_at_of(guide):
 def guide_of(project, phases, steps=count_steps, deploy=None, board=None):
     """
     What the person does now, what is done, what comes later and what they set aside, from the Phases of `project`:
-    `{"now": {phase, by, says, offer, chat_offer, needs, steps, with_wiring}, "stations", "done", "later", "set_aside", "no_simulation", "no_open_phase", "wired"}`.
+    `{"now": {phase, by, says, offer, chat_offer, needs, steps, with_wiring}, "stations", "done", "later", "set_aside", "no_simulation", "simulation", "no_open_phase", "wired"}`.
+    `no_simulation` is the flag's sentence and `simulation` the line show and the page draw (`checks_reading.simulation_of`).
     `stations` places each phase beside the now (`stations_of`, P1119), and `done` and `later` are built from it. `steps` counts the wiring
     sheet's steps. The needs are read once more, by the parts phase's own rule (`counted`, `set_aside`). `deploy` is the
     run's DeployState (P1043), None to read it here. `board` is the run's WiredBoard (P1044), None to read it here:
@@ -311,8 +312,10 @@ def guide_of(project, phases, steps=count_steps, deploy=None, board=None):
     stations = stations_of(phases, at, no_model, breadboard_place, has_no_picks(by_name))
     if board is None:
         board = wired_board.read_wired(project, deploy if deploy is not None else deploy_reading.read_deploy(project))
+    no_sim, firmware = flow_codes.BUILD in no_model, by_name.get(flow_codes.FIRMWARE)  # one no-model rule for both keys
     return {"now": said, "stations": stations, "done": names_at(stations, flow_codes.DONE_PLACE),
             "later": names_at(stations, flow_codes.LATER_PLACE), "set_aside": [need["id"] for need in set_aside(listed)],
-            "no_simulation": flow_codes.NO_SIMULATION_NOW if flow_codes.BUILD in no_model else None,
+            "no_simulation": flow_codes.NO_SIMULATION_NOW if no_sim else None,
+            "simulation": checks_reading.simulation_of(project, bool(firmware) and firmware.status != flow_codes.NOT_STARTED, no_sim),
             "no_open_phase": no_open_phase(said, by_name), "wired": wired_board.wired_data(board)}
 # --- end MVP ---

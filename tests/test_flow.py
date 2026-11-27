@@ -678,6 +678,10 @@ def a_firmware(project):
 # build a hand-written project say `requirements (no needs or picks behind it)` in `done`, on purpose.
 # P977 review: the sentences the review asked for, and `now.by` a list (two jobs name the person and Claude)
 NO_MODEL = "No simulation: Wokwi has no model of this board. You test it on the real board."
+#: P1209: the guide's `check` of a project with no check record, and the line of firmware with no record.
+NO_CHECK = {"name": "check-firmware", "state": "none-recorded", "why": None, "at": None, "current": None, "status": None,
+            "data": None, "lines": None, "inputs": None}
+NOT_RUN_YET = "Free checks: not run yet. Ask Claude to run them, for free."
 
 
 def a_run(project, verdict, image=b"an image"):
@@ -719,6 +723,7 @@ class TheGuideTest(FlowTest):
                             "firmware. Spark cannot see your wiring."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)"],
             "later": ["simulate (no Wokwi model of this board)", "deploy"], "set_aside": [], "no_simulation": NO_MODEL,
+            "simulation": {"line": NO_MODEL, "grey": True, "check": NO_CHECK},  # P1209: no firmware and no check record
             "no_open_phase": None, "wired": {"sheet_at": sheet_at(project), "deploy_at": None},  # P1044: the fixture keeps a sheet
             # P1119: the two jobs: the breadboard is now beside the firmware, so it is in no list
             "stations": stations(("idea", "done", None), ("needs", "done", "not-done"), ("parts", "done", "not-done"),
@@ -778,6 +783,7 @@ class TheGuideTest(FlowTest):
                             "run the deploy in your terminal."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)", "breadboard (spark cannot see it)", "firmware"],
             "later": ["simulate (no Wokwi model of this board)"], "set_aside": [], "no_simulation": NO_MODEL, "no_open_phase": None,
+            "simulation": {"line": NOT_RUN_YET + " " + NO_MODEL, "grey": False, "check": NO_CHECK},  # P1209: firmware, no record
             "wired": {"sheet_at": sheet_at(project), "deploy_at": None},  # P1044: the fixture keeps a sheet
             # P1119: a simulate with no model is later, though it stands before the deploy now
             "stations": stations(("idea", "done", None), ("needs", "done", "not-done"), ("parts", "done", "not-done"),
@@ -870,6 +876,7 @@ class TheGuideTest(FlowTest):
                     "says": "Tell Claude your goal in the chat, in your own words."},
             "done": [], "later": ["needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"],
             "set_aside": [], "no_simulation": None, "no_open_phase": None, "wired": None,  # P1044: no sheet and no board log
+            "simulation": {"line": None, "grey": False, "check": NO_CHECK},  # P1209: nothing to say
             "stations": stations(("idea", "now", None), *[(phase, "later", None) for phase in PHASES[1:]])})  # P1119
 
     def test_needs_set_aside_do_not_count_and_a_picked_one_counts_as_picked(self):
@@ -1741,6 +1748,23 @@ class TheOfferStepTest(FlowTest):
         at = lines.index("  " + NO_MODEL)  # the page's order, then the first phase line
         self.assertEqual(lines[at:at + 3][:2], ["  " + NO_MODEL, "  SET ASIDE: soil"])
         self.assertIn("idea:", lines[at + 2])
+
+    def test_show_prints_the_same_simulation_line_as_the_page(self):
+        """P1209 (D5): show's text line is "  " + data.guide.simulation.line, and the page's guide section holds the same text."""
+        from spark.firmware.firmware_check import INPUTS
+        from spark.firmware.project_secrets import is_secret_path
+        from spark.flow.write_flow_page import FlowPageStore, write_page
+        from spark.records.check_record import CheckRecordStore
+        project = a_firmware(a_project_built_with_no_simulation())
+        CheckRecordStore(project, "check-firmware", leave_out=is_secret_path).save(
+            INPUTS, "2026-11-27T02:10:00+01:00", {"status": "ok", "data": {}, "lines": ["imports: 0 of 0 imported", "tests: none (no tests/ folder)"]})
+        line = show(project)[0]["data"]["guide"]["simulation"]["line"]
+        self.assertTrue(line.startswith("Free checks, ") and line.endswith(NO_MODEL), line)
+        self.assertIn("  " + line, lines_of(project))
+        self.assertNotIn("  " + NO_MODEL, lines_of(project))  # one line, not two
+        write_page(project, store=FlowPageStore())
+        section = (project / "page.html").read_text(encoding="utf-8").split('<section id="guide">')[1].split("</section>")[0]
+        self.assertIn('<p class="muted">%s</p>' % line, section)
 
     def test_the_offers_in_data_keep_their_four_keys_and_no_step(self):
         said, _ = show(with_needs(a_built_project(), SOIL))

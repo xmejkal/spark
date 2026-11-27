@@ -229,6 +229,7 @@ class TheCheckRecordTest(unittest.TestCase):
         self.assertEqual(code, outcomes.EXIT_OK, said)
         self.assertEqual([note["subject"] for note in said["notes"]], ["page.html"])
         self.assertNotEqual((project / "page.html").read_text(), "an older page\n")
+        self.assertIn("Free checks, ", (project / "page.html").read_text())  # the page reads the record just kept
 
 
 class WhatItDeclaresTest(unittest.TestCase):
