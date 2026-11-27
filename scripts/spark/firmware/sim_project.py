@@ -20,6 +20,7 @@ from spark.records import onboard_parts
 from spark.design import board_components
 from spark.design import board_sections
 from spark.core import outcomes
+from spark.core.text_guards import flat_line
 from spark.sourcing import part_records
 from spark.sourcing import part_rules
 from spark.firmware.scenario_steps import WHY_LOG_UNREADABLE
@@ -406,12 +407,13 @@ def converter_warnings(stdout):
 
 def why_outside_sim(sim, image):
     """The sentence that refuses an image outside the sim folder, or None when it is inside. A run writes its image, so it
-    only writes inside sim/, and the look and the deploy refuse the same image: they would flash a file no run made."""
+    only writes inside sim/, and the look and the deploy refuse the same image: they would flash a file no run made. The
+    image is named absolute and on one line (P1320), so a folder part with a line break fakes no line and Privacy masks it."""
     try:
         outside = Path(sim).resolve() not in Path(image).resolve().parents
     except (OSError, ValueError, RuntimeError):  # a null byte in the name, a link loop
         outside = True
-    return "wokwi.toml names %s, outside sim/, and a run writes its image only inside sim/" % image if outside else None
+    return flat_line("wokwi.toml names %s, outside sim/, and a run writes its image only inside sim/", Path(image).absolute()) if outside else None
 
 
 #: The image named in wokwi.toml when the build named none (moved here from run_scenario.py, P685).
