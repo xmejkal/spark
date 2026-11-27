@@ -389,7 +389,7 @@ class TheRecordBoardLayoutTest(unittest.TestCase):
         placed = drawing.BreadboardPlanner(*record_inputs(self.read)).plan(self.read.steps).parts
         button = next(part for part in placed if part.id == "TactileButton")
         # P953: the board's body ends in 25 and four columns stay free, so the button's body starts in 30
-        self.assertEqual((min(h.column for h in button.holes.values()), max(h.column for h in button.holes.values())), (31, 33))
+        self.assertEqual((min(h.column for h in button.holes.values()), max(h.column for h in button.holes.values())), (30, 32))
 
 
 EPAPER = ROOT / "tests" / "data" / "breadboard" / "epaper"
@@ -1094,13 +1094,15 @@ UNDRAWN_BODIES = {
 }
 #: How far a leg may stand out of its body's edge on one axis: one pitch, the nearest hole (P1240).
 LEG_REACH_MM = 2.54
+#: Wokwi draws 96 px to the inch.
+PX_PER_MM = 96 / 25.4
 
 
 def hole_extent_mm(placed):
     """(the larger, the smaller) extent in mm of the holes a placed part's pins take, from the holes' own x and y."""
     xs = [hole.x for hole in placed.holes.values()]
     ys = [hole.y for hole in placed.holes.values()]
-    extents = sorted(((max(xs) - min(xs)) / part_shape.PX_PER_MM, (max(ys) - min(ys)) / part_shape.PX_PER_MM), reverse=True)
+    extents = sorted(((max(xs) - min(xs)) / PX_PER_MM, (max(ys) - min(ys)) / PX_PER_MM), reverse=True)
     return tuple(extents)
 
 
