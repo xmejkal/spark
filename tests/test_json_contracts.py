@@ -794,6 +794,12 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
         calls, broken = calls_off_the_table({"firmware_check.py": path.read_text()}, firmware_codes, (), used, None)
         self.assertEqual((calls > 0, broken, used), (True, [], FIRMWARE_FORWARDED))
 
+    def test_the_pin_map_variant_has_its_parent_s_word_and_meaning_and_its_own_fix(self):
+        parent, variant = firmware_codes.PIN_MAP_NAME_MISSING, firmware_codes.PIN_MAP_NAME_MISSING_NO_MAP
+        self.assertEqual((str(variant), variant.meaning), (str(parent), parent.meaning))
+        self.assertNotEqual(variant.fix, parent.fix)
+        self.assertEqual(variant.fix, "build the board with --keep, which writes firmware/pins.py")
+
     def test_each_code_constant_of_the_table_is_a_word_of_codes_with_that_word_s_meaning(self):
         # P935: a variant (BAD_ARGUMENT_REPLIES_UNREADABLE) is another Code of its parent's word and meaning, never a new word;
         # an area's variant of the core's word (core's BAD_ARGUMENT_REPLIES_UNREADABLE) has the core's meaning

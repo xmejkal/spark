@@ -34,7 +34,8 @@ NO_TESTS_LINE, TESTS_NOT_CHECKED_LINE = "tests: none (no %s/ folder)", "tests: n
 #: The subject of an import problem that names no module (`nothing_to_import`).
 FIRMWARE_SUBJECT = "firmware"
 #: With no firmware/pins.py, the one problem of the pin names (its code is a variant with the fix to build the map).
-NO_PIN_MAP_SENTENCE = PIN_MAP_PATH + " is not there, and %d use%s it, first %s:%d"
+NO_PIN_MAP_ONE = PIN_MAP_PATH + " is not there, and 1 use needs it, first %s:%d"
+NO_PIN_MAP_MANY = PIN_MAP_PATH + " is not there, and %d uses need it, first %s:%d"
 
 #: What `--help` says after the arguments (P481).
 DETAILS = """It needs no sim/, no board and no token. It writes one file, .spark/check-firmware.json, the check record that
@@ -176,7 +177,8 @@ class CheckFirmware(Operation):
         if not pins.has_map and pins.missing:
             first, count = pins.missing[0], len(pins.missing)
             return [Finding.of(PROBLEMS, PIN_MAP_PATH, firmware_codes.PIN_MAP_NAME_MISSING_NO_MAP,
-                               NO_PIN_MAP_SENTENCE % (count, " needs" if count == 1 else "s need", printable(first.file), first.line))]
+                               (NO_PIN_MAP_ONE % (printable(first.file), first.line) if count == 1
+                                else NO_PIN_MAP_MANY % (count, printable(first.file), first.line)))]
         return [Finding.of(PROBLEMS, printable("%s:%d" % (each.file, each.line)), firmware_codes.PIN_MAP_NAME_MISSING, each.sentence())
                 for each in pins.missing]
 

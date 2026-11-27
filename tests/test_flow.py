@@ -3417,6 +3417,15 @@ class ThePinMapTest(FlowTest):
         self.assertIsNone(statuses(show(project)[0])["firmware"])
         self.assertEqual(says(show(project)[0], "firmware")[0][:len("firmware/main.py written")], "firmware/main.py written")
 
+    def test_with_no_pin_map_show_says_it_is_not_there_and_not_a_count_of_found_uses(self):
+        project = a_firmware(a_built_project())
+        (project / "firmware" / "main.py").write_text(self.USES_JOY_SW)
+        with contextlib.redirect_stdout(io.StringIO()):
+            check_firmware.main(["--project", str(project)])
+        said, code = show(project)
+        self.assertEqual((statuses(said)["firmware"], code, says(said, "firmware")[0]),
+                         ("problems", 1, "pin map: firmware/pins.py is not there, 1 use needs it, first firmware/main.py:3"))
+
     def test_no_check_record_gives_no_status(self):
         project = a_firmware(a_built_project())
         self.assertIsNone(statuses(show(project)[0])["firmware"])

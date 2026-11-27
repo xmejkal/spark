@@ -80,8 +80,9 @@ data.name (the project folder's), data.title (the page's), data.stamp (newest: t
 data.artifact (the id kept in .spark/page.json, else null) (docs/guide/agents/flow.md).
 
 Exit codes: 0 no phase holds problems or could not run, 1 a phase holds problems (a need that cannot be matched,
-requirements the picks cannot give, a build that failed, a firmware line in sim/wokwi.toml that spark cannot use, a firmware file that uses a pin name the pin map lacks, in a current check record), 2 a
-phase could not be read or its last build could not run, or an argument is wrong. Problems win: with both, the status is
+requirements the picks cannot give, a build that failed, a firmware line in sim/wokwi.toml that spark cannot use, a
+firmware file that uses a pin name the pin map lacks, in a current check record), 2 a phase could not be read or its
+last build could not run, or an argument is wrong. Problems win: with both, the status is
 problems and the exit 1, and the phase that could not run is listed under unchecked. Every phase answers either way.
 For page, 0 means the page was written and 2 that it could not be written or an argument is wrong. A phase's own
 problems do not change them. For run-request, 0 means the step ran ok, 1 that it ran with problems, and 2 that nothing

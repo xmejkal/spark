@@ -124,6 +124,12 @@ class WhatTheCheckDoesNotCompareTest(unittest.TestCase):
         uses = read({"main.py": "import pins\nf(pins, pins)\n"})
         self.assertEqual(places_of(uses), [("firmware/main.py", 2)])
 
+    def test_a_name_the_file_guards_with_hasattr_or_getattr_is_a_place_not_a_missing_use(self):
+        for guard in ('hasattr(pins, "X")', 'getattr(pins, "X", None)'):
+            with self.subTest(guard=guard):
+                uses = read({"main.py": "import pins\nif %s:\n    y = pins.X\n" % guard})
+                self.assertEqual((uses.missing, places_of(uses)), ((), [("firmware/main.py", 2)]))
+
     def test_forms_the_check_does_not_see_give_nothing(self):
         for source in ("import pins.x\nx = pins.NOPE\n", "from .pins import NOPE\n", 'm = __import__("pins")\nm.NOPE\n'):
             with self.subTest(source=source):
@@ -238,6 +244,18 @@ class TheDataAndTheLineTest(unittest.TestCase):
         data = {"state": "recorded", "used": 1, "missing": [], "not_compared": places}
         self.assertEqual(PinMapUses.line_from(data),
                          "pin map: 1 of 1 uses found in firmware/pins.py, not compared in 2 places, first firmware/main.py:1")
+
+    def test_with_no_pin_map_the_line_says_it_is_not_there(self):
+        uses = read({"main.py": MAIN + "x = pins.LED\n"}, pins=None)
+        self.assertEqual(uses.to_data()["has_map"], False)
+        self.assertEqual(PinMapUses.line_from(uses.to_data()),
+                         "pin map: firmware/pins.py is not there, 2 uses need it, first firmware/main.py:3")
+        one = read({"main.py": MAIN}, pins=None).to_data()
+        self.assertEqual(PinMapUses.line_from(one), "pin map: firmware/pins.py is not there, 1 use needs it, first firmware/main.py:3")
+        self.assertEqual(PinMapUses.line_from(one, missing_only=True), PinMapUses.line_from(one))
+
+    def test_a_map_that_is_there_keeps_the_data_as_it_was(self):
+        self.assertNotIn("has_map", read({"main.py": MAIN}).to_data())
 
     def test_a_firmware_with_no_use_and_no_place_has_no_line(self):
         self.assertIsNone(PinMapUses.line_from({"state": "recorded", "used": 0, "missing": [], "not_compared": []}))

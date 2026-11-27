@@ -26,7 +26,7 @@
  {
   "file": "scripts/spark/firmware/pin_map_uses.py",
   "name": "P882: a place that cannot be compared gives no assumption",
-  "find": "places.update(Place(name, line, form) for line, form in unseen)",
+  "find": "places.update(Place(name, line, form) for line, form in not_compared)",
   "replace": "None"
  },
  {

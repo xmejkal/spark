@@ -51,7 +51,7 @@ PIN_MAP_NOT_READ = Code("pin_map_not_read", "a firmware file or the pin map does
                         "fix the file that the sentence names, then run check_firmware.py again. firmware/pins.py is written by the build: "
                         "build again with --keep instead of editing it")
 #: A variant of PIN_MAP_NAME_MISSING: firmware/pins.py is not there, so the fix is to build it, not to edit it.
-PIN_MAP_NAME_MISSING_NO_MAP = Code("pin_map_name_missing", PIN_MAP_NAME_MISSING.meaning,
+PIN_MAP_NAME_MISSING_NO_MAP = Code(PIN_MAP_NAME_MISSING, PIN_MAP_NAME_MISSING.meaning,
                                    "build the board with --keep, which writes firmware/pins.py")
 
 #: Each code and the one sentence that says what it means.

@@ -39,6 +39,9 @@ USES_SENTENCE, IMPORTS_SENTENCE = "%s:%d uses %s.%s, and %s has no %s", "%s:%d i
 LINE_FOUND, LINE_NONE = "pin map: %d of %d uses found in " + PIN_MAP_PATH, "pin map: none compared"
 LINE_MISSING, LINE_PLACES, LINE_NOT_READ = ", not found: %s", ", not compared in %d place%s, first %s:%d", "pin map: not checked (%s)"
 LINE_MISSING_ITEM = "%s (%s:%d)"
+#: With no firmware/pins.py the line says so, for one use and for more (the data keeps `has_map` false then).
+LINE_NO_MAP_ONE = "pin map: " + PIN_MAP_PATH + " is not there, 1 use needs it, first %s:%d"
+LINE_NO_MAP_MANY = "pin map: " + PIN_MAP_PATH + " is not there, %d uses need it, first %s:%d"
 
 Place = collections.namedtuple("Place", "file line form")
 
@@ -92,9 +95,9 @@ class PinMapUses(collections.namedtuple("PinMapUses", "state why where has_map u
             tree, failure = _parse(source, name)
             if failure:
                 return cls(NOT_CHECKED, failure, name)
-            found, unseen = _uses_in(tree)
+            found, not_compared = _uses_in(tree)
             uses.update(PinUse(each, name, line, imported) for each, line, imported in found)
-            places.update(Place(name, line, form) for line, form in unseen)
+            places.update(Place(name, line, form) for line, form in not_compared)
         uses = _one_per_place(sorted(uses))
         missing = tuple(each for each in uses if each.name not in names)
         return cls(RECORDED, None, None, has_map, len(uses), missing, tuple(sorted(places)), tuple(sorted(names)))
@@ -103,9 +106,10 @@ class PinMapUses(collections.namedtuple("PinMapUses", "state why where has_map u
         """The `pin_map` of the answer and of the check record, JSON values."""
         if self.state != RECORDED:
             return {"state": self.state, "why": self.why}
-        return {"state": self.state, "used": self.used,
+        data = {"state": self.state, "used": self.used,
                 "missing": [{"name": each.name, "file": each.file, "line": each.line} for each in self.missing],
                 "not_compared": [place._asdict() for place in self.places]}
+        return data if self.has_map else dict(data, has_map=False)
 
     def assumptions(self):
         """One `not checked: ...` sentence for each place the check could not compare."""
@@ -113,8 +117,10 @@ class PinMapUses(collections.namedtuple("PinMapUses", "state why where has_map u
 
     @staticmethod
     def line_from(data, missing_only=False):
-        """The kept result line of a `pin_map` (what `to_data` gives, or the record's copy), or None for a map with no use and no
-        place, for any other shape, and with `missing_only`, for a map that lacks no name. Never raises."""
+        """The kept result line of a `pin_map` (what `to_data` gives, or the record's copy). Never raises.
+        None when the map has no use and no place.
+        None when the data is of any other shape.
+        None when `missing_only` and the map lacks no name."""
         recorded = _shape_of(data)
         if recorded is None:
             return None
@@ -123,8 +129,13 @@ class PinMapUses(collections.namedtuple("PinMapUses", "state why where has_map u
         missing, places = data["missing"], data["not_compared"]
         if missing_only and not missing or not data["used"] and not places:
             return None
-        line = LINE_FOUND % (data["used"] - len(missing), data["used"]) if data["used"] else LINE_NONE
-        if missing:
+        if data.get("has_map") is False and missing:  # every use is missing: the map is not there
+            first = min(missing, key=lambda each: (each["file"], each["line"]))
+            line = (LINE_NO_MAP_ONE % (first["file"], first["line"]) if len(missing) == 1
+                    else LINE_NO_MAP_MANY % (len(missing), first["file"], first["line"]))
+        else:
+            line = LINE_FOUND % (data["used"] - len(missing), data["used"]) if data["used"] else LINE_NONE
+        if missing and data.get("has_map") is not False:
             line += LINE_MISSING % ", ".join(LINE_MISSING_ITEM % (each["name"], each["file"], each["line"]) for each in missing)
         if places:
             first = min(places, key=lambda each: (each["file"], each["line"]))
@@ -145,7 +156,7 @@ def _shape_of(data):
     missing, places = data.get("missing"), data.get("not_compared")
     if data.get("state") != RECORDED or not _is_count(data.get("used")) or not isinstance(missing, list) or not isinstance(places, list):
         return None
-    if len(missing) > data["used"]:
+    if len(missing) > data["used"] or "has_map" in data and data["has_map"] is not False:
         return None
     well_made = (all(isinstance(each, dict) and isinstance(each.get("name"), str) and isinstance(each.get("file"), str)
                      and _is_count(each.get("line")) for each in missing)
@@ -257,6 +268,16 @@ def _imports_of(tree):
     return uses, places, aliases
 
 
+def _guarded(tree, aliases):
+    """{the names that the file asks the module about}: `hasattr(pins, "X")` and `getattr(pins, "X", default)`. The file
+    guards such a name itself, so a read of it is not a missing use."""
+    guards = {"hasattr": 2, "getattr": 3}
+    return {node.args[1].value for node in ast.walk(tree)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and len(node.args) == guards.get(node.func.id, 99)
+            and isinstance(node.args[0], ast.Name) and node.args[0].id in aliases
+            and isinstance(node.args[1], ast.Constant) and isinstance(node.args[1].value, str)}
+
+
 def _uses_in(tree):
     """({(name, line, imported)} the uses of one file, {(line, form)} the places it cannot compare)."""
     uses, places, aliases = _imports_of(tree)
@@ -271,5 +292,6 @@ def _uses_in(tree):
             places.add((node.lineno, VALUE_FORM))
         elif not _is_dunder(parent.attr):
             uses.add((parent.attr, node.lineno, False))
-    return uses, places
+    guarded = _guarded(tree, aliases)
+    return {each for each in uses if each[2] or each[0] not in guarded}, places
 # --- end MVP ---
