@@ -1189,6 +1189,13 @@ class TheCopyLineTest(unittest.TestCase):
         (self.scripts / "look.py").unlink()
         self.assertIsNone(self.line(self.look()))
 
+    def test_a_script_outside_the_home_folder_gives_none(self):
+        # the review (refuter, question 1): spark installed in a sibling of the home folder would print its whole path
+        scripts = self.tmp / "other" / "spark" / "scripts"
+        scripts.mkdir(parents=True)
+        (scripts / "look.py").write_text("")
+        self.assertIsNone(copy_line(self.look(), self.home, self.privacy(), scripts))
+
     def test_a_word_that_printable_changes_gives_none(self):
         self.assertIsNone(self.line(self.look("a\nb")))
 

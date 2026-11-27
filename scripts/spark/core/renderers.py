@@ -142,13 +142,16 @@ def step_command(step, homes=(), scripts=SCRIPTS):
 
 def copy_line(step, home, privacy, scripts=SCRIPTS):
     """The line a page offers a person to paste for `step` (P1286): `step_command` with `home`, the person's home folder,
-    in the `"$HOME"` form (`privacy.forms_of`: as written and resolved). None when the step has an env, its script in
-    `scripts` is no file, `printable` changes a word, `privacy` (the page's) changes the line, or the line fails
-    `shell_line.copyable`: the page then says why there is none."""
-    script = scripts / script_of(step.op)
+    in the `"$HOME"` form (`privacy.forms_of`: as written and resolved). None when its script in `scripts` lies outside
+    the home folder, so no line holds a path outside it (the review), the step has an env, the script is no file,
+    `printable` changes a word, `privacy` (the page's) changes the line, or the line fails `shell_line.copyable`: the page
+    then says why there is none."""
+    script, homes = scripts / script_of(step.op), forms_of(home)
+    if not any(str(script).startswith(form + "/") for form in homes):
+        return None
     if step.env or not script.is_file() or any(printable(word) != word for word in map(str, [script, *step.argv])):
         return None
-    line = step_command(step, forms_of(home), scripts)
+    line = step_command(step, homes, scripts)
     if privacy.mask_text(line) != line or not shell_line.copyable(line, str(home)):
         return None
     return line
