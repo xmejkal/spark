@@ -725,6 +725,16 @@ class TheCoreImportsNoAreaTest(unittest.TestCase):
         self.assertEqual({name: names for name, names in found.items() if names}, {})
 
 
+class TheShellLineIsALeafTest(unittest.TestCase):
+    """P1256 (R3-8): the rule a printed command passes, `shell_line.copyable`, imports only the standard library, so any
+    interface asks it with no import of spark: a stricter rule than U1's, which lets a leaf import a leaf of the core."""
+
+    def test_shell_line_imports_only_the_standard_library(self):
+        tree = ast.parse((ROOT / "scripts" / "spark" / "core" / "shell_line.py").read_text())
+        self.assertIn("shell_line", measure.LEAVES)
+        self.assertEqual(sorted(name for name in measure.imports_of(tree) if name not in sys.stdlib_module_names), [])
+
+
 class TheFlowAreaTest(unittest.TestCase):
     """P825: the flow area's modules live in `scripts/spark/flow/`, its `__init__.py` imports nothing, each module imports
     alone, and `flow_operations.OPERATIONS` maps each op to its Operation. `scripts/` keeps the CLI `flow.py`."""
