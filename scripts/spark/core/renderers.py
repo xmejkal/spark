@@ -92,8 +92,13 @@ class JsonDocument(FlatJsonLine):
 
 
 # --- MVP ---
-#: The scripts folder: a step's op `<op>` runs `<SCRIPTS>/<op>.py`, the rule board_envelope.next_text uses.
+#: The scripts folder: a step's op runs `<SCRIPTS>/<script_of(op)>`.
 SCRIPTS = Path(__file__).resolve().parents[2]
+#: The script of each step op that is not `<op>.py` (P1081 #1585, P1078). Which script runs an op is the CLI frontend's
+#: fact, which the Operation catalogue does not hold (P1077): `step_command`, `board_envelope.next_text` and the flow's
+#: follow-up line read it through `script_of`.
+OP_SCRIPTS = {"pick": "parts.py", "requirements": "parts.py", "needs-drop": "parts.py", "build-board": "check_spine.py",
+              "run-scenario": "run_scenario.py"}
 #: The symbol of each mark on the status line, when the stream can encode it.
 MARK_SYMBOLS = {MARK_OK: "✓", MARK_STOP: "✗", MARK_WARNING: "!", MARK_UNCHECKED: "?"}
 #: The ASCII word of each mark, for a stream whose encoding cannot encode the symbols (D8).
@@ -111,11 +116,16 @@ NO_COMMAND_MESSAGE = "No command: the first item under %s above says why."
 YOU_MESSAGE, YES_MESSAGE = " you, in your own terminal.", " %s.py asks for your yes."
 
 
+def script_of(op):
+    """The file name of the script in SCRIPTS that runs a step whose op is `op`: its OP_SCRIPTS entry, else `<op>.py`."""
+    return OP_SCRIPTS.get(op, "%s.py" % op)
+
+
 def step_command(step):
     """The one line a person runs for `step`: `NAME=value` for each variable of its env, then its script and argv, all
     shell-quoted and through `printable`, so a newline in an argument shows as `?` and never breaks the line."""
     names = ["%s=%s" % (name, shlex.quote(str(value))) for name, value in sorted((step.env or {}).items())]
-    return printable(" ".join(names + [shlex.join([str(SCRIPTS / ("%s.py" % step.op))] + [str(each) for each in step.argv])]))
+    return printable(" ".join(names + [shlex.join([str(SCRIPTS / script_of(step.op))] + [str(each) for each in step.argv])]))
 
 
 def import_rich():

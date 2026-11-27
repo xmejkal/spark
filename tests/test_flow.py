@@ -2091,11 +2091,12 @@ class TheFollowUpTest(FlowTest):
         self.assertIn("/init_project.py --project %s --answers %s%s — " % (project.absolute(), shlex.quote(ANSWERS_PLACEHOLDER), NEEDS_YOU), line)
         self.assertNotIn(NEEDS_YOU, FlowFollowUp().line(step._replace(needs_yes=False)))
 
-    def test_every_op_a_flow_step_names_has_its_script(self):
+    @staticmethod
+    def flow_step_ops():
+        """The op of every step that a step function of offer_steps or phase_steps builds."""
         import inspect
         import types
         from spark.flow import offer_steps, phase_steps
-        from spark.flow.now_follow_up import STEP_SCRIPTS
         project = a_firmware(a_built_project())
         given = {"project": project, "need": "soil", "pick_id": "x-many", "name": "A soil probe", "no_simulation": False,
                  "phase": types.SimpleNamespace(status=NS), "pairs": ["soil=x-many"], "why": "the why",
@@ -2106,10 +2107,26 @@ class TheFollowUpTest(FlowTest):
                 if builder.__module__ == module.__name__ and name.endswith(("_step", "_steps")):
                     made = builder(*[given[parameter] for parameter in inspect.signature(builder).parameters])
                     ops |= {step.op for step in (made if isinstance(made, list) else [made])}
+        return ops
+
+    def test_every_op_a_flow_step_names_has_its_script(self):
+        from spark.core.renderers import script_of
+        ops = self.flow_step_ops()
         self.assertTrue({"pick", "requirements", "build-board", "needs-drop", "init_project", "run_scenario", "look"} <= ops, ops)
         for op in sorted(ops):
             with self.subTest(op=op):
-                self.assertTrue((ROOT / "scripts" / STEP_SCRIPTS.get(op, op + ".py")).is_file())
+                self.assertTrue((ROOT / "scripts" / script_of(op)).is_file())
+
+    def test_every_catalogue_op_a_step_names_has_its_script(self):
+        # P1081 #1585: one script_of for the CLI frontend, and every op on the core that a step names runs a script
+        from spark.core.renderers import script_of
+        from spark.operation_catalogue import CATALOGUE
+        named = self.flow_step_ops() & set(CATALOGUE)
+        self.assertTrue({"pick", "requirements", "build-board", "needs-drop", "look"} <= named, named)
+        for op in sorted(named):
+            with self.subTest(op=op):
+                self.assertTrue((ROOT / "scripts" / script_of(op)).is_file())
+        self.assertEqual((script_of("run-scenario"), script_of("pick"), script_of("look")), ("run_scenario.py", "parts.py", "look.py"))
 
 
 def wrote_nothing():
