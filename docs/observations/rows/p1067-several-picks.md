@@ -26,7 +26,19 @@ raised and rejected findings only. 2026-11-27.
 | 16 | the radios miss the 44 px target | the refuter, round 2 | acted | each radio's label gets the button height through `style`; Chrome measured 44 px |
 | 17 | `RunRequest.data_keys` lacks "keys", and the ran line reads `offer.label` when `offer` is None | the refuter, round 2 | acted | both fixed, with a test |
 | 18 | a committed copy of today's page script, so a test can load an old page | the plan | rejected | today's script was run on a `keys` row in node: it showed "a step this page no longer offers" and did not crash; a node test pins that a row of an unknown shape reads as `request_other` |
-| 19 | the three new rows of the run's rule are not marked critical | the builder | raised | the critical cap is full at 50 of 50; which row leaves is the PO's call |
+| 19 | the three new rows of the run's rule are not marked critical | the builder | dropped | dropped because the critical cap is full at 50 of 50: the rows run as new rows in every sweep, and a critical place for them needs the PO to free one, which is on his morning list |
 | 20 | each radio came after its offer's long words, while the design draws the choice first | the Chrome check | acted | the radio's label leads its row; a node test pins it |
 | 21 | the Send box ran a pick's label into its words ("for board If you wired") | the Chrome check | acted | a colon joins them |
-| 22 | the canvas draws a small picture of each part in the pick rows; the page shows none | the Chrome check | raised | no card yet: spark-main files it with the next batch |
+| 22 | the canvas draws a small picture of each part in the pick rows; the page shows none | the Chrome check | raised | a card from spark-main's next filing batch; its number is written here before the merge |
+| 23 | the review ran on the five commits, 2026-11-27, about 03:04 to 03:31 CET: one lens and the refuter, both on Opus | the review | acted | rows 24 to 34; the refuter reproduced four picks in one request, the all-or-nothing failure, every refusal, a page published before the change, and the CLI path |
+| 24 | `joined_picks` breaks the family of `*_step` names in offer_steps.py | the lens | rejected | the test `test_every_op_a_flow_step_names_has_its_script` calls every `*_step` function with a fixed set of arguments, and `steps` is not one of them; this function joins steps and is not one, so its name stays out of that family |
+| 25 | flow.md lost the sentence that a deploy, a simulation, a look or a grant is never an offer here | the lens | acted | the sentence is back |
+| 26 | json.md says "`keys` what ran", but a refused row that names an offered key also answers `keys` | the lens | acted | "`keys` the keys it names" |
+| 27 | the script makes two separators of its own | the lens | acted | `flow_codes.NEEDS_JOIN` and `LABEL_JOIN`, as the page words `needs_join` and `label_join` |
+| 28 | commands/idea.md says "in one click", but sending takes Send and the box's Send | the lens | acted | "in one Send" |
+| 29 | a double full stop in flow.md | the lens | acted | removed |
+| 30 | a row of picks that ran with problems never says that no pick was saved | the refuter | acted | "No pick was saved." leads the line, from `flow_codes.NO_PICK_SAVED_SAYS`; a node test and mutation row 16 |
+| 31 | a row with both `key` and `keys` is refused, yet its answer names the key | the refuter | acted | its answer names no key; a test and mutation row 17 |
+| 32 | `request_malformed` has two texts | the refuter | acted | flow.md says the code's meaning word for word; the detail of `key` and `keys` stays in `RunRequest.details` |
+| 33 | old tests beyond the Done when's words change: the `without_script` helper, the offers test, the node count | the refuter | acted | each follows a decision in the council's record (`data-need` on `li.need`, the `part` field for the radio's label, the new node tests); the PR body names each with its old and new text |
+| 34 | the page's golden, tests/golden-design/flow-ok-page.txt, differs from today's output, and the hook refused the push | the hook, 2026-11-27 | acted | rewritten with `SPARK_ACCEPT=flow`; read hunk by hunk: only new page words and the new embedded script changed, and no HTML line outside the script |
