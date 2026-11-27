@@ -22,7 +22,6 @@ interface Offer {
   label: string;
   says: string[];
   need?: string;
-  part?: string | null;
 }
 
 interface Words {
@@ -51,6 +50,7 @@ interface Words {
   note: string;
   problems: string;
   could_not_run: string;
+  keep: Record<string, string>;
   not_now: string;
   picks_said: string[];
   send_picks: string;
@@ -431,9 +431,12 @@ class PageView {
       const need = item.closest("[data-need]");
       if (need) {
         if (!needs.includes(need)) needs.push(this.drawNeed(need));
-        // The choice leads its row, as the design draws it (P1067's look in Chrome, 27 Nov); the offer's words follow.
-        item.insertBefore(this.doc.createTextNode(" "), item.firstChild);
-        item.insertBefore(this.radio(need, key, offer.part || offer.label), item.firstChild);
+        // P1135: the row's text (its part and what you have) becomes its radio's label, which leads the row as the design
+        // draws it (P1067's look in Chrome, 27 Nov); a line after it, that spark cannot build from the pick, stays.
+        const text = item.firstChild!;
+        const label = this.radio(need, key, text.textContent!.trim());
+        text.remove();
+        item.insertBefore(label, item.firstChild);
         return;
       }
       const made = this.button(offer.label, () => this.confirm(item, offer.label, offer.says, () => this.requests.send(key)));
@@ -442,6 +445,7 @@ class PageView {
       const said = item.tagName === "P" ? item.lastChild : null;
       const step = said ? own(this.words.now_button, said.textContent!.trim()) : undefined;
       if (step) said!.textContent = " " + step;
+      if (item.tagName === "LI") item.textContent = "";  // P1135: an offer's row is its button alone, which says its label
       item.appendChild(this.doc.createTextNode(" "));
       item.appendChild(made);
       this.buttons.push(made);
@@ -449,11 +453,17 @@ class PageView {
     if (needs.length) this.drawSendPicks(needs[needs.length - 1]);
   }
 
-  /** P1067: a need's row as a radiogroup named by its need, whose first radio, "not now", is checked. */
+  /**
+   * P1067: a need's row as a radiogroup named by its need, whose first radio, "not now", is checked. P1135: on a picked need
+   * it reads its keep word ("keep “X”"), and the group points at the row's picked line.
+   */
   drawNeed(need: Element) {
+    const name = need.getAttribute("data-need")!;
+    const keep = own(this.words.keep, name);
     need.setAttribute("role", "radiogroup");
-    need.setAttribute("aria-label", need.getAttribute("data-need")!);
-    need.insertBefore(this.radio(need, "", this.words.not_now), need.querySelector("ul"));
+    need.setAttribute("aria-label", name);
+    if (keep) need.setAttribute("aria-describedby", "picked-" + name);
+    need.insertBefore(this.radio(need, "", keep || this.words.not_now), need.querySelector("ul"));
     return need;
   }
 

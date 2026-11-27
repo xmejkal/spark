@@ -9,7 +9,8 @@
    "says": [
     "Tell Claude your goal in the chat"
    ],
-   "offers": []
+   "offers": [],
+   "needs": null
   },
   {
    "phase": "needs",
@@ -19,7 +20,8 @@
    "says": [
     "2 need(s): button, light"
    ],
-   "offers": []
+   "offers": [],
+   "needs": null
   },
   {
    "phase": "parts",
@@ -36,13 +38,31 @@
      "effect": "Saves “Red LED 5 mm” as the pick for the light need in this project. Uses 1 of your 3 “Red LED 5 mm” for the light. May note the choice in your history.",
      "makes_stale": [
       "requirements"
-     ]
+     ],
+     "part": "Red LED 5 mm",
+     "have": "in your drawer"
     },
     {
      "key": "needs-drop:light",
      "label": "Drop the light need",
      "effect": "To drop this need, tell Claude: “drop the light need”.",
-     "makes_stale": []
+     "makes_stale": [],
+     "part": null,
+     "have": null
+    }
+   ],
+   "needs": [
+    {
+     "need": "button",
+     "picked": [
+      "Tactile 6 mm"
+     ],
+     "says": []
+    },
+    {
+     "need": "light",
+     "picked": [],
+     "says": []
     }
    ]
   },
@@ -62,9 +82,12 @@
      "makes_stale": [
       "build",
       "breadboard"
-     ]
+     ],
+     "part": null,
+     "have": null
     }
-   ]
+   ],
+   "needs": null
   },
   {
    "phase": "build",
@@ -79,9 +102,12 @@
      "key": "build",
      "label": "Build the board",
      "effect": "Saves its files in this project. Runs no simulation and costs nothing.",
-     "makes_stale": []
+     "makes_stale": [],
+     "part": null,
+     "have": null
     }
-   ]
+   ],
+   "needs": null
   }
  ],
  "stands_at": "parts",
@@ -123,7 +149,7 @@
    "by": [
     "you"
    ],
-   "says": "1 need has no part yet: light. Tell Claude a pick for each, or to set it aside.",
+   "says": "1 need has no part yet: light. Pick a part for each, or ask Claude to set one aside.",
    "offer": null,
    "needs": [
     "light"
