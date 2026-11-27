@@ -79,8 +79,7 @@ A need of `needs` (P1135) has its id, `picked` (its picks by name, `[]` for none
 A `null` status means spark does not judge the phase, and `says` tells where it stands. The idea is `ok` and says the goal (`your goal is “…”`) when the brief (`.spark/project.json`) holds a goal that is not blank, whatever the rest of the brief holds ([P1142](https://github.com/xmejkal/spark/issues/1677)). It has `null` and says the brief holds no goal when there is none, and `null` and `the brief cannot be read (<why>)` when the file cannot be read. The goal is shown as the brief writes it, and `Privacy` masks paths and secret values only. A
 hand-written project (requirements.json and no needs file) has `null` for its needs and parts, and says so. A project
 whose last need was dropped (needs.json holds no need, requirements.json stays) has `null` too, and says "no need is
-left: the last one was dropped" for its needs and "no need or pick is behind the parts list" for its parts. Written firmware and a
-simulated image have `null`, because you judge them. Without firmware/main.py, or without an image, they are
+left: the last one was dropped" for its needs and "no need or pick is behind the parts list" for its parts. Written firmware has `null`, unless the current check record names a pin name that `firmware/pins.py` lacks: then `problems`, the pin line first ([what the check cannot see](firmware-codes.md#the-pin-map)). A simulated image has `null`, because you judge it. Without firmware/main.py, or without an image, they are
 `not-started`. A firmware line in sim/wokwi.toml that spark cannot use gives the simulate phase `problems`.
 
 The hints of the simulate and deploy phases name the command and who acts, and hold no placeholder

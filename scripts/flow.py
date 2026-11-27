@@ -35,7 +35,7 @@ means: read data.guide.now. When Wokwi has no model of the board, the build ends
 code board_not_in_wokwi and exits 0 (P1207). The guide counts that build as done and says there is no simulation. An
 older record of such a build, with the stage could-not-run, is counted as done too and keeps exit 2 until the next build.
 After LATER stands the simulation line, data.guide.simulation.line (P1209): the free checks' state, read from the check
-record .spark/check-firmware.json that check_firmware.py keeps (not run yet, current with its time and its two result
+record .spark/check-firmware.json that check_firmware.py keeps (not run yet, current with its time and its result
 lines, older when a file under firmware/ or tests/ changed since, or not read and why), then why there is no simulation.
 flow.py show never runs the checks. The page draws the same line, grey only when Wokwi has no model of the board and the
 free checks are current and ok (data.guide.simulation.grey).
@@ -80,7 +80,7 @@ data.name (the project folder's), data.title (the page's), data.stamp (newest: t
 data.artifact (the id kept in .spark/page.json, else null) (docs/guide/agents/flow.md).
 
 Exit codes: 0 no phase holds problems or could not run, 1 a phase holds problems (a need that cannot be matched,
-requirements the picks cannot give, a build that failed, a firmware line in sim/wokwi.toml that spark cannot use), 2 a
+requirements the picks cannot give, a build that failed, a firmware line in sim/wokwi.toml that spark cannot use, a firmware file that uses a pin name the pin map lacks, in a current check record), 2 a
 phase could not be read or its last build could not run, or an argument is wrong. Problems win: with both, the status is
 problems and the exit 1, and the phase that could not run is listed under unchecked. Every phase answers either way.
 For page, 0 means the page was written and 2 that it could not be written or an argument is wrong. A phase's own
