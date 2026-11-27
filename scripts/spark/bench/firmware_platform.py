@@ -34,6 +34,11 @@ def record_of(project):
         raise DeployError("the board's chip cannot be read from %s: %s" % (requirements, cannot), reason=board_codes.CHIP_UNKNOWN)
 
 
+#: How spark finds mpremote and esptool, said once for the `--help` of the look and the deploy (P1264).
+FINDING_THE_TOOLS = ("Spark finds mpremote and esptool in the Python that runs it. When that Python lacks one, spark asks the "
+                     "Python of the one on your PATH. When neither has it, the stop says where spark looked.")
+
+
 # --- MVP --- the platform seam (P475): every board tool and the doctor's tool lookup come from one object
 class FirmwarePlatform:
     """Strategy: the factories for a project's board tools. A subclass supplies each `make_` method, and `find_tool` for the

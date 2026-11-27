@@ -579,7 +579,7 @@ class TheRecordsAreaTest(unittest.TestCase):
     MODULES = ["answer_operation", "board_pads", "board_records", "board_rules", "brief", "check_record", "chip_table", "deploy_record_store", "fact_needs", "folder_walk", "launcher",
                "missing_facts", "onboard_parts", "project_commit", "provenance", "record_kind", "records_codes", "registered_project_store",
                "storage", "store", "tool_choices",
-               "tool_finder", "versions"]
+               "tool_finder", "tool_python", "versions"]
     #: Each CLI's own top-level functions: `main` and what only it uses to print (`_validate_all` and `print_status`).
     #: `boards.py --list` runs design's `ListBoards`, imported inside `main` (P707). A library function back in a CLI,
     #: under any name, fails the check.

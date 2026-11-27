@@ -97,6 +97,10 @@ class NothingShipsUnusedTest(unittest.TestCase):
     #: Scripts that still name a tool's executable, until their task moves them to tool_finder.find (P82).
     NOT_YET_MOVED = {}  # empty since the final review: a project's own cli.ts runs under the ts-runtime role
 
+    #: A script that reads one tool's own output must say which tool it reads: it checks the identity of a tool it was
+    #: handed, and looks nothing up (P1264, D1). Each entry names its reason, and the test below holds it to the file.
+    READS_ITS_OWN_TOOL = {"board_look.py": ({"esptool"}, "EsptoolReader refuses a flasher that is not esptool, because it parses esptool's flash-id output")}
+
     def test_no_script_but_tools_names_a_tool_s_executable(self):
         names = {entry.get("exe") for key, entry in json.loads((ROOT / "data" / "tools.json").read_text()).items()
                  if isinstance(entry, dict) and entry.get("exe")} | {"bun"}
@@ -106,14 +110,17 @@ class NothingShipsUnusedTest(unittest.TestCase):
                 continue
             text = path.read_text()
             found = {name for name in names if '"%s"' % name in text}
-            if found - self.NOT_YET_MOVED.get(path.name, set()):
-                named[path.name] = sorted(found - self.NOT_YET_MOVED.get(path.name, set()))
+            allowed = self.NOT_YET_MOVED.get(path.name, set()) | self.READS_ITS_OWN_TOOL.get(path.name, (set(), ""))[0]
+            if found - allowed:
+                named[path.name] = sorted(found - allowed)
         self.assertEqual(named, {}, "ask tool_finder.find for the tool instead (P82)")
 
     def test_every_script_still_allowed_to_name_a_tool_still_does(self):
-        stale = {name: sorted(tools_named) for name, tools_named in self.NOT_YET_MOVED.items()
-                 if not all('"%s"' % tool in (ROOT / "scripts" / name).read_text() for tool in tools_named)}
-        self.assertEqual(stale, {}, "a moved script left in NOT_YET_MOVED")
+        where = {path.name: path for path in script_files()}
+        stale = {name: sorted(tools_named) for name, tools_named in
+                 list(self.NOT_YET_MOVED.items()) + [(file, tools) for file, (tools, _) in self.READS_ITS_OWN_TOOL.items()]
+                 if not all('"%s"' % tool in where[name].read_text() for tool in tools_named)}
+        self.assertEqual(stale, {}, "a moved script left in NOT_YET_MOVED or READS_ITS_OWN_TOOL")
 
     def test_nothing_shipped_names_one_persons_home(self):
         # P44: an agent file named a path in its author's home for the catalog; on anyone else's machine that
