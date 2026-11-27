@@ -25,6 +25,6 @@ Opus), delegated and the PO's to change. This file holds the acted, raised and r
 | 17 | `--help` says how spark finds the tools once | plan | acted | `firmware_platform.FINDING_THE_TOOLS` is in the look's and the deploy's `DETAILS`. In the deploy it sits before the gate paragraph, because a test holds the `why:` paragraph last |
 | 18 | `tool_finder.py` stood at 598 of 600 lines | plan | acted | the module docstring and two docstrings were shortened and two pairs of lines joined. It is 599. Three older mutation rows were re-anchored on the new text (P214 no metadata, P725 plain ToolError, sprint-10 P82 install line) and each still fails a test |
 | 19 | `docs/guide/agents/bench.md` and `firmware-codes.md` | plan lens | acted | read and unchanged: they name `mpremote devs` as the command that lists the boards, which is right |
-| 20 | `tools.py --status` has no Operation and no `--json` | plan, council | raised | a card filed by the delegated council, in Idea. Not part of this card |
-| 21 | the page shows no missing board tool | plan, council | raised | a card filed by the delegated council, in Idea. Not part of this card |
-| 22 | Homebrew's Python refuses `pip install --user` (PEP 668), so the install line fails there | plan, council | raised | a card filed by the delegated council, in Idea. Not part of this card |
+| 20 | `tools.py --status` has no Operation and no `--json` | plan, council | raised | P1276 [#1838](https://github.com/xmejkal/spark/issues/1838), in Idea. Not part of this card |
+| 21 | the page shows no missing board tool | plan, council | raised | P1265 [#1824](https://github.com/xmejkal/spark/issues/1824), which already holds it. Not part of this card |
+| 22 | Homebrew's Python refuses `pip install --user` (PEP 668), so the install line fails there | plan, council | raised | P1277 [#1839](https://github.com/xmejkal/spark/issues/1839), in Idea. Not part of this card |
