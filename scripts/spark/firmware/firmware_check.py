@@ -5,7 +5,7 @@ and the project's own tests (`own_tests`: PROJECT/tests run with unittest). `che
 nothing, so it blocks no deploy: the deploy reads the logs of sim/runs/ only.
 """
 
-from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, RUNS, Argument, Operation
+from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, RUNS, Operation
 from spark.core.outcomes import COULD_NOT_RUN, NONE_RECORDED, NOT_CHECKED, PROBLEMS, RECORDED
 from spark.core.result import Finding, OperationResult
 from spark.firmware import firmware_codes

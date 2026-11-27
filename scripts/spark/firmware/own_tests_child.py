@@ -52,7 +52,8 @@ def failures_of(result):
 
 
 class CountedResult(unittest.TextTestResult):
-    """The run's result, which also keeps the ids of the tests that passed a subtest: such a test ran, so it is no skipped test."""
+    """Result: the run's result, which also keeps the ids of the tests that passed a subtest: such a test ran, so it is no
+    skipped test."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
