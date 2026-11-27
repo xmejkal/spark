@@ -1082,5 +1082,78 @@ class WhatIsNotDrawnTest(unittest.TestCase):
                          ["330", "10000", "4700", "1000000", ""])
 
 
+NO_ROAD = "no simulation.wokwi.part and no physical block, so the sheet draws no part for it"
+#: Records with a body_mm that neither road of the sheet draws, each with its reason. Nothing is skipped in silence (P1240).
+UNDRAWN_BODIES = {
+    "dfr0534-module": NO_ROAD,
+    "jst-ph-2-power-inlet": NO_ROAD,
+    "l9110s-module": NO_ROAD,
+    "max98357a-dfr0954": NO_ROAD,
+    "speaker-terminal": NO_ROAD,
+    "vl6180x-breakout": NO_ROAD,
+}
+#: How far a leg may stand out of its body's edge on one axis: one pitch, the nearest hole (P1240).
+LEG_REACH_MM = 2.54
+
+
+def hole_extent_mm(placed):
+    """(the larger, the smaller) extent in mm of the holes a placed part's pins take, from the holes' own x and y."""
+    xs = [hole.x for hole in placed.holes.values()]
+    ys = [hole.y for hole in placed.holes.values()]
+    extents = sorted(((max(xs) - min(xs)) / part_shape.PX_PER_MM, (max(ys) - min(ys)) / part_shape.PX_PER_MM), reverse=True)
+    return tuple(extents)
+
+
+class TheBodySpanTest(unittest.TestCase):
+    """A part's legs may stand out of its body by one pitch at most: the holes it takes span no more than its body_mm
+    plus LEG_REACH_MM on each axis (P1240: the 6 mm button took holes 17.78 mm apart)."""
+
+    @staticmethod
+    def drawn_parts():
+        """{record id: (placed part, the record)} of each record in parts/ with a body_mm that a road of the sheet draws, and
+        {record id: why not} of each that none draws. Each part is placed alone on the full surface."""
+        read = xiao_read()
+        placed, undrawn = {}, {}
+        for path in sorted((ROOT / "parts").glob("*.json")):
+            record = json.loads(path.read_text())
+            if not record.get("body_mm"):
+                continue
+            one = mock.Mock(built=mock.Mock(board=read.built.board, parts=[record]), resistors={})
+            catalog = drawing_catalog.describe_parts(one, GEOMETRY)
+            geometry = GEOMETRY.with_surface(drawing.Surface.load_full())
+            try:
+                for wokwi_type, part_px in drawing_catalog.record_parts(one).items():
+                    geometry = geometry.with_part(wokwi_type, part_px)
+            except NotDrawnError as refused:
+                undrawn[record["id"]] = str(refused)
+                continue
+            component = [name for name in catalog if name != wiring_steps.THE_BOARD]
+            if not component:
+                undrawn[record["id"]] = "no road draws it"
+                continue
+            ledger = HoleLedger(geometry.surface)
+            try:
+                placed[record["id"]] = (drawing.FirstFitPartPlacement(geometry).place(record["id"], catalog[component[0]], ledger),
+                                        record)
+            except NotDrawnError as refused:
+                undrawn[record["id"]] = str(refused)
+        return placed, undrawn
+
+    def test_no_part_takes_holes_further_apart_than_its_body_and_one_pitch(self):
+        placed, _ = self.drawn_parts()
+        self.assertTrue(placed)
+        for record_id, (part, record) in placed.items():
+            body = sorted((record["body_mm"]["width"], record["body_mm"]["height"]), reverse=True)
+            with self.subTest(record=record_id):
+                for extent, side in zip(hole_extent_mm(part), body):
+                    self.assertLessEqual(extent, side + LEG_REACH_MM,
+                                         "%s: its holes span %.2f mm, its body side is %.2f mm" % (record_id, extent, side))
+
+    def test_each_record_with_a_body_is_drawn_or_named_with_its_reason(self):
+        placed, undrawn = self.drawn_parts()
+        self.assertEqual(set(undrawn), set(UNDRAWN_BODIES), "UNDRAWN_BODIES must name each undrawn record: %s" % undrawn)
+        self.assertEqual(set(placed) & set(UNDRAWN_BODIES), set())
+
+
 if __name__ == "__main__":
     unittest.main()
