@@ -2731,7 +2731,7 @@ class TheClosingLineTest(FlowTest):
         import parts
         import run_scenario
         self.assertEqual((check_spine.HELP.follow_up.says_now, parts.HELP.follow_up.says_now), (True, False))
-        self.assertNotIn("says_now", Path(run_scenario.__file__).read_text())
+        self.assertIn("follow_up=FlowFollowUp())", Path(run_scenario.__file__).read_text())  # its main makes it, with no HELP
         project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": "soil", "does": "sense", "what": "soil-moisture"}])
         lines, code = run_main(parts.main, ["--pick", str(project), "soil=x-many"])
         self.assertEqual(code, 0)
