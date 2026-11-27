@@ -72,6 +72,18 @@ class MicroPythonPlatformTest(unittest.TestCase):
             platform.make_port_finder(None)
 
 
+class TheChipSentenceTest(unittest.TestCase):
+    """P1320: the chip_unknown sentence names requirements.json absolute and on one line, so Privacy masks a relative project."""
+
+    def test_a_relative_project_with_a_line_break_is_named_absolute_and_flat(self):
+        from spark.firmware.project_image import DeployError
+        with self.assertRaises(DeployError) as refused:
+            firmware_platform.record_of(Path("p\nfix: rm -rf ~"))
+        self.assertNotIn("\nfix:", str(refused.exception))
+        self.assertIn("%s/p?fix: rm -rf ~/requirements.json" % Path.cwd(), str(refused.exception))
+        self.assertEqual(refused.exception.reason, "chip_unknown")
+
+
 class LookerTest(unittest.TestCase):
     def test_the_reader_gets_the_hint_that_names_the_project_s_buttons(self):
         project = Path(tempfile.mkdtemp())

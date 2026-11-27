@@ -14,7 +14,7 @@
  {
   "file": "scripts/spark/firmware/scenario_run.py",
   "name": "unreadable-firmware-line-is-the-runs-code",
-  "find": "raise FirmwareLineError(\"wokwi.toml %s%s\" % (named.why, named.fix()))",
+  "find": "raise FirmwareLineError(\"wokwi.toml %s%s\", named.why, named.fix())",
   "replace": "raise ValueError(\"wokwi.toml %s%s\" % (named.why, named.fix()))"
  }
 ]

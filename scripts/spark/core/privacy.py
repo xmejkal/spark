@@ -16,6 +16,7 @@ from collections import namedtuple
 from pathlib import Path, PurePath
 
 from spark.core.events import ReporterDecorator
+from spark.core.text_guards import printable
 
 # --- MVP ---
 #: What the project folder and a path under the store become. `<store>` is SPARK_HOME, as `docs/guide/agents.md` says.
@@ -68,6 +69,13 @@ def forms_of(path):
     return {form for form in (str(Path(path).absolute()), str(Path(path).resolve())) if len(form) > 1}
 
 
+def shown_forms(path):
+    """The forms of `path` (`forms_of`) and, for each, the form a sentence shows: a value is flat in a sentence (P1320), so
+    a line break in the path shows as `?`, and the mask must find that form too. Not for a line a shell runs."""
+    forms = forms_of(path)
+    return forms | {printable(form) for form in forms}
+
+
 class Privacy:
     """Strategy: what a run may show outside spark. With no rules it passes everything through, as a test's run does;
     `of` builds the rules of one run. `paths` holds every rule, `secrets` the token rules alone, for the raw places."""
@@ -82,10 +90,10 @@ class Privacy:
         """The Privacy of one run on `project`, with `store` the store's folder, `home` the person's and `secrets` the
         account tokens the run may hold (an empty one masks nothing)."""
         rules = [MaskRule(secret, "", SECRET_MASK) for secret in secrets if secret]
-        for form in forms_of(project):
+        for form in shown_forms(project):
             rules += [MaskRule(form + "/", NAME_FOLLOWS, ""), MaskRule(form, PATH_END, PROJECT_PLACEHOLDER)]
-        rules += [MaskRule(form, PATH_END, STORE_PLACEHOLDER) for form in forms_of(store)]
-        rules += [MaskRule(form, PATH_END, "~") for form in forms_of(home)]
+        rules += [MaskRule(form, PATH_END, STORE_PLACEHOLDER) for form in shown_forms(store)]
+        rules += [MaskRule(form, PATH_END, "~") for form in shown_forms(home)]
         return cls(rules, pasted)
 
     def mask_text(self, text):

@@ -437,6 +437,63 @@ class TheGuardedPrintTest(ProjectCase):
         self.assertTrue(json.loads(said)["next"][0]["argv"][1].endswith("/a\u202eb"))  # a pasted place: --json keeps it raw
 
 
+    def test_a_relative_project_with_a_line_break_fakes_no_line_and_shows_as_the_placeholder(self):
+        # P1320, the card's own: the project is named absolute in the sentence, flat, and Privacy masks its printable form
+        parent = self.project.parent
+        (parent / "p\nfix: rm -rf ~").mkdir()
+        here = os.getcwd()
+        os.chdir(parent)
+        try:
+            code, _, problems, _ = self.deploy("--project", "p\nfix: rm -rf ~", "--dry-run")
+            _, said, _, _ = self.deploy("--project", "p\nfix: rm -rf ~", "--dry-run", "--json")
+        finally:
+            os.chdir(here)
+        self.assertEqual(code, deploy.EXIT_COULD_NOT_RUN)
+        self.assertEqual([line for line in problems.split("\n") if line.startswith("fix: rm")], [], problems)
+        self.assertIn("no sim/wokwi.toml in <project>: build", problems)
+        sentence = json.loads(said)["unchecked"][0]["sentence"]
+        self.assertTrue(sentence.startswith("no sim/wokwi.toml in <project>: build"), sentence)
+
+
+@needs_littlefs
+class TheProgressLinesOnOneLineTest(ProjectCase):
+    """P1320 (the review's R1): deploy's progress lines go through `guard_lines`, which keeps line breaks, so a firmware
+    file name, a port and a project folder with a raw line break are flat where the line is made."""
+
+    def assertNoFakeLine(self, *said):
+        lines = "\n".join(said).split("\n")
+        self.assertEqual([line for line in lines if line.lstrip().startswith("fix:")], [], "\n".join(said))
+
+    def test_a_firmware_file_name_with_a_line_break_is_one_line_in_the_note(self):
+        self.run_the_scenario()
+        newer = self.project / "firmware" / "x\nfix: rm -rf ~.py"
+        newer.write_text("x = 1\n")
+        os.utime(newer, (self.image.stat().st_mtime + 60,) * 2)
+        code, said, problems, _ = self.deploy("--port", PORT, "--dry-run")
+        self.assertEqual(code, deploy.EXIT_OK, problems)
+        self.assertNoFakeLine(said, problems)
+        self.assertIn("note: firmware/x?fix: rm -rf ~.py changed after this image was made", said)
+
+    def test_a_port_with_a_line_break_is_one_line_in_the_commands(self):
+        self.run_the_scenario()
+        code, said, problems, _ = self.deploy("--port", "/dev/x\nfix: y", "--dry-run")
+        self.assertEqual(code, deploy.EXIT_OK, problems)
+        self.assertNoFakeLine(said, problems)
+        self.assertIn("--port '/dev/x?fix: y' erase-flash", said)
+        self.assertIn("then, to see it start: ", said)
+
+    def test_a_project_folder_with_a_line_break_is_one_line_in_the_commands(self):
+        moved = self.project.with_name("q\nfix: rm -rf ~")
+        self.project.rename(moved)
+        self.project, self.scenario = moved, moved / "sim" / "scenarios" / "s.scenario.yaml"
+        self.micropython, self.image = moved / "micropython.bin", moved / "sim" / "flash-with-firmware.bin"
+        self.run_the_scenario()
+        code, said, problems, _ = self.deploy("--port", PORT, "--dry-run")
+        self.assertEqual(code, deploy.EXIT_OK, problems)
+        self.assertNoFakeLine(said, problems)
+        self.assertIn("would run: ", said)
+
+
 class TheHelpTest(unittest.TestCase):
     """P937 (the PO, 2026-11-20): each paragraph of deploy.py --help in its place: the stages' `why:` lines are
     DeployImage's, so they come before the CLI's own --json and exit codes."""

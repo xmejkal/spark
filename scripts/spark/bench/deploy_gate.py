@@ -19,10 +19,10 @@ from spark.records.store import format_rerun_line  # noqa: F401  (board_grant, g
 from spark.core import outcomes
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
 from spark.core.replies import AGENT, TYPED_BY, YES_NO, Reply, ReplyStrategy, Terminal
-from spark.core.text_guards import printable
+from spark.core.text_guards import ValueMessageError, printable
 
-#: How the store's record says a yes was given in a terminal: %s is the person's login name.
-NO_TERMINAL = "no terminal to ask you in. Run this line in your own terminal window (Claude Code's ! has none):\n  %s"
+#: The line to run follows on a line of its own, indented; each of its values is flat (P1320).
+NO_TERMINAL_HEAD = "no terminal to ask you in. Run this line in your own terminal window (Claude Code's ! has none):"
 
 #: What an agent does next (P213), for a GateClosedError: `deploy.py`'s `--json` turns it into a step.
 NEXT_DEPLOY, NEXT_LOOK = "deploy", "look"
@@ -34,14 +34,14 @@ RELAYED_REFUSED = ("a yes given through another program cannot open the erase. T
 
 
 # --- MVP ---
-class GateClosedError(Exception):
-    """Error: why the gate stays shut, and `code`, the exit code: 1 for a stop the look found, 2 for everything else.
-    `reason` is the board_codes code that names why, a required keyword, so no raise site goes without one (P433).
-    `next_op` is NEXT_DEPLOY (the person runs the deploy in their own terminal), NEXT_LOOK (the look is stale or missing)
-    or None (nothing to do but read the sentence)."""
+class GateClosedError(ValueMessageError):
+    """Error: why the gate stays shut, a template and its values, each value on one line (P1320), and `code`, the exit
+    code: 1 for a stop the look found, 2 for everything else. `reason` is the board_codes code that names why, a required
+    keyword, so no raise site goes without one (P433). `next_op` is NEXT_DEPLOY (the person runs the deploy in their own
+    terminal), NEXT_LOOK (the look is stale or missing) or None (nothing to do but read the sentence)."""
 
-    def __init__(self, why, code=EXIT_COULD_NOT_RUN, next_op=None, *, reason):
-        super().__init__(why)
+    def __init__(self, template, *values, code=EXIT_COULD_NOT_RUN, next_op=None, reason):
+        super().__init__(template, *values)
         self.code = code
         self.next_op = next_op
         self.reason = reason
@@ -106,7 +106,10 @@ class TerminalConsentStrategy(ConsentStrategy):
 
     def require_ready(self):
         if not self.terminal.live:
-            raise GateClosedError(NO_TERMINAL % self.line, next_op=NEXT_DEPLOY, reason=board_codes.NO_TERMINAL)
+            # P1320: the line's makers flatten its values (deploy_image.choose_consent, issue_grant), so each break in it is
+            # one they intend, such as the grant line under the deploy's
+            raise GateClosedError.of_lines([NO_TERMINAL_HEAD] + ("  " + self.line).split("\n"), next_op=NEXT_DEPLOY,
+                                           reason=board_codes.NO_TERMINAL)
 
     def ask(self, question):
         self.require_ready()
@@ -167,7 +170,7 @@ def require_open_gate(report, token, consent, image, caveats):
     """Returns None when the person said yes to erasing this board for `image`. Raises GateClosedError, which says why
     not. It never erases or writes. The `caveats` (LookReport.question_caveats) come first in the question."""
     if report.stops:
-        raise GateClosedError("%s. not flashed." % "; ".join(stop.sentence for stop in report.stops), EXIT_PROBLEMS,
+        raise GateClosedError("%s. not flashed.", "; ".join(stop.sentence for stop in report.stops), code=EXIT_PROBLEMS,
                               reason=report.stops[0].code)  # with two stops, the first one's code
     if not token:
         raise GateClosedError("run look.py first, then deploy.py --token <token>.", next_op=NEXT_LOOK,
@@ -175,14 +178,15 @@ def require_open_gate(report, token, consent, image, caveats):
     mine = report.token()
     if not mine:
         why = report.no_token_reason()
-        raise GateClosedError("no token: %s. not flashed." % why.sentence, reason=why.code)
+        # P1320: the sentence's values are flat at their source, so a line break in it is one it intends (a BoardError's lines)
+        raise GateClosedError.of_lines(("no token: %s. not flashed." % why.sentence).split("\n"), reason=why.code)
     theirs = (token.split("-", 1) + [""])[:2]
     changed = [what for what, given, read in zip(("the board", "the image"), theirs, mine.split("-")) if given != read]
     if changed:
-        raise GateClosedError("%s changed since the look: run look.py again." % " and ".join(changed), next_op=NEXT_LOOK,
+        raise GateClosedError("%s changed since the look: run look.py again.", " and ".join(changed), next_op=NEXT_LOOK,
                               reason=board_codes.TOKEN_STALE)
     if not consent.opens_erase:  # P675: after the token checks, so the line to rerun holds a token that passes them
-        raise GateClosedError(RELAYED_REFUSED, next_op=NEXT_DEPLOY, reason=board_codes.RELAYED_YES_REFUSED)
+        raise GateClosedError("%s", RELAYED_REFUSED, next_op=NEXT_DEPLOY, reason=board_codes.RELAYED_YES_REFUSED)
     accepted = report.warnings + ["%s unknown (%s)" % each for each in report.unknown.items()]
     question = "erase ALL of this board's flash (%s) and write %s?" % (say_last_deploy_in_question(report.last_deploy), image)
     if accepted:

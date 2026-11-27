@@ -1,6 +1,7 @@
 """P239 PR 5 (#238): ProjectImage is the image a project's sim/wokwi.toml names and the run logs that name it."""
 
 import hashlib
+import os
 import sys
 import tempfile
 import unittest
@@ -132,6 +133,80 @@ class TheImageTest(unittest.TestCase):
     def test_the_error_is_an_exception_named_for_what_it_is(self):
         self.assertTrue(issubclass(DeployError, Exception))
         self.assertFalse(hasattr(project_image, "DeployProblem"))
+
+
+class OneLinePerValueTest(unittest.TestCase):
+    """P1320: a raw line break in a value shows as `?` in each sentence of the image, so it fakes no line on stderr. A
+    sentence of a masked code names the project absolute, so Privacy masks a relative `--project` too."""
+
+    def assertFlat(self, text, raw="x?fix: rm -rf ~"):
+        self.assertNotIn("\nfix:", text)
+        self.assertIn(raw, text)
+
+    def test_a_folder_part_of_the_toml_s_name_is_flat(self):
+        project = project_with_image()
+        (project / "sim" / "wokwi.toml").write_text('firmware = "../a\\nfix: run rm -rf ~/b.bin"\n')
+        with self.assertRaises(DeployError) as said:
+            ProjectImage(project)
+        self.assertFlat(str(said.exception), "a?fix: run rm -rf ~/b.bin")
+        self.assertEqual(said.exception.reason, "firmware_line_bad")
+
+    def test_a_relative_project_with_no_toml_is_named_absolute_and_flat(self):
+        parent = Path(tempfile.mkdtemp()).resolve()
+        (parent / "x\nfix: rm -rf ~").mkdir()
+        here = os.getcwd()
+        os.chdir(parent)
+        try:
+            with self.assertRaises(DeployError) as said:
+                ProjectImage(Path("x\nfix: rm -rf ~"))
+        finally:
+            os.chdir(here)
+        self.assertFlat(str(said.exception), "%s/x?fix: rm -rf ~" % parent)
+
+    def test_an_image_outside_sim_of_a_relative_project_is_named_absolute(self):
+        # the review's A4: the look and the deploy ask why_outside_sim for the absolute path, so Privacy masks it
+        project = project_with_image()
+        (project / "sim" / "wokwi.toml").write_text('firmware = "../x.bin"\n')
+        here = os.getcwd()
+        os.chdir(project.parent)
+        try:
+            with self.assertRaises(DeployError) as said:
+                ProjectImage(Path(project.name))
+        finally:
+            os.chdir(here)
+        self.assertIn("names %s/sim/../x.bin," % project.resolve(), str(said.exception))
+
+    def test_an_image_name_that_is_not_built_yet_is_flat(self):
+        project = project_with_image()
+        (project / "sim" / "wokwi.toml").write_text('firmware = "x\\nfix: rm -rf ~.bin"\n')
+        with self.assertRaises(DeployError) as said:
+            ProjectImage(project)
+        self.assertFlat(str(said.exception))
+        self.assertEqual(said.exception.reason, "no_image")
+
+    def test_a_log_name_that_cannot_be_read_is_flat_and_absolute(self):
+        project = project_with_image()
+        write_log(project, "x\nfix: rm -rf ~.log", "passed")
+        (project / "sim" / "runs" / "x\nfix: rm -rf ~.log").chmod(0)  # it cannot be read (no mock.patch, rule T2)
+        with self.assertRaises(DeployError) as said:
+            ProjectImage(project).read_run_logs()
+        self.assertFlat(str(said.exception))
+        self.assertIn(str(project.absolute()), str(said.exception))
+
+    def test_a_failed_log_s_name_and_its_verdict_are_flat_in_why_untested(self):
+        image = ProjectImage(project_with_image())
+        image.read_run_logs = lambda: [(Path("runs/x\nfix: rm -rf ~.log"), "failed\nfix: rm -rf ~", DIGEST)]  # no mock.patch, rule T2
+        said = image.why_untested()
+        self.assertFlat(said)
+        self.assertIn("(verdict: failed?fix: rm -rf ~)", said)
+
+    def test_a_log_name_is_flat_in_why_untested_with_no_run_and_in_why_other_runs(self):
+        image = ProjectImage(project_with_image())
+        image.read_run_logs = lambda: [(Path("runs/x\nfix: rm -rf ~.log"), "passed", "0"), (Path("runs/x\nfix: rm -rf ~2.log"), "passed", None)]
+        self.assertFlat(image.why_other_runs())
+        self.assertNotIn("\n", image.why_other_runs())
+        image.path, image.read_run_logs = image.path.with_name("x\nfix: rm -rf ~.bin"), lambda: []  # no mock.patch, rule T2
+        self.assertFlat(image.why_untested())
 
 
 class TheRunLogsTest(unittest.TestCase):

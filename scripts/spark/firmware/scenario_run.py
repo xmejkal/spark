@@ -15,6 +15,7 @@ from pathlib import Path
 from spark.core import outcomes, zone_time
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 from spark.core.result import Refusal
+from spark.core.text_guards import ValueMessageError, flat_line
 from spark.firmware import image_builder, sim_project
 from spark.firmware.firmware_codes import (BOARD_NOT_STARTED, BOARD_SILENT, FIRMWARE_LINE_BAD, NEVER_READY, NO_MAIN_PY,
                                            NO_SIM_PROJECT, NO_TOKEN, RUN_INPUT_UNUSABLE, SIMULATOR_CANNOT_START,
@@ -61,9 +62,10 @@ def with_ready_wait(scenario):
     return "\n".join(lines) + "\n"
 
 
-class FirmwareLineError(ValueError):
-    """Error: the firmware line of wokwi.toml cannot be read, the deploy's `firmware_line_bad` for the same cause (P689). The run's
-    own refusals (no line to name the image in, a read-only file) stay plain ValueErrors, `run_input_unusable`."""
+class FirmwareLineError(ValueMessageError, ValueError):
+    """Error: the firmware line of wokwi.toml cannot be read, the deploy's `firmware_line_bad` for the same cause (P689), each
+    value on one line (P1320). The run's own refusals (no line to name the image in, a read-only file) stay plain ValueErrors,
+    `run_input_unusable`: their text is constant."""
     code = FIRMWARE_LINE_BAD
 
 
@@ -75,7 +77,7 @@ def image_in(toml):
     """
     named = sim_project.firmware_in(toml)
     if named.state == outcomes.NOT_CHECKED:
-        raise FirmwareLineError("wokwi.toml %s%s" % (named.why, named.fix()))
+        raise FirmwareLineError("wokwi.toml %s%s", named.why, named.fix())
     if named.state == outcomes.NONE_RECORDED and sim_project.UNNAMED_FIRMWARE not in toml.read_text():
         raise ValueError("wokwi.toml names no firmware, and wokwi-cli refuses that. To fix it, write it as firmware = \"name.bin\".")
     if named.state == outcomes.NONE_RECORDED and not os.access(toml, os.W_OK):
@@ -98,20 +100,20 @@ def verdict(code, serial, out, err, timeout_ms):
     errors = err.strip().splitlines()
     why = next((line for line in errors if ERROR_WORD in line), errors[-1] if errors else "no reason given")
     if API_ERROR in why:
-        return COULD_NOT_RUN, Refusal("wokwi-cli lost the simulator (exit %d): %s" % (code, why), SIMULATOR_LOST)
+        return COULD_NOT_RUN, Refusal(flat_line("wokwi-cli lost the simulator (exit %d): %s", code, why), SIMULATOR_LOST)
     if not serial.strip():
         if code == TIMEOUT_EXIT:
-            return COULD_NOT_RUN, Refusal("the board printed nothing in %d ms: does diagram.json wire its TX and RX to "
-                                          "$serialMonitor (P190)?" % timeout_ms, BOARD_SILENT)
-        return COULD_NOT_RUN, Refusal("wokwi-cli stopped before the board started (exit %d): %s" % (code, why), BOARD_NOT_STARTED)
+            return COULD_NOT_RUN, Refusal(flat_line("the board printed nothing in %d ms: does diagram.json wire its TX and RX to "
+                                                    "$serialMonitor (P190)?", timeout_ms), BOARD_SILENT)
+        return COULD_NOT_RUN, Refusal(flat_line("wokwi-cli stopped before the board started (exit %d): %s", code, why), BOARD_NOT_STARTED)
     # wokwi-cli's own line is the proof that the wait matched: the wait matches any text containing READY, and the serial
     # log file joins MicroPython's lines with no line break between them (wokwi-cli 0.27.1, 2026-10-12).
     if not any(MATCHED in line and READY in line for line in out.splitlines()):
-        return PROBLEMS, Refusal("the firmware never printed %r: print it once setup is done (the ready contract, "
-                                 "commands/build.md)" % READY, NEVER_READY)
+        return PROBLEMS, Refusal(flat_line("the firmware never printed %r: print it once setup is done (the ready contract, "
+                                           "commands/build.md)", READY), NEVER_READY)
     if code == TIMEOUT_EXIT:
-        return PROBLEMS, Refusal("timed out after %d ms: a step waited for something that never came" % timeout_ms, STEP_TIMEOUT)
-    return PROBLEMS, Refusal("failed (wokwi-cli exit %d): %s" % (code, why), STEP_FAILED)
+        return PROBLEMS, Refusal(flat_line("timed out after %d ms: a step waited for something that never came", timeout_ms), STEP_TIMEOUT)
+    return PROBLEMS, Refusal(flat_line("failed (wokwi-cli exit %d): %s", code, why), STEP_FAILED)
 
 
 class ScenarioRun:
@@ -134,9 +136,9 @@ class ScenarioRun:
     def problem(self):
         """Why this run cannot pass, found before any Wokwi minute is spent, as a Refusal, or None."""
         if not all((self.sim / name).is_file() for name in ("diagram.json", "wokwi.toml")):
-            return Refusal("no simulation project in %s: build first with /spark:build --keep ." % self.sim, NO_SIM_PROJECT)
+            return Refusal(flat_line("no simulation project in %s: build first with /spark:build --keep .", self.sim), NO_SIM_PROJECT)
         if not (self.project / "firmware" / "main.py").is_file():
-            return Refusal(NO_MAIN % (self.project, READY), NO_MAIN_PY)
+            return Refusal(flat_line(NO_MAIN, self.project, READY), NO_MAIN_PY)
         try:
             self.steps_text = with_ready_wait(self.scenario.read_text())
             self.steps = ScenarioSteps.from_text(self.steps_text)
@@ -150,12 +152,14 @@ class ScenarioRun:
         except (OSError, ValueError, tool_finder.ToolError) as cannot:  # a missing tool, or image_builder's codes
             code = (TOOL_MISSING if isinstance(cannot, tool_finder.ToolError)
                     else getattr(cannot, "code", RUN_INPUT_UNUSABLE))
-            return Refusal("%s: %s" % (self.scenario.name, cannot), code)
+            first, *more = str(cannot).split("\n")  # P1320: a ToolError's own lines stay, and its values are flat at their source
+            return Refusal("\n".join([flat_line("%s: %s", self.scenario.name, first)] + [flat_line("%s", line) for line in more]), code)
         outside = sim_project.why_outside_sim(self.sim, self.image)
         if outside:
             return Refusal(outside, FIRMWARE_LINE_BAD)
         if self.image.is_dir() or not self.image.parent.is_dir():
-            return Refusal("%s: wokwi.toml names %s, and a run cannot write its image there" % (self.scenario.name, self.image.name), RUN_INPUT_UNUSABLE)
+            return Refusal(flat_line("%s: wokwi.toml names %s, and a run cannot write its image there", self.scenario.name, self.image.name),
+                           RUN_INPUT_UNUSABLE)
         return None
 
     def unknown_component_ids(self):  # --- MVP --- (P399)
@@ -164,8 +168,8 @@ class ScenarioRun:
         unknown = [each for each in self.steps.component_ids if each not in self.diagram_ids.ids]
         if self.diagram_ids.state != outcomes.RECORDED or not unknown:
             return None
-        return Refusal("%s: sim/diagram.json has no component %s. Its component ids: %s"
-                       % (self.scenario.name, ", ".join(unknown), ", ".join(self.diagram_ids.ids)), UNKNOWN_COMPONENT_ID)
+        return Refusal(flat_line("%s: sim/diagram.json has no component %s. Its component ids: %s",
+                                 self.scenario.name, ", ".join(unknown), ", ".join(self.diagram_ids.ids)), UNKNOWN_COMPONENT_ID)
 
     def not_checked(self):  # --- MVP --- (P399)
         """After problem(): one sentence for each thing it could not compare with the diagram. The run goes on after them."""
@@ -218,10 +222,10 @@ class ScenarioRun:
                                         capture_output=True, encoding="utf-8", errors="replace",
                                         timeout=self.timeout_ms / 1000 + STARTUP_ALLOWANCE_S)
             except subprocess.TimeoutExpired as late:
-                sentence = Refusal("wokwi-cli did not finish in %d s" % late.timeout, SIMULATOR_HUNG)
+                sentence = Refusal(flat_line("wokwi-cli did not finish in %d s", late.timeout), SIMULATOR_HUNG)
                 return COULD_NOT_RUN, sentence, self.write_log(sentence, "\n".join(map(printed_text, (late.stdout, late.stderr))))
             except OSError as cannot:
-                return COULD_NOT_RUN, Refusal("wokwi-cli could not start: %s" % cannot, SIMULATOR_CANNOT_START), None
+                return COULD_NOT_RUN, Refusal(flat_line("wokwi-cli could not start: %s", cannot), SIMULATOR_CANNOT_START), None
             finally:
                 as_run.unlink(missing_ok=True)
             serial = serial_log.read_text(errors="replace") if serial_log.is_file() else ""
@@ -274,7 +278,7 @@ def find_simulator(find_tool):  # --- MVP --- (P684)
         return None, Refusal(str(missing), TOOL_MISSING)
     token = simulator.entry.get("account_env", "WOKWI_CLI_TOKEN")
     if token and not os.environ.get(token):
-        return None, Refusal("%s is not set: %s (a run spends Wokwi CI minutes)" % (
-            token, simulator.entry.get("needs_account", "get one at wokwi.com/dashboard/ci")), NO_TOKEN)
+        return None, Refusal(flat_line("%s is not set: %s (a run spends Wokwi CI minutes)",
+                                       token, simulator.entry.get("needs_account", "get one at wokwi.com/dashboard/ci")), NO_TOKEN)
     return simulator, None
 

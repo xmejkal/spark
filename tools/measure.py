@@ -619,7 +619,8 @@ def raw_value_message(source, known):
     keyword `template`) is no string constant, such as a `%`, an f-string, a name or a call, or whose arguments hold a `**`.
     Only `scripts/spark/core/text_guards.py`, where the helpers hand their own `template` on, may pass the bare name
     `template`. The count is per class name. Known limits: a class under another name (`import ToolError as SP`,
-    `P = ToolError`) is not seen; `X.of_lines(...)` is not counted, because it is safe by construction; a helper
+    `P = ToolError`) is not seen; `X.of_lines(...)` is not counted: it is safe only when each source of its lines is a
+    ValueMessageError or `flat_line`, so a reviewer checks the sources and a mutation row pins them (P1320); a helper
     `def f(template)` outside text_guards is counted, so the baseline or a fix covers it.
     """
     seen = collections.Counter()

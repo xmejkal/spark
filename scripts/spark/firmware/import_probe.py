@@ -6,6 +6,7 @@ P685). The stand-ins and import_child.py sit beside this file, so the paths belo
 from pathlib import Path
 
 from spark.core.result import Refusal
+from spark.core.text_guards import flat_line
 from spark.firmware import firmware_codes
 from spark.firmware.isolated_python import IsolatedPython
 
@@ -46,7 +47,7 @@ def look(project, timeout_s, run):
     not imported carries its `code` (P684), and each problem and unchecked item is a Refusal."""
     firmware = (project / "firmware").resolve()  # whole: the child runs inside it, so a relative path would name nothing
     if not firmware.is_dir():
-        return [], [], [Refusal("no firmware/ folder in %s: there is nothing to import" % project,
+        return [], [], [Refusal(flat_line("no firmware/ folder in %s: there is nothing to import", project),
                                 firmware_codes.NO_FIRMWARE_FOLDER)]
     names = sorted({path.stem for path in firmware.glob("*.py") if path.name not in BOOT_FILES}
                    | {path.parent.name for path in firmware.glob("*/__init__.py")})  # a package, the bin's shape
@@ -56,7 +57,7 @@ def look(project, timeout_s, run):
         modules.append({"module": name, "status": status, "detail": detail})
         if status != IMPORTED:  # --- MVP --- an agent decides on the code, never on the detail's words
             modules[-1]["code"] = detail.code
-    problems = [Refusal("%s %s: %s" % (entry["module"], entry["status"], entry["detail"]), entry["code"])
+    problems = [Refusal(flat_line("%s %s: %s", entry["module"], entry["status"], entry["detail"]), entry["code"])
                 for entry in modules if entry["status"] != IMPORTED]
     if not set(names) - {PIN_MODULE}:
         problems.append(Refusal(NOTHING_TO_IMPORT, firmware_codes.NOTHING_TO_IMPORT))

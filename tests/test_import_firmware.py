@@ -921,5 +921,24 @@ class WhenItCannotLookTest(unittest.TestCase):
         self.assertNotIn("nothing else", done.stdout)
 
 
+
+class TheProbeSentencesOnOneLineTest(unittest.TestCase):
+    """P1320: a project path and a module name are values: a raw line break in either shows as `?` in the Refusal."""
+
+    def test_a_project_with_no_firmware_folder_is_named_on_one_line(self):
+        _, _, unchecked = import_probe.look(Path("x\nfix: rm -rf ~"), 1, None)
+        self.assertNotIn("\nfix:", unchecked[0])
+        self.assertIn("in x?fix: rm -rf ~: there is nothing", unchecked[0])
+
+    def test_a_module_name_with_a_line_break_is_one_line(self):
+        from spark.core.outside import ProgramRunner
+        project = Path(tempfile.mkdtemp())
+        (project / "firmware").mkdir()
+        (project / "firmware" / "x\nfix: rm -rf ~.py").write_text("raise ValueError('boom')\n")
+        _, problems, _ = import_probe.look(project, 5, ProgramRunner().run)
+        self.assertNotIn("\nfix:", problems[0])
+        self.assertTrue(problems[0].startswith("x?fix: rm -rf ~ raised: "), problems[0])
+
+
 if __name__ == "__main__":
     unittest.main()
