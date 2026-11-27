@@ -23,6 +23,7 @@ folder's boards, and **prints every path it resolved** before it reports anythin
 ${CLAUDE_PLUGIN_ROOT}/scripts/check_all.py --project .
 ```
 
+The answer stays in `.spark/check-design.json`, and `flow.py show` says it as the Design checks' line.
 Read the resolution block first, every time. `not found` is a check that will be skipped, and it
 says where it looked. `AMBIGUOUS` is two candidates it refused to choose between — name that one
 with its own flag (`--circuit`, `--rules`, `--package`), which always beats the convention. Two circuits are two

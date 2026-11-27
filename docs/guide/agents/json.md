@@ -16,7 +16,7 @@ come from the project that the build reads, which is the nearest folder up that 
 project as a whole path. It is `null` when no folder up is a project: then the parts and boards come from the plugin's
 library, and there are no rules. The first resolved line names a project that is not the folder, or says that there
 is none. A `--project` that is not a directory has no `project` key ([what exit 0 means](#what-exit-0-means)).
-The sample below is older than P319, so it has no `project` key.
+The sample below is older than P319, so it has no `project` key. Since [P1255](https://github.com/xmejkal/spark/issues/1814), a run in a project folder keeps its answer in the check record `.spark/check-design.json`, which `flow.py show` reads. The record names a board of spark's library as `spark:boards/<id>.json` and one of the store's shelf as `store:shelf/boards/<id>.json`, never by a whole path. With no board named, every board is checked, so the record also lists the ids of your shelf's boards.
 
 ### What exit 0 means
 
