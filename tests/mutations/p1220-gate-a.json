@@ -1,0 +1,68 @@
+[
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "P1220: a failed run no longer shuts gate A (test_flow.TheGateATest)",
+  "find": "return {\"shut_by\": [flow_codes.RUN_FAILED], \"fact\": fact.fact,",
+  "replace": "return {\"shut_by\": [], \"fact\": fact.fact,"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "P1220: gate A is read before the On the board station (test_flow.TheGateATest)",
+  "find": "    reached = bool(deployed) and (deployed.status != flow_codes.NOT_STARTED or bool(now and now.phase == flow_codes.DEPLOY))  # the On the board station",
+  "replace": "    reached = True  # the On the board station"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "P1220: gate A is never reached (test_flow.TheGateATest)",
+  "find": "    reached = bool(deployed) and (deployed.status != flow_codes.NOT_STARTED or bool(now and now.phase == flow_codes.DEPLOY))  # the On the board station",
+  "replace": "    reached = False  # the On the board station"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "P1220: an unread run gives an empty shut_by, never null (test_flow.TheGateATest)",
+  "find": "return {\"shut_by\": None, \"fact\": None,",
+  "replace": "return {\"shut_by\": [], \"fact\": None,"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "P1220: a board with no Wokwi model reads no runs again (test_flow.TheGateATest)",
+  "find": "if simulate and simulate.status in (None, flow_codes.NOT_STARTED) \\\n        else NO_IMAGE_FACT",
+  "replace": "if simulate and simulate.status in (None, flow_codes.NOT_STARTED) and flow_codes.SIMULATE not in no_model \\\n        else NO_IMAGE_FACT"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "P1220: a board with no Wokwi model says its image's fact (test_flow.TheGateATest)",
+  "find": "code = flow_codes.NO_MODEL_NOTE if no_model and fact != UNREADABLE_FACT else fact.fact",
+  "replace": "code = fact.fact"
+ },
+ {
+  "file": "scripts/spark/flow/show_flow.py",
+  "name": "P1220: show prints no row (test_flow.TheGateATest)",
+  "find": "if guide.get(\"gate_a\") else []  # P1220: gate A's row",
+  "replace": "if False else []  # P1220: gate A's row"
+ },
+ {
+  "file": "scripts/spark/flow/page_sections.py",
+  "name": "P1220: the page draws no row with no now (test_flow_page.TheTestedBeforeTheBoardRowTest)",
+  "find": "lines = (['<p>%s</p>' % _text(said)] if said else []) + self._tested(page)",
+  "replace": "lines = (['<p>%s</p>' % _text(said)] if said else []) + []"
+ },
+ {
+  "file": "scripts/spark/flow/page_sections.py",
+  "name": "P1220: the page draws no row in the NOW box (test_flow_page.TheTestedBeforeTheBoardRowTest)",
+  "find": "        lines += self._tested(page)\n",
+  "replace": "        lines += []\n"
+ },
+ {
+  "file": "scripts/spark/bench/image_evidence.py",
+  "name": "P1220: the deploy reads no failed run through the one reader (test_image_evidence.NoSimulationEvidenceTest)",
+  "find": "for log, verdict in image.failed_runs():",
+  "replace": "for log, verdict in []:"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "P1220: a board with no model reads no default image, so a failed run is missed (test_flow.TheGateATest)",
+  "find": "image_fact(project, flow_codes.SIMULATE in no_model) if simulate",
+  "replace": "image_fact(project) if simulate"
+ }
+]

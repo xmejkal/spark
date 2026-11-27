@@ -26,6 +26,8 @@ SHEET_UNREADABLE = sheet.REFUSALS + (ValueError, KeyError, TypeError, AttributeE
 #: Value: what the runs say of the image (a fact of flow_codes, or None) and the name of a log that failed on it, or None.
 ImageFact = namedtuple("ImageFact", "fact log")
 NO_IMAGE_FACT = ImageFact(None, None)
+#: No fact, as NO_IMAGE_FACT, and the code of a run log that cannot be read: a board with no model never reads it as "no run failed" (P1220).
+UNREADABLE_FACT = ImageFact(None, firmware_codes.LOG_UNREADABLE)
 #: What the image's runs say that leaves the simulate open: a run failed on it, firmware changed after it, or none ran.
 OPEN_IMAGE_FACTS = (flow_codes.RUN_FAILED, flow_codes.IMAGE_OLDER, flow_codes.IMAGE_UNTESTED)
 
@@ -49,12 +51,13 @@ def no_model_phases(project, by_name):
     return {flow_codes.BUILD} | ({flow_codes.SIMULATE} if simulate and simulate.status in (flow_codes.NOT_STARTED, None) else set())
 
 
-def image_fact(project):
+def image_fact(project, default_without_toml=False):
     """The ImageFact of the image sim/wokwi.toml names: RUN_FAILED with the first failed log's name, IMAGE_OLDER,
     IMAGE_UNTESTED or IMAGE_TESTED. NO_SIM_FILES while sim/wokwi.toml is no file (P1034). NO_IMAGE_FACT when there is no
-    image or a log cannot be read: the phase says why."""
+    image or a log cannot be read (UNREADABLE_FACT for the log): the phase says why. `default_without_toml` takes the board's default
+    image with no sim/wokwi.toml, as the deploy does, for a board Wokwi has no model of (P1220)."""
     try:
-        image = ProjectImage(Path(project))
+        image = ProjectImage(Path(project), default_without_toml=default_without_toml)
         failed = image.failed_runs()
         if failed:
             return ImageFact(flow_codes.RUN_FAILED, failed[0][0].name)
@@ -62,7 +65,9 @@ def image_fact(project):
             return ImageFact(flow_codes.IMAGE_OLDER, None)
         return ImageFact(flow_codes.IMAGE_TESTED if image.find_passed_logs() else flow_codes.IMAGE_UNTESTED, None)
     except DeployError as missing:
-        return ImageFact(flow_codes.NO_SIM_FILES, None) if missing.reason == firmware_codes.NO_SIM_TOML else NO_IMAGE_FACT
+        if missing.reason == firmware_codes.NO_SIM_TOML:
+            return ImageFact(flow_codes.NO_SIM_FILES, None)
+        return UNREADABLE_FACT if missing.reason == firmware_codes.LOG_UNREADABLE else NO_IMAGE_FACT
     except OSError:
         return NO_IMAGE_FACT
 
@@ -281,22 +286,41 @@ def stands_at_of(guide):
     return guide["now"]["phase"] if guide["now"] else None
 
 
+def gate_a_of(fact, reached, no_model):
+    """Gate A's one condition (P1220, D10): no failed run on the current image, and the row "Tested before the board". None
+    before the On the board station is `reached`. Else `{shut_by, fact, says}`: `shut_by` is [RUN_FAILED] while a run failed
+    on the image the ImageFact `fact` reads, [] when none did, and None when the runs cannot be read. `no_model` is True for
+    a board Wokwi has no model of: its row says so unless a run failed. Gate A's other conditions are not built (P79 #16),
+    so [] never means that gate A is open. Data only: no code refuses on it."""
+    if not reached:
+        return None
+    if fact.fact == flow_codes.RUN_FAILED:
+        return {"shut_by": [flow_codes.RUN_FAILED], "fact": fact.fact, "says": flow_codes.GATE_A_SAYS[fact.fact] % fact.log}
+    code = flow_codes.NO_MODEL_NOTE if no_model and fact != UNREADABLE_FACT else fact.fact
+    if code is None:
+        return {"shut_by": None, "fact": None, "says": flow_codes.GATE_A_CANNOT_TELL}
+    return {"shut_by": [], "fact": code, "says": flow_codes.GATE_A_SAYS[code]}
+
+
 def guide_of(project, phases, steps=count_steps, deploy=None, board=None):
     """
     What the person does now, what is done, what comes later and what they set aside, from the Phases of `project`:
-    `{"now": {phase, by, says, offer, chat_offer, needs, steps, with_wiring}, "stations", "done", "later", "set_aside", "no_simulation", "no_open_phase", "wired"}`.
+    `{"now": {phase, by, says, offer, chat_offer, needs, steps, with_wiring}, "stations", "done", "later", "set_aside", "no_simulation", "no_open_phase", "wired", "gate_a"}`.
     `stations` places each phase beside the now (`stations_of`, P1119), and `done` and `later` are built from it. `steps` counts the wiring
     sheet's steps. The needs are read once more, by the parts phase's own rule (`counted`, `set_aside`). `deploy` is the
     run's DeployState (P1043), None to read it here. `board` is the run's WiredBoard (P1044), None to read it here:
     `wired` is `{sheet_at, deploy_at}`, the witnesses of a board that can be wired, or None when spark saw none.
+    `gate_a` is `gate_a_of`'s row (P1220), None before the deploy has a board log or is now.
     """
     by_name, listed = {phase.phase: phase for phase in phases}, readable(lambda: needs.read(project), [])
     no_model = no_model_phases(project, by_name)
     simulate = by_name.get(flow_codes.SIMULATE)
-    fact = image_fact(project) if simulate and simulate.status in (None, flow_codes.NOT_STARTED) and flow_codes.SIMULATE not in no_model \
+    fact = image_fact(project, flow_codes.SIMULATE in no_model) if simulate and simulate.status in (None, flow_codes.NOT_STARTED) \
         else NO_IMAGE_FACT
     all_aside = bool(listed) and not counted(listed)
     now = now_phase(phases, no_model, fact, all_aside)
+    deployed = by_name.get(flow_codes.DEPLOY)
+    reached = bool(deployed) and (deployed.status != flow_codes.NOT_STARTED or bool(now and now.phase == flow_codes.DEPLOY))  # the On the board station
     at = phases.index(now) if now else len(phases)
     open_needs = [need["id"] for need in counted(listed) if not need.get("pick")]
     beside_sheet = now and now.phase == flow_codes.FIRMWARE and now.status == flow_codes.NOT_STARTED and is_sheet_current(project, by_name)
@@ -314,5 +338,6 @@ def guide_of(project, phases, steps=count_steps, deploy=None, board=None):
     return {"now": said, "stations": stations, "done": names_at(stations, flow_codes.DONE_PLACE),
             "later": names_at(stations, flow_codes.LATER_PLACE), "set_aside": [need["id"] for need in set_aside(listed)],
             "no_simulation": flow_codes.NO_SIMULATION_NOW if flow_codes.BUILD in no_model else None,
-            "no_open_phase": no_open_phase(said, by_name), "wired": wired_board.wired_data(board)}
+            "no_open_phase": no_open_phase(said, by_name), "wired": wired_board.wired_data(board),
+            "gate_a": gate_a_of(fact, reached, flow_codes.SIMULATE in no_model)}
 # --- end MVP ---
