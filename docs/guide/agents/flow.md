@@ -17,10 +17,9 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
 - `phases`: the nine phases in order, `idea`, `needs`, `parts`, `requirements`, `build`, `breadboard`, `firmware`,
   `simulate` and `deploy`. Each is `{phase, status, mark, by, says, offers, needs}`.
 - `fingerprint`: the sha256 of the current offers (each `key`, `effect` and `makes_stale`, and a pick's `notes` when it
-  has some, as canonical JSON) and of
-  `.spark/needs.json`, `requirements.json` and `.spark/build.json`. It changes when one of these files changes, or when
-  an offer changes: a pick's effect changes with the drawer count, and its notes with an unsure entry or a store record. No other file of the project changes it, except through
-  an offer. The page carries its first 12 hex digits ([P829](https://github.com/xmejkal/spark/issues/1187)).
+  has some, as canonical JSON) and of `.spark/needs.json`, `requirements.json` and `.spark/build.json`. It changes when
+  one of these files changes, or when an offer changes: a pick's effect changes with the drawer count, and its notes
+  with an unsure entry or a store record. No other file of the project changes it, except through an offer. The page carries its first 12 hex digits ([P829](https://github.com/xmejkal/spark/issues/1187)).
 - `stands_at`: the phase of `guide.now`, kept for old readers. Read `guide.now.phase`: it is the same phase, by one rule
   ([P1030](https://github.com/xmejkal/spark/issues/1510)). It is `null` when no phase is open (the deploy is `ok`), or with a phase list a test swaps in.
 - `guide` ([P977](https://github.com/xmejkal/spark/issues/1407)): what the person does now. `now` is `{phase, by, says,
@@ -138,8 +137,7 @@ an owned drawer entry with none, so the first offers are what spark can build fr
 entry by the record it says it is, else by its label. A pick offer for a `compute` need whose candidate is no record
 spark knows asks the parts list's own rule (`need_requirements.board_problems`) with the pick made. When that refusal
 names the candidate, the offer's first note says `Spark cannot build from it: no board file.` (P1180). A board that
-another need picks is the board the parts list places, so then the offer says nothing. An offer for a need that does not
-compute never says it, and a board's pick for one names its own part (`own_part`, P1136).
+another need picks is the board the parts list places, so then the offer says nothing. An offer for a need that does not compute never says it, and a board's pick for one names its own part (`own_part`, P1136).
 
 The build phase reads `.spark/build.json`. If the folder of `check_spine.py --keep` is a project, the build writes this
 file and lists it under `kept`. It holds the build's `status`, its `stages`, the `requirements` file (`null` after a build of the reference design, and the build phase says so, P1095), its sha256, whether this build wrote `dist/` (`dist_written`, which `check_all` reads, P816; when it is false and a `dist/` is there, the build phase says the last build did not write it, P1088) and the
