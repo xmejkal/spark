@@ -4,8 +4,8 @@ scenario run (or the build, while sim/wokwi.toml is missing), the deploy's look,
 after a need was dropped (P1027, slice 2), and a pick for each open need of a parts phase whose offers are not one
 (P1141). `PHASE_STEPS` holds one step function per phase, so a phase's step changes in one entry. The firmware names
 none: Claude writes firmware/main.py in the chat. Each step is next-only: the page shows no button for it, and
-`flow.py run-request` never runs a scenario run or a look (the build is the build phase's own offer step). The step of run_scenario.py, a
-script off the core, has the script's name as its op until the script moves onto the core (piece 5). The image fact is
+`flow.py run-request` never runs a scenario run or a look (the build is the build phase's own offer step). The scenario
+run's step is the firmware's own (`firmware_scenario.paid_run_step`, op `run-scenario`, P1078). The image fact is
 read once more here (`guide.image_fact`): `guide_of` keeps its own inside, and exposing it costs more than its value. A
 NextStep holds plain values only, so an event can carry it later.
 """
@@ -14,6 +14,7 @@ from spark.bench.board_envelope import look_step
 from spark.bench.image_evidence import evidence_for
 from spark.core.operation import READS, RUNS, WRITES
 from spark.core.result import NextStep
+from spark.firmware.firmware_scenario import paid_run_step
 from spark.flow import flow_codes
 from spark.flow.guide import image_fact, scenario_names
 from spark.flow.offer_steps import build_step, picks_step, whole
@@ -36,13 +37,11 @@ def brief_step(project):
 
 
 def scenario_steps(project):
-    """One scenario run per scenario of the project, by name, or one with SCENARIO_PLACEHOLDER while there is none. The
-    person runs it in their own terminal, and it spends Wokwi CI minutes, so it needs the person."""
-    folder = whole(project)
-    found = scenario_names(folder)
+    """One scenario run per scenario of the project, by name, or one with SCENARIO_PLACEHOLDER while there is none
+    (`paid_run_step`). The person runs it in their own terminal, and it spends Wokwi CI minutes, so it needs the person."""
+    found = scenario_names(whole(project))
     why = flow_codes.SCENARIO_WHY if found else flow_codes.SCENARIO_FIRST_WHY
-    return [NextStep("run_scenario", [name, "--project", str(folder)], why, (READS, RUNS, WRITES), False, True,
-                     store.read_given_env()) for name in found or [SCENARIO_PLACEHOLDER]]
+    return [paid_run_step(project, name, why) for name in found or [SCENARIO_PLACEHOLDER]]
 
 
 def look_first_step(project, no_simulation):

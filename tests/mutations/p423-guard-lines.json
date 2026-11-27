@@ -54,7 +54,6 @@
   "find": "        self.report(Event.line(stage, text, raw))",
   "replace": "        print(\"  \" + text, flush=True)"
  },
-
  {
   "file": "scripts/spark/bench/deploy_image.py",
   "name": "deploy's standing-yes line prints around the reporter",
