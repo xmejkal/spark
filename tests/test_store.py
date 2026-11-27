@@ -220,10 +220,18 @@ class TheSuiteStaysOutOfThePersonsStoreTest(unittest.TestCase):
     def test_a_script_the_suite_starts_gets_the_same_scratch_store(self):
         self.assertEqual(home_in(dict(os.environ)), store.home())
 
+    #: The children that run a project's own tests with unittest (P1208). Each runs alone under `python3 -I` and imports
+    #: nothing of spark, so the store's suite guard can never be reached from it.
+    UNITTEST_CHILDREN = ["own_tests_child.py"]
+
     def test_no_script_imports_unittest_so_a_real_run_never_gets_a_scratch_store(self):
         importing = [path.name for path in sorted(path for path in SCRIPTS.rglob("*.py") if "stand_in" not in path.parts)
                      if re.search(r"^\s*(import|from)\s+(unittest|doctest)\b", path.read_text(), re.M)]
-        self.assertEqual(importing, [])
+        self.assertEqual(importing, self.UNITTEST_CHILDREN)
+        for child in self.UNITTEST_CHILDREN:
+            with self.subTest(child=child):
+                text = next(SCRIPTS.rglob(child)).read_text()
+                self.assertIsNone(re.search(r"^\s*(import|from)\s+spark\b", text, re.M), "a unittest child imports nothing of spark")
 
     def test_only_the_store_says_where_the_store_is(self):
         spelled = [path.name for path in sorted(path for path in SCRIPTS.rglob("*.py") if "stand_in" not in path.parts)

@@ -54,10 +54,10 @@
   "replace": "add_micropython_time(time)\n\n\nif __name__ == \"__main__\":\n    import_named(sys.argv[1:])"
  },
  {
-  "file": "scripts/spark/firmware/import_probe.py",
+  "file": "scripts/spark/firmware/isolated_python.py",
   "name": "P443: the child runs without -I, so a firmware can import the helper",
-  "find": "[sys.executable, \"-I\", \"-B\", str(CHILD), name,",
-  "replace": "[sys.executable, \"-B\", str(CHILD), name,"
+  "find": "[sys.executable, \"-I\", \"-B\", str(script)]",
+  "replace": "[sys.executable, \"-B\", str(script)]"
  },
  {
   "file": "scripts/spark/firmware/stand_in/fallback/micropython.py",

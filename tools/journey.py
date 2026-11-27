@@ -38,7 +38,7 @@ STEPS = [
      "Ran end to end on 2026-10-11. Drawn on a half breadboard for the XIAO C6 (a Wokwi diagram). A picture alone for the FireBeetle 2 S3, from its record, 2026-10-29. The page of tabs ran, 2026-10-16. A moved part, jumper or resistor is kept, 2026-10-18. The library's XIAO record builds button + LED, 2026-10-18. An SPI and an I2C part build with 0 errors on the FireBeetle 2 and the XIAO C6, 2026-11-01 (P512). A display on the XIAO still stops at the simulation: it has no Wokwi part. A module with no Wokwi part is drawn from its record's physical block, and the steps name the holes, 2026-11-20 (P945). Power and ground go through the breadboard's + and - rails, 2026-11-20 (P953). A board with no Wokwi part builds, and its simulation stage says could-not-run, 2026-11-20 (P955). The P934 walk built a FireBeetle 2 ESP32-C6 with an e-paper this way, 2026-11-22.", "works"),
     ("Checks", "check_all.py", "Run the checks on the project.", "What holds, and what a check could not look at.",
      "A fresh button-and-LED project passes.", "works"),
-    ("Firmware", "import_firmware.py", "Write the firmware with Claude.", "A pin map that the firmware imports.",
+    ("Firmware", "check_firmware.py", "Write the firmware with Claude.", "A pin map that the firmware imports.",
      "The import passes on a Mac. No check yet that it drives every signal.", "partly"),
     ("Simulate", "run_scenario.py", "Say in words what must happen.",
      "The firmware running in Wokwi, with a dated log.", "The button-and-LED project passed on 2026-10-12. A board-only FireBeetle 2 S3 build wires its own LED and button, 2026-11-01. There its button changed its LED's effect (walk 4). A wrong component id stops before the run, and --dry-run needs no token.", "works"),

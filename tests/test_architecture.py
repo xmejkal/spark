@@ -382,7 +382,7 @@ class TheFirmwareAreaTest(unittest.TestCase):
 
     #: Each CLI's own top-level functions: `main` and what only it uses to parse and print. A library function back in a
     #: CLI, under any name, fails the check.
-    CLIS = {"flash_image.py": ["main", "project_here"], "import_firmware.py": ["main", "render"], "run_scenario.py": ["main"]}
+    CLIS = {"flash_image.py": ["main", "project_here"], "check_firmware.py": ["main"], "run_scenario.py": ["main"]}
 
     def test_scripts_holds_the_three_clis_and_no_firmware_library_module(self):
         names = {path.stem for path in self.FIRMWARE.glob("*.py") if path.name != "__init__.py"}
@@ -436,7 +436,8 @@ class TheBreadboardAreaTest(unittest.TestCase):
 # --- MVP ---
 class TheChecksAreaTest(unittest.TestCase):
     """W6-C3 (P695): the checks' modules live in `scripts/spark/checks/`, its `__init__.py` imports nothing, and each
-    module imports alone. `scripts/` keeps the six CLIs and `check_spine.py`, and each CLI defines `main` only."""
+    module imports alone. `scripts/` keeps the six CLIs, `check_spine.py` (the build's) and `check_firmware.py` (the firmware's,
+    P1208), and each CLI defines `main` only."""
     CHECKS = ROOT / "scripts" / "spark" / "checks"
     #: The modules of the area, by the names of its page (`areas/checks.md`).
     MODULES = ["build_check", "check", "check_codes", "check_design", "checks_operations", "order_check", "physics_board", "physics_check", "rules_check", "vendor_pins_check"]
@@ -447,7 +448,7 @@ class TheChecksAreaTest(unittest.TestCase):
         self.assertEqual(sorted(path.stem for path in self.CHECKS.glob("*.py") if path.name != "__init__.py"), self.MODULES)
         scripts = ROOT / "scripts"
         self.assertEqual(sorted(path.name for path in [*scripts.glob("check_*.py"), *scripts.glob("compare_design.py")]),
-                         sorted(self.CLIS + ["check_spine.py"]))
+                         sorted(self.CLIS + ["check_spine.py", "check_firmware.py"]))
         self.assertEqual(sorted(set(self.MODULES) & {path.stem for path in scripts.glob("*.py")}), [])
         for cli in self.CLIS:
             with self.subTest(cli=cli):
