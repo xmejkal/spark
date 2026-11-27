@@ -147,12 +147,17 @@ def read_definition(case):
 
 
 def read_check_record(text):
-    """CheckRecordStore.read of a project with `text` as its `.spark/check-firmware.json` (None: no file), over no inputs."""
+    """CheckRecordStore.read of a project with `text` as its `.spark/check-firmware.json` (None: no file), in an otherwise empty project."""
     project = Path(tempfile.mkdtemp())
     if text is not None:
         (project / ".spark").mkdir()
         (project / ".spark" / "check-firmware.json").write_text(text)
     return check_record.CheckRecordStore(project, "check-firmware").read()
+
+
+#: A check record of check-firmware with its `inputs` and `lines` as JSON text.
+CHECK_RECORD = ('{"schema": 1, "op": "check-firmware", "at": "2026-11-27T02:10:00+01:00", "inputs": %s, "inputs_sha256": {}, '
+                '"status": "ok", "data": {}, "lines": %s}')
 
 
 #: Every reader that follows the rule in outcomes.py: its function from an input to a Value, and for each input the state
@@ -198,8 +203,9 @@ READERS = {
         "missing": (None, "none-recorded"),
         "malformed": ("{not json", "not-checked"),
         "wrong shape": ('{"schema": 1, "op": "check-firmware"}', "not-checked"),
-        "good": ('{"schema": 1, "op": "check-firmware", "at": "2026-11-27T02:10:00+01:00", "inputs": [], "inputs_sha256": {}, '
-                 '"status": "ok", "data": {}, "lines": []}', "recorded")}),
+        "input .": (CHECK_RECORD % ('["."]', '[]'), "not-checked"),
+        "a line that is no text": (CHECK_RECORD % ('["firmware"]', '[1]'), "not-checked"),
+        "good": (CHECK_RECORD % ('["firmware"]', '[]'), "recorded")}),
     "ScenarioSteps.from_text": (read_text, {
         "missing": (None, "none-recorded"),
         "malformed": ("steps:\n  - just-a-word\n", "not-checked"),

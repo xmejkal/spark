@@ -303,8 +303,7 @@ def gate_a_of(fact, reached, no_model):
 
 
 def guide_of(project, phases, steps=count_steps, deploy=None, board=None):
-    """
-    What the person does now, what is done, what comes later and what they set aside, from the Phases of `project`:
+    """What the person does now, what is done, what comes later and what they set aside, from the Phases of `project`:
     `{"now": {phase, by, says, offer, chat_offer, needs, steps, with_wiring}, "stations", "done", "later", "set_aside", "no_simulation", "simulation", "no_open_phase", "wired", "gate_a"}`.
     `no_simulation` is the flag's sentence and `simulation` the line show and the page draw (`checks_reading.simulation_of`).
     `stations` places each phase beside the now (`stations_of`, P1119), and `done` and `later` are built from it. `steps` counts the wiring

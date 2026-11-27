@@ -30,7 +30,10 @@ LINES_JOIN, INPUTS_JOIN = "; ", " or "
 
 
 def read_check(project, name):
-    """The CheckRecord of the check `name` in `project`, its secrets files left out as the Operation leaves them out."""
+    """The CheckRecord of the check `name` in `project`, its secrets files left out as the Operation leaves them out. The
+    leave-out rule is the firmware's secrets rule (`project_secrets.is_secret_path`, P1060), the one `check-firmware` saves
+    with. A record whose inputs hold no firmware/ secrets file, such as P1255's `check-design` over `board.tsx`, is
+    unaffected by it."""
     return CheckRecordStore(project, name, leave_out=is_secret_path).read()
 
 

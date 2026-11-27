@@ -162,7 +162,7 @@
    "label": "Write the firmware",
    "op": null,
    "from_page": false,
-   "tell": "Write the firmware for this project's board."
+   "tell": "Write the firmware for this project's board, with a thin main that calls modules the free checks can import."
   },
   {
    "key": "offer:run-simulation",

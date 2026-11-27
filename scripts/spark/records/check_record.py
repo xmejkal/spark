@@ -30,6 +30,8 @@ KEYS = ("schema", "op", "at", "inputs", "inputs_sha256", "status", "data", "line
 WHY_NO_JSON = "the check record is no JSON"
 WHY_SHAPE = "the check record is of another shape (%s)"
 WHY_INPUT = "the check record names an input outside the project (%s)"
+WHY_NO_INPUTS = "the check record names no input"
+WHY_CANNOT_READ = "the check record cannot be read (%s)"
 WHY_UNREADABLE = "its files cannot be read (%s)"
 
 
@@ -44,11 +46,12 @@ class CheckRecord(collections.namedtuple("CheckRecord", "name state why at curre
 
 
 def is_plain_input(text):
-    """True for an input a record may name: a non-empty relative path inside the project, with no `..` part."""
-    if not isinstance(text, str) or not text or "\\" in text:
+    """True for an input a record may name: a relative path to something inside the project, with no `..` part. `.`, `./`
+    and an empty path name the project itself, so they are no input."""
+    if not isinstance(text, str) or "\\" in text:
         return False
     path = PurePosixPath(text)
-    return not path.is_absolute() and ".." not in path.parts and path.parts[0] != "."
+    return bool(path.parts) and not path.is_absolute() and ".." not in path.parts
 
 
 def inputs_sha256(project, inputs, leave_out=None):
@@ -76,12 +79,16 @@ def shape_problem(record, name):
     missing = [key for key in KEYS if key not in record]
     if missing:
         return WHY_SHAPE % ("no " + ", ".join(missing))
-    if record["schema"] != SCHEMA or record["op"] != name:
+    if type(record["schema"]) is not int or record["schema"] != SCHEMA or record["op"] != name:  # JSON's true is no 1
         return WHY_SHAPE % ("schema %r, op %r" % (record["schema"], record["op"]))
+    if record["inputs"] == []:
+        return WHY_NO_INPUTS
     if not isinstance(record["inputs"], list) or not all(is_plain_input(each) for each in record["inputs"]):
         return WHY_INPUT % record["inputs"]
     typed = (("at", str), ("inputs_sha256", dict), ("status", str), ("data", dict), ("lines", list))
     wrong = [key for key, kind in typed if not isinstance(record[key], kind)]
+    if not wrong and not all(isinstance(line, str) for line in record["lines"]):
+        wrong = ["lines"]  # a line that is no text would crash the sentence that joins them
     return WHY_SHAPE % ("wrong " + ", ".join(wrong)) if wrong else None
 
 
@@ -101,7 +108,10 @@ class CheckRecordStore:
 
     def save(self, inputs, at, answer):
         """Write the record of `answer` ({status, data, lines}) at the time `at` (with its zone), over `inputs`, hashed now.
-        OSError when it cannot: the project is not there, `.spark` is no folder, or the write fails."""
+        OSError when it cannot: the project is not there, `.spark` is no folder, or the write fails. ValueError for no
+        inputs or an input that is not plain (`is_plain_input`): a programmer's error, as a name that is no plain id is."""
+        if not inputs or not all(is_plain_input(each) for each in inputs):
+            raise ValueError("a check record's inputs are plain paths in the project, not %r" % (inputs,))
         (self.project / SPARK_FOLDER).mkdir(exist_ok=True)  # no parents: a mistyped project is never made
         record = {"schema": SCHEMA, "op": self.name, "at": at, "inputs": list(inputs),
                   "inputs_sha256": inputs_sha256(self.project, inputs, self.leave_out),
@@ -109,13 +119,17 @@ class CheckRecordStore:
         store.write_file(self.path, json.dumps(record, indent=1, sort_keys=True, ensure_ascii=False) + "\n")
 
     def read(self):
-        """The CheckRecord of this project: none-recorded with no file, not-checked with `why` for a file of another shape or
-        inputs that cannot be read, else recorded, with `current`."""
-        if not self.path.exists():
-            return CheckRecord(self.name, outcomes.NONE_RECORDED)
+        """The CheckRecord of this project: none-recorded with no file, not-checked with `why` for a file that cannot be read,
+        is no JSON or is of another shape, or inputs that cannot be read, else recorded, with `current`."""
         try:
-            record = json.loads(self.path.read_text(encoding="utf-8"))
-        except (OSError, ValueError, RecursionError):
+            if not self.path.exists():  # raises under a .spark/ that cannot be searched
+                return CheckRecord(self.name, outcomes.NONE_RECORDED)
+            data = self.path.read_bytes()
+        except OSError as failed:
+            return CheckRecord(self.name, outcomes.NOT_CHECKED, WHY_CANNOT_READ % type(failed).__name__)
+        try:
+            record = json.loads(data.decode("utf-8"))
+        except (ValueError, RecursionError):  # a UnicodeDecodeError is a ValueError
             return CheckRecord(self.name, outcomes.NOT_CHECKED, WHY_NO_JSON)
         why = shape_problem(record, self.name)
         if why:

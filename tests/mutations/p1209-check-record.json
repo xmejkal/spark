@@ -25,6 +25,12 @@
  },
  {
   "file": "scripts/spark/records/check_record.py",
+  "name": "P1209: a line that is no text reads as recorded (test_check_record.TheCheckRecordTest.test_a_record_reader_never_raises_on_an_input_of_dot_or_a_line_that_is_no_text)",
+  "find": "    if not wrong and not all(isinstance(line, str) for line in record[\"lines\"]):\n",
+  "replace": "    if False:\n"
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
   "name": "P1209: the store makes a mistyped project folder (test_check_record.TheCheckRecordTest.test_the_store_never_makes_the_project_folder)",
   "find": "(self.project / SPARK_FOLDER).mkdir(exist_ok=True)",
   "replace": "(self.project / SPARK_FOLDER).mkdir(parents=True, exist_ok=True)"
@@ -106,6 +112,12 @@
   "name": "P1209: a failed current check names no status (test_checks_reading.TheSimulationLineTest.test_a_failed_check_is_never_grey)",
   "find": "    if check.status != OK:\n        return CURRENT_NOT_OK",
   "replace": "    if False:\n        return CURRENT_NOT_OK"
+ },
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "P1209: the line drops why there is no simulation (test_flow.TheOfferStepTest.test_show_prints_the_same_simulation_line_as_the_page)",
+  "find": "flow_codes.NO_SIMULATION_NOW if no_model else None",
+  "replace": "None"
  },
  {
   "file": "scripts/spark/flow/page_sections.py",

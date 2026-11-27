@@ -195,7 +195,8 @@ class ThePhasesTest(FlowTest):
         self.assertEqual(said["data"]["stands_at"], "idea")  # P1030: the guide's now, the one rule
         self.assertEqual(says(said, "idea"), ["the brief holds no goal"])
         # P979: the hints name the command and who acts, with no placeholder and no path
-        self.assertEqual(says(said, "firmware"), ["No firmware/main.py yet. Ask Claude to write it in the chat."])
+        self.assertEqual(says(said, "firmware"), ["No firmware/main.py yet. Ask Claude to write it in the chat. Keep main.py "
+                                                   "thin, with the code in modules it calls, so the free checks can import them."])
         self.assertEqual(says(said, "simulate"), ["No simulation files yet (sim/wokwi.toml). Ask Claude to build the board."])
         self.assertEqual(says(said, "deploy"), ["Ask Claude to look at the board first (/spark:deploy).",
                                                 "Claude then gives you the deploy line. Run it in your terminal and type yes, unless you gave Claude a standing yes for this board."])
@@ -772,7 +773,8 @@ class TheGuideTest(FlowTest):
         phases, _ = read_flow(project)
         guide = guide_of(project, phases, steps=lambda _project: None)
         self.assertEqual((guide["now"]["phase"], guide["now"]["by"], guide["now"]["says"]),
-                         ("firmware", ["claude"], "Ask Claude in the chat to write the firmware for this board."))
+                         ("firmware", ["claude"], "Ask Claude in the chat to write the firmware for this board. Keep main.py thin, "
+                          "with the code in modules it calls, so the free checks can import them."))
         self.assertIn("breadboard (spark cannot see it)", guide["done"])
 
     def test_with_the_firmware_written_the_deploy_is_now_and_the_simulate_stays_later(self):
@@ -808,7 +810,8 @@ class TheGuideTest(FlowTest):
         BuildRecordStore(project, clock=FakeClock()).write({key: value for key, value in record.items() if key not in ("schema", "at")})
         guide = show(project)[0]["data"]["guide"]
         self.assertEqual((guide["now"]["phase"], guide["now"]["says"]),
-                         ("firmware", "Ask Claude in the chat to write the firmware for this board."))
+                         ("firmware", "Ask Claude in the chat to write the firmware for this board. Keep main.py thin, with the "
+                          "code in modules it calls, so the free checks can import them."))
         self.assertEqual(guide["done"], ["idea", "requirements (no needs or picks behind it)", "build (no simulation)"])
 
     def test_a_build_of_a_board_wokwi_has_no_model_of_is_stale_when_the_parts_list_changed(self):
@@ -1783,6 +1786,20 @@ class TheOfferStepTest(FlowTest):
         write_page(project, store=FlowPageStore())
         section = (project / "page.html").read_text(encoding="utf-8").split('<section id="guide">')[1].split("</section>")[0]
         self.assertIn('<p class="muted">%s</p>' % line, section)
+
+    def test_show_of_a_record_with_a_line_that_is_no_text_exits_0_and_says_not_checked(self):
+        """The review (A1, R12): a record's reader never raises, so `"lines": [1]` never crashes show or the page."""
+        from spark.firmware.firmware_check import INPUTS
+        from spark.records.check_record import CheckRecordStore
+        project = a_firmware(a_project_built_with_no_simulation_now())  # a build recorded ok: show exits 0
+        records = CheckRecordStore(project, "check-firmware")
+        records.save(INPUTS, "2026-11-27T02:10:00+01:00", {"status": "ok", "data": {}, "lines": ["imports: 1 of 1 imported"]})
+        records.path.write_text(json.dumps(dict(json.loads(records.path.read_text()), lines=[1])))
+        said, code = show(project)
+        simulation = said["data"]["guide"]["simulation"]
+        self.assertEqual((code, simulation["check"]["state"], simulation["grey"]), (0, "not-checked", False))
+        self.assertTrue(simulation["line"].startswith("Free checks: the check record is of another shape"), simulation["line"])
+        self.assertIn("  " + simulation["line"], lines_of(project))
 
     def test_the_offers_in_data_keep_their_five_keys_and_no_step(self):
         said, _ = show(with_needs(a_built_project(), SOIL))

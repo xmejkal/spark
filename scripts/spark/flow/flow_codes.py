@@ -73,7 +73,12 @@ NO_SHEET_MESSAGE = "no breadboard.md yet"
 SHEET_NOT_JUDGED_MESSAGE = "breadboard.md, spark does not judge the wiring"
 SHEET_STALE_MESSAGE = "breadboard.md is from other requirements than requirements.json"
 FIRMWARE_MESSAGE = "firmware/main.py written %s"
-NO_FIRMWARE_MESSAGE = "No firmware/main.py yet. Ask Claude to write it in the chat."
+#: The rule of a firmware the free checks can import (the card P1209 #1758, page-check step 7): main.py runs on import, so
+#: the code they import lives in the modules it calls. The firmware step's sentence and its NOW end with it, and the
+#: write-firmware tell says it in its one sentence with no file name, as every tell is written.
+THIN_MAIN_RULE = "Keep main.py thin, with the code in modules it calls, so the free checks can import them."
+WRITE_FIRMWARE_TELL = "Write the firmware for this project's board, with a thin main that calls modules the free checks can import."
+NO_FIRMWARE_MESSAGE = "No firmware/main.py yet. Ask Claude to write it in the chat. " + THIN_MAIN_RULE
 TESTED_MESSAGE = "a passed run tested the current image"
 NEWER_MESSAGE = "changed after the image: %s"
 LOOK_FIRST_MESSAGE = "Ask Claude to look at the board first (/spark:deploy)."
@@ -159,7 +164,7 @@ OFFER_KINDS = {PICK: OfferKind(PARTS, PICK_LABEL, True, None),
                WRITE_REQUIREMENTS: OfferKind(REQUIREMENTS, REQUIREMENTS_LABEL, True, None),
                BUILD_BOARD: OfferKind(BUILD, BUILD_LABEL, True, None),
                NEEDS_DROP: OfferKind(NEEDS, DROP_LABEL, False, None),
-               WRITE_FIRMWARE: OfferKind(FIRMWARE, WRITE_FIRMWARE_LABEL, False, "Write the firmware for this project's board."),
+               WRITE_FIRMWARE: OfferKind(FIRMWARE, WRITE_FIRMWARE_LABEL, False, WRITE_FIRMWARE_TELL),
                RUN_SIMULATION: OfferKind(SIMULATE, RUN_SIMULATION_LABEL, False, "Help me run the simulation of this project."),
                LOOK_AT_BOARD: OfferKind(DEPLOY, LOOK_AT_BOARD_LABEL, False, "Look at this project's board with me.")}
 
@@ -421,7 +426,7 @@ SHEET_STALE_NOW = "The wiring sheet is out of date. Ask Claude to build the boar
 #: The firmware with a current wiring sheet: two jobs in any order, and the count of the sheet's steps.
 TWO_JOBS_NOW = ("Two jobs, in any order: wire the breadboard (%d steps, power off), and ask Claude to write the firmware. "
                 "Spark cannot see your wiring.")
-FIRMWARE_NOW = "Ask Claude in the chat to write the firmware for this board."
+FIRMWARE_NOW = "Ask Claude in the chat to write the firmware for this board. " + THIN_MAIN_RULE
 SIMULATE_NOW = "Ask Claude for the scenario command, and run it in your terminal. It uses Wokwi CI minutes."
 #: The simulate phase's closing hint is the same sentence (P979).
 SCENARIO_HINT = SIMULATE_NOW

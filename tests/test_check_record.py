@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.core import outcomes  # noqa: E402
 from spark.firmware.project_secrets import is_secret_path  # noqa: E402
-from spark.records.check_record import CheckRecordStore  # noqa: E402
+from spark.records.check_record import CheckRecordStore, is_plain_input  # noqa: E402
 
 AT = "2026-11-27T02:10:00+01:00"
 ANSWER = {"status": "ok", "data": {"imports": {"imported": 1, "total": 1}, "tests": {"state": "none-recorded"}},
@@ -110,6 +110,66 @@ class TheCheckRecordTest(unittest.TestCase):
                 read = CheckRecordStore(project, "check-firmware").read()
                 self.assertEqual((read.state, read.current), (outcomes.NOT_CHECKED, None))
                 self.assertTrue(isinstance(read.why, str) and read.why)
+
+    def test_a_record_reader_never_raises_on_an_input_of_dot_or_a_line_that_is_no_text(self):
+        """The review (A1, R12): `.`, `./` and an empty path are no plain input, and every line is a str."""
+        project = a_project()
+        path = saved(project).path
+        good = json.loads(path.read_text())
+        self.assertEqual([is_plain_input(text) for text in (".", "./", "", "firmware/", "board.tsx")],
+                         [False, False, False, True, True])
+        for case, text in (("input .", json.dumps(dict(good, inputs=["."]))),
+                           ("input ./", json.dumps(dict(good, inputs=["./"]))),
+                           ("a line that is no text", json.dumps(dict(good, lines=[1])))):
+            with self.subTest(case=case):
+                path.write_text(text)
+                read = CheckRecordStore(project, "check-firmware").read()
+                self.assertEqual((read.state, read.current), (outcomes.NOT_CHECKED, None))
+                self.assertTrue(isinstance(read.why, str) and read.why)
+
+    def test_schema_true_is_not_schema_1(self):
+        """The review (A8, R13): JSON's true equals 1 in Python, and is no schema."""
+        project = a_project()
+        path = saved(project).path
+        path.write_text(json.dumps(dict(json.loads(path.read_text()), schema=True)))
+        read = CheckRecordStore(project, "check-firmware").read()
+        self.assertEqual((read.state, read.why), (outcomes.NOT_CHECKED, "the check record is of another shape (schema True, op 'check-firmware')"))
+
+    def test_a_record_with_no_inputs_is_not_checked(self):
+        """The review (A8, R13): a record over no inputs proves nothing, so it never reads as current."""
+        project = a_project()
+        path = saved(project).path
+        path.write_text(json.dumps(dict(json.loads(path.read_text()), inputs=[], inputs_sha256={})))
+        read = CheckRecordStore(project, "check-firmware").read()
+        self.assertEqual((read.state, read.why), (outcomes.NOT_CHECKED, "the check record names no input"))
+
+    def test_a_record_that_cannot_be_read_is_not_checked_with_its_own_reason(self):
+        """The review (A8, R13): an OSError on the record is not "no JSON"."""
+        project = a_project()
+        path = saved(project).path
+        path.chmod(0)
+        try:
+            read = CheckRecordStore(project, "check-firmware").read()
+        finally:
+            path.chmod(0o644)
+        self.assertEqual((read.state, read.why), (outcomes.NOT_CHECKED, "the check record cannot be read (PermissionError)"))
+
+    def test_a_spark_folder_that_cannot_be_searched_is_not_checked_with_its_own_reason(self):
+        """The review (A8, R13): `exists()` raises under a `.spark/` with no search right; the reader does not."""
+        project = a_project()
+        saved(project)
+        (project / ".spark").chmod(0)
+        try:
+            read = CheckRecordStore(project, "check-firmware").read()
+        finally:
+            (project / ".spark").chmod(0o755)
+        self.assertEqual((read.state, read.why), (outcomes.NOT_CHECKED, "the check record cannot be read (PermissionError)"))
+
+    def test_save_refuses_an_input_that_is_not_plain(self):
+        """The review (A4): an input outside the project is a programmer's error, as a name that is no plain id is."""
+        for inputs in ((".",), ("../x",), ("/etc",), ("",), ()):
+            with self.subTest(inputs=inputs), self.assertRaises(ValueError):
+                CheckRecordStore(a_project(), "check-firmware").save(inputs, AT, ANSWER)
 
     def test_an_input_that_cannot_be_read_is_not_checked(self):
         """v2-3: an OSError while hashing is no crash and no current record."""
