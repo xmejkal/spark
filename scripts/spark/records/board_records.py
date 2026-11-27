@@ -172,12 +172,7 @@ def active_id(project: Path) -> str:
 
 #: The file whose `board` names the project's board (D35, P988), and the line said once when it cannot be read.
 REQUIREMENTS_NAME, NOT_MARKED = "requirements.json", "no board is marked: %s"
-
-
-def requirements_files(folder):
-    """The requirements files of `folder`, sorted: every `*requirements.json`, as a folder can hold the car's and its
-    remote's (P1325). The checks read their boards and loads from them, and check-design's record hashes them (P1255)."""
-    return sorted(Path(folder).glob("*" + REQUIREMENTS_NAME))
+REQUIREMENTS_GLOB = "*" + REQUIREMENTS_NAME  # a folder's requirements files, the car's and its remote's (P1325): checks and record (P1255)
 
 
 def requirements_board(project: Path):

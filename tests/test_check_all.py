@@ -1384,11 +1384,11 @@ class TheCheckRecordIsWrittenTest(unittest.TestCase):
         self.assertNotIn("a check record's inputs are plain paths", text)
 
     def test_the_record_hashes_the_requirements_files_that_choose_the_board(self):
-        """P1255 fix B: one rule, `board_records.requirements_files`, names the files that choose the board, for the check
+        """P1255 fix B: one glob, `board_records.REQUIREMENTS_GLOB`, names the files that choose the board, for the check
         and for its record."""
         (self.project / "remote.requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3"}))
         self.run_on(self.project)
-        self.assertEqual([path.name for path in board_records.requirements_files(self.project)],
+        self.assertEqual(sorted(path.name for path in self.project.glob(board_records.REQUIREMENTS_GLOB)),
                          ["remote.requirements.json", "requirements.json"])
         self.assertEqual([name for name in self.kept().inputs if name.endswith("requirements.json")],
                          ["remote.requirements.json", "requirements.json"])
