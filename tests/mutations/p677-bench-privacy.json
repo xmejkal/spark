@@ -1,7 +1,7 @@
 [
- {"file": "scripts/spark/core/privacy.py", "name": "the store rule is skipped", "find": "        rules += [MaskRule(form, PATH_END, STORE_PLACEHOLDER) for form in forms_of(store)]\n", "replace": "\n"},
+ {"file": "scripts/spark/core/privacy.py", "name": "the store rule is skipped", "find": "        rules += [MaskRule(form, PATH_END, STORE_PLACEHOLDER) for form in shown_forms(store)]\n", "replace": "\n"},
  {"file": "scripts/spark/core/privacy.py", "name": "the project rule comes before the store rule (shortest place first)", "find": "        ordered = sorted(rules, key=lambda rule: -len(rule.place))", "replace": "        ordered = sorted(rules, key=lambda rule: len(rule.place))"},
- {"file": "scripts/spark/core/privacy.py", "name": "a home path is left", "find": "        rules += [MaskRule(form, PATH_END, \"~\") for form in forms_of(home)]\n", "replace": "\n", "tier": "critical"},
+ {"file": "scripts/spark/core/privacy.py", "name": "a home path is left", "find": "        rules += [MaskRule(form, PATH_END, \"~\") for form in shown_forms(home)]\n", "replace": "\n", "tier": "critical"},
  {"file": "scripts/spark/core/privacy.py", "name": "a token is left", "find": "        rules = [MaskRule(secret, \"\", SECRET_MASK) for secret in secrets if secret]", "replace": "        rules = []", "tier": "critical"},
  {"file": "scripts/spark/core/privacy.py", "name": "an empty secret masks every string", "find": "for secret in secrets if secret]", "replace": "for secret in secrets]"},
  {"file": "scripts/spark/core/privacy.py", "name": "lines are not walked", "find": "lines=self.masked(result.lines, kept), diagnostics", "replace": "lines=result.lines, diagnostics"},

@@ -64,6 +64,20 @@ class PathRulesTest(unittest.TestCase):
         here = str(Path(".").resolve())
         self.assertEqual(Privacy.of(Path("."), STORE, HOME, ()).mask_text(here + "/sim/x.bin"), "sim/x.bin")
 
+    def test_a_project_and_a_store_with_a_line_break_are_masked_in_their_printable_form_too(self):
+        """P1320: a sentence shows a path flat, with `?` for its line break, so the mask finds that form as well."""
+        project, store_path = HOME + "/gadgets/p\nfix: rm -rf ~", HOME + "/st\nore"
+        masked = privacy(project, store_path).mask_text("wrote %s/sim/x.bin for %s, %s/boards/a.json" % (
+            project.replace("\n", "?"), project.replace("\n", "?"), store_path.replace("\n", "?")))
+        self.assertEqual(masked, "wrote sim/x.bin for <project>, <store>/boards/a.json")
+        self.assertEqual(privacy(project, store_path).mask_text(project + "/sim"), "sim")
+
+    def test_shown_forms_are_the_forms_and_the_printable_ones_that_differ(self):
+        from spark.core.privacy import forms_of, shown_forms
+        self.assertEqual(shown_forms(PROJECT), forms_of(PROJECT))
+        self.assertEqual(shown_forms(HOME + "/p\nq"), {HOME + "/p\nq", HOME + "/p?q"})
+        self.assertEqual(shown_forms(None), set())
+
     def test_a_path_before_a_full_stop_is_masked_and_a_longer_name_with_a_dot_is_kept_whole(self):
         self.assertEqual(privacy().mask_text("it is in %s." % HOME), "it is in ~.")
         self.assertEqual(privacy().mask_text("%s.bak/x and %s.old" % (PROJECT, STORE)), "~/gadgets/lamp.bak/x and ~/.local/share/spark.old")
