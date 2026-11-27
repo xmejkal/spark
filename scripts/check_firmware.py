@@ -10,7 +10,9 @@ Example, in a project after `/spark:build` and the firmware are written:
 
 The check is the Operation `spark/firmware/firmware_check.CheckFirmware` (op `check-firmware`), which says what it checks, and
 this CLI hands the arguments to the core, which parses them and prints. Its `--help` is the Operation's text and the EPILOG
-here. It needs no sim/, no board and no token, and it writes nothing.
+here. It needs no sim/, no board and no token. It writes one file, `.spark/check-firmware.json`, the check record that
+`flow.py show` and the page read (P1209). No gate reads it, so it blocks no deploy. When the project has a page.html, it
+writes that page again (`PageFollowUp`, as `deploy.py`).
 """
 
 import sys
@@ -21,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.cli import HelpText, run_cli  # noqa: E402
 from spark.core.outside import build_bare_outside_world  # noqa: E402
 from spark.firmware.firmware_check import CheckFirmware  # noqa: E402
+from spark.flow.now_follow_up import PageFollowUp  # noqa: E402
 
 #: The CLI's own text in `--help`, after the Operation's details: its exit codes.
 EPILOG = """Exit codes: 0 every module imported and every test passed, or the project has no tests/; 1 a module did not import, there is
@@ -31,7 +34,7 @@ nothing to import, or a test failed or raised; 2 there is no firmware/ folder, o
 def main(argv=None, outside=None, operation=None):
     """Run the free checks and print the text, or with --json the envelope. `outside` is the OutsideWorld a test gives,
     `operation` the CheckFirmware a test gives with its own timeouts. Returns the exit code."""
-    return run_cli(HelpText("check_firmware.py", epilog=EPILOG), operation or CheckFirmware(), argv,
+    return run_cli(HelpText("check_firmware.py", epilog=EPILOG, follow_up=PageFollowUp()), operation or CheckFirmware(), argv,
                    outside_builder=build_bare_outside_world, outside=outside)
 
 

@@ -27,9 +27,12 @@ from fakes import FakeOutsideWorld  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.core.codes import Code  # noqa: E402
 from spark.core.result import Refusal  # noqa: E402
-from spark.core.operation import READS, RUNS  # noqa: E402
+from spark.core.operation import READS, RUNS, WRITES  # noqa: E402
+from spark.core.zone_time import stamp  # noqa: E402
 from spark.firmware import own_tests  # noqa: E402
 from spark.firmware.firmware_check import CheckFirmware  # noqa: E402
+from spark.records.check_record import CheckRecordStore  # noqa: E402
+from fakes import FakeClock  # noqa: E402
 
 LIGHT = "from machine import Pin\nLED = Pin(2, Pin.OUT)\n"
 TWO_PASSING = "import unittest\n\nclass A(unittest.TestCase):\n    def test_one(self):\n        pass\n\n    def test_two(self):\n        pass\n"
@@ -88,7 +91,7 @@ class TheFreeChecksTogetherTest(unittest.TestCase):
         result = check(a_project({"light": LIGHT}))
         self.assertEqual((result.status(), result.findings), (outcomes.OK, []))
         self.assertEqual(result.data["tests"], {"state": "none-recorded"})
-        self.assertEqual(result.notes, ["no tests/ folder: this project has no own tests"])
+        self.assertEqual(result.notes, [{"subject": "tests", "sentence": "no tests/ folder: this project has no own tests"}])
         self.assertIn("tests: none (no tests/ folder)", result.lines)
 
     def test_no_firmware_folder_still_runs_the_tests(self):
@@ -162,13 +165,80 @@ class TheFreeChecksTogetherTest(unittest.TestCase):
         self.assertEqual([(each.subject, each.code) for each in found], [("firmware", "nothing_to_import")])
 
 
+class TheCheckRecordTest(unittest.TestCase):
+    """P1209 (D1, D3): every run that read firmware/ keeps its answer in `.spark/check-firmware.json`, which the flow reads."""
+
+    def test_a_run_keeps_its_answer_in_the_check_record(self):
+        project = a_project({"light": LIGHT}, {"test_a": TWO_PASSING})
+        result = check(project)
+        read = CheckRecordStore(project, "check-firmware").read()
+        self.assertEqual((read.state, read.current, read.status), (outcomes.RECORDED, True, outcomes.OK))
+        self.assertEqual(read.data, {"imports": result.data["imports"], "tests": result.data["tests"]})
+        self.assertEqual(read.lines, ["imports: 1 of 1 imported", "tests: 2 of 2 passed (tests/)"])
+        self.assertEqual(read.at, stamp(FakeClock().now()))  # the time with its zone
+        self.assertIs(result.data["written"], True)
+
+    def test_a_failed_check_is_kept_with_its_status(self):
+        project = a_project({"light": LIGHT}, {"test_a": ONE_FAILING})
+        check(project)
+        read = CheckRecordStore(project, "check-firmware").read()
+        self.assertEqual((read.status, read.data["tests"]["failed"]), (outcomes.PROBLEMS, ["test_a.A.test_bad"]))
+
+    def test_a_record_that_cannot_be_written_is_a_note_and_the_result_stands(self):
+        project = a_project({"light": LIGHT}, {"test_a": TWO_PASSING})
+        (project / ".spark").write_text("a file where the folder goes")
+        result = check(project)
+        self.assertEqual((result.status(), result.findings, result.data["written"]), (outcomes.OK, [], False))
+        self.assertEqual(result.notes, [{"subject": ".spark/check-firmware.json",
+                                         "sentence": "did not keep the check record: FileExistsError"}])
+        self.assertEqual(result.lines[-1], "did not keep the check record: FileExistsError")  # the text view shows it (v2-7)
+
+    def test_no_firmware_folder_keeps_no_record(self):
+        """v2-5: a mistyped --project is never made into a project with a .spark/."""
+        project = a_project(tests={"test_a": TWO_PASSING})
+        result = check(project)
+        self.assertEqual((result.data["written"], (project / ".spark").exists()), (False, False))
+
+    def test_the_record_keeps_no_module_detail(self):
+        """v3-2: no `modules`, no module detail and no traceback text, only the counts and the failed tests' ids."""
+        project = a_project({"light": LIGHT, "sensor": "raise KeyError('a-detail-text')\n"}, {"test_a": ONE_FAILING})
+        check(project)
+        text = (project / ".spark" / "check-firmware.json").read_text()
+        self.assertNotIn('"modules"', text)
+        for gone in ("a-detail-text", "KeyError", "AssertionError", "1 != 2"):
+            self.assertNotIn(gone, text)
+        self.assertIn("test_a.A.test_bad", text)
+
+    def test_the_record_names_no_secrets_file(self):
+        """v2-12, v3-2: the secrets file is in the record with neither its path nor its sha256."""
+        import hashlib
+        project = a_project({"light": LIGHT, "wifi_secrets": 'PASSWORD = "hunter2-hunter2"\n'}, {"test_a": TWO_PASSING})
+        check(project)
+        text = (project / ".spark" / "check-firmware.json").read_text()
+        self.assertNotIn("wifi_secrets", text)
+        self.assertNotIn(hashlib.sha256((project / "firmware" / "wifi_secrets.py").read_bytes()).hexdigest(), text)
+        self.assertIn("firmware/light.py", text)
+
+    def test_the_page_is_written_again_after_a_check(self):
+        project = a_project({"light": LIGHT}, {"test_a": TWO_PASSING})
+        (project / "page.html").write_text("an older page\n")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = check_firmware.main(["--project", str(project), "--json"])
+        said = json.loads(out.getvalue())
+        self.assertEqual(code, outcomes.EXIT_OK, said)
+        self.assertEqual([note["subject"] for note in said["notes"]], ["page.html"])
+        self.assertNotEqual((project / "page.html").read_text(), "an older page\n")
+        self.assertIn("Free checks, ", (project / "page.html").read_text())  # the page reads the record just kept
+
+
 class WhatItDeclaresTest(unittest.TestCase):
-    def test_it_declares_reads_and_runs_and_writes_nothing(self):
-        self.assertEqual(CheckFirmware.effects, (READS, RUNS))
+    def test_it_declares_writes_and_writes_only_its_check_record(self):
+        self.assertEqual(CheckFirmware.effects, (READS, RUNS, WRITES))
         project = a_project({"light": LIGHT}, {"test_a": TWO_PASSING})
         before = files_of(project)
         check(project)
-        self.assertEqual(files_of(project), before)
+        self.assertEqual(files_of(project), sorted(before + [".spark", ".spark/check-firmware.json"]))
 
     def test_its_data_keys_are_the_keys_of_its_answer(self):
         result = check(a_project({"light": LIGHT}, {"test_a": TWO_PASSING}))

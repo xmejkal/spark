@@ -38,7 +38,7 @@ how it went, in one of three states:
 - `not-checked`: the tests did not finish in the time limit, gave no count, or ran no test (a `tests/` that holds none, or one whose every test was skipped: nothing passed and nothing failed, and a skipped is not a pass). It has no
   number, and `unchecked` holds an item with the code `own_tests_not_run`, so the status is `could-not-run`, never `ok`.
 
-A failed own test blocks no deploy: `check_firmware.py` writes nothing, and a deploy reads the logs of `sim/runs/` only.
+A failed own test blocks no deploy: `check_firmware.py` keeps its answer in `.spark/check-firmware.json`, which no gate reads ([P1209](https://github.com/xmejkal/spark/issues/1758)), and a deploy reads the logs of `sim/runs/` only.
 The tests' code runs on this machine, in the project folder.
 
 ## run_scenario.py's envelope

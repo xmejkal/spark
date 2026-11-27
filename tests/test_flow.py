@@ -208,7 +208,8 @@ class ThePhasesTest(FlowTest):
         self.assertEqual(said["data"]["stands_at"], "idea")  # P1030: the guide's now, the one rule
         self.assertEqual(says(said, "idea"), ["the brief holds no goal"])
         # P979: the hints name the command and who acts, with no placeholder and no path
-        self.assertEqual(says(said, "firmware"), ["No firmware/main.py yet. Ask Claude to write it in the chat."])
+        self.assertEqual(says(said, "firmware"), ["No firmware/main.py yet. Ask Claude to write it in the chat. Keep main.py "
+                                                   "thin, with the code in modules it calls, so the free checks can import them."])
         self.assertEqual(says(said, "simulate"), ["No simulation files yet (sim/wokwi.toml). Ask Claude to build the board."])
         self.assertEqual(says(said, "deploy"), ["Ask Claude to look at the board first (/spark:deploy).",
                                                 "Claude then gives you the deploy line. Run it in your terminal and type yes, unless you gave Claude a standing yes for this board."])
@@ -707,6 +708,10 @@ def a_firmware(project):
 # build a hand-written project say `requirements (no needs or picks behind it)` in `done`, on purpose.
 # P977 review: the sentences the review asked for, and `now.by` a list (two jobs name the person and Claude)
 NO_MODEL = "No simulation: Wokwi has no model of this board. You test it on the real board."
+#: P1209: the guide's `check` of a project with no check record, and the line of firmware with no record.
+NO_CHECK = {"name": "check-firmware", "state": "none-recorded", "why": None, "at": None, "current": None, "status": None,
+            "data": None, "lines": None, "inputs": None}
+NOT_RUN_YET = "Free checks: not run yet. Ask Claude to run them, for free."
 
 
 def a_run(project, verdict, image=b"an image"):
@@ -745,9 +750,11 @@ class TheGuideTest(FlowTest):
             "now": {"phase": "firmware", "by": ["you", "claude"], "offer": None, "chat_offer": "write-firmware", "needs": [], "steps": 10,
                     "with_wiring": True,
                     "says": "Two jobs, in any order: wire the breadboard (10 steps, power off), and ask Claude to write the "
-                            "firmware. Spark cannot see your wiring."},
+                            "firmware. Spark cannot see your wiring. Keep main.py thin, with the code in modules it calls, so "
+                            "the free checks can import them."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)"],
             "later": ["simulate (no Wokwi model of this board)", "deploy"], "set_aside": [], "no_simulation": NO_MODEL,
+            "simulation": {"line": NO_MODEL, "grey": True, "check": NO_CHECK},  # P1209: no firmware and no check record
             "no_open_phase": None, "wired": {"sheet_at": sheet_at(project), "deploy_at": None},  # P1044: the fixture keeps a sheet
             "gate_a": None,  # P1220: no board log yet
             # P1119: the two jobs: the breadboard is now beside the firmware, so it is in no list
@@ -795,7 +802,8 @@ class TheGuideTest(FlowTest):
         phases, _ = read_flow(project)
         guide = guide_of(project, phases, steps=lambda _project: None)
         self.assertEqual((guide["now"]["phase"], guide["now"]["by"], guide["now"]["says"]),
-                         ("firmware", ["claude"], "Ask Claude in the chat to write the firmware for this board."))
+                         ("firmware", ["claude"], "Ask Claude in the chat to write the firmware for this board. Keep main.py thin, "
+                          "with the code in modules it calls, so the free checks can import them."))
         self.assertIn("breadboard (spark cannot see it)", guide["done"])
 
     def test_with_the_firmware_written_the_deploy_is_now_and_the_simulate_stays_later(self):
@@ -808,6 +816,7 @@ class TheGuideTest(FlowTest):
                             "run the deploy in your terminal."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)", "breadboard (spark cannot see it)", "firmware"],
             "later": ["simulate (no Wokwi model of this board)"], "set_aside": [], "no_simulation": NO_MODEL, "no_open_phase": None,
+            "simulation": {"line": NOT_RUN_YET + " " + NO_MODEL, "grey": False, "check": NO_CHECK},  # P1209: firmware, no record
             "wired": {"sheet_at": sheet_at(project), "deploy_at": None},  # P1044: the fixture keeps a sheet
             "gate_a": {"shut_by": [], "fact": "no-model", "says": "No simulator run: none covers this board."},  # P1220: the deploy is now
             # P1119: a simulate with no model is later, though it stands before the deploy now
@@ -830,7 +839,8 @@ class TheGuideTest(FlowTest):
         BuildRecordStore(project, clock=FakeClock()).write({key: value for key, value in record.items() if key not in ("schema", "at")})
         guide = show(project)[0]["data"]["guide"]
         self.assertEqual((guide["now"]["phase"], guide["now"]["says"]),
-                         ("firmware", "Ask Claude in the chat to write the firmware for this board."))
+                         ("firmware", "Ask Claude in the chat to write the firmware for this board. Keep main.py thin, with the "
+                          "code in modules it calls, so the free checks can import them."))
         self.assertEqual(guide["done"], ["idea", "requirements (no needs or picks behind it)", "build (no simulation)"])
 
     def test_a_build_of_a_board_wokwi_has_no_model_of_is_stale_when_the_parts_list_changed(self):
@@ -901,6 +911,7 @@ class TheGuideTest(FlowTest):
                     "says": "Tell Claude your goal in the chat, in your own words."},
             "done": [], "later": ["needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"],
             "set_aside": [], "no_simulation": None, "no_open_phase": None, "wired": None,  # P1044: no sheet and no board log
+            "simulation": {"line": None, "grey": False, "check": NO_CHECK},  # P1209: nothing to say
             "gate_a": None,  # P1220
             "stations": stations(("idea", "now", None), *[(phase, "later", None) for phase in PHASES[1:]])})  # P1119
 
@@ -1917,6 +1928,37 @@ class TheOfferStepTest(FlowTest):
         at = lines.index("  " + NO_MODEL)  # the page's order, then the first phase line
         self.assertEqual(lines[at:at + 3][:2], ["  " + NO_MODEL, "  SET ASIDE: soil"])
         self.assertIn("idea:", lines[at + 2])
+
+    def test_show_prints_the_same_simulation_line_as_the_page(self):
+        """P1209 (D5): show's text line is "  " + data.guide.simulation.line, and the page's guide section holds the same text."""
+        from spark.firmware.firmware_check import INPUTS
+        from spark.firmware.project_secrets import is_secret_path
+        from spark.flow.write_flow_page import FlowPageStore, write_page
+        from spark.records.check_record import CheckRecordStore
+        project = a_firmware(a_project_built_with_no_simulation())
+        CheckRecordStore(project, "check-firmware", leave_out=is_secret_path).save(
+            INPUTS, "2026-11-27T02:10:00+01:00", {"status": "ok", "data": {}, "lines": ["imports: 0 of 0 imported", "tests: none (no tests/ folder)"]})
+        line = show(project)[0]["data"]["guide"]["simulation"]["line"]
+        self.assertTrue(line.startswith("Free checks, ") and line.endswith(NO_MODEL), line)
+        self.assertIn("  " + line, lines_of(project))
+        self.assertNotIn("  " + NO_MODEL, lines_of(project))  # one line, not two
+        write_page(project, store=FlowPageStore())
+        section = (project / "page.html").read_text(encoding="utf-8").split('<section id="guide">')[1].split("</section>")[0]
+        self.assertIn('<p class="muted">%s</p>' % line, section)
+
+    def test_show_of_a_record_with_a_line_that_is_no_text_exits_0_and_says_not_checked(self):
+        """The review (A1, R12): a record's reader never raises, so `"lines": [1]` never crashes show or the page."""
+        from spark.firmware.firmware_check import INPUTS
+        from spark.records.check_record import CheckRecordStore
+        project = a_firmware(a_project_built_with_no_simulation_now())  # a build recorded ok: show exits 0
+        records = CheckRecordStore(project, "check-firmware")
+        records.save(INPUTS, "2026-11-27T02:10:00+01:00", {"status": "ok", "data": {}, "lines": ["imports: 1 of 1 imported"]})
+        records.path.write_text(json.dumps(dict(json.loads(records.path.read_text()), lines=[1])))
+        said, code = show(project)
+        simulation = said["data"]["guide"]["simulation"]
+        self.assertEqual((code, simulation["check"]["state"], simulation["grey"]), (0, "not-checked", False))
+        self.assertTrue(simulation["line"].startswith("Free checks: the check record is of another shape"), simulation["line"])
+        self.assertIn("  " + simulation["line"], lines_of(project))
 
     def test_the_offers_in_data_keep_their_six_keys_and_no_step(self):
         said, _ = show(with_needs(a_built_project(), SOIL))

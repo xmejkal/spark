@@ -146,8 +146,8 @@
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "the guide does not say why there is no simulation (P977)",
-  "find": "flow_codes.NO_SIMULATION_NOW if flow_codes.BUILD in no_model else None",
-  "replace": "None"
+  "find": "\"no_simulation\": flow_codes.NO_SIMULATION_NOW if no_sim else None,",
+  "replace": "\"no_simulation\": None,"
  },
  {
   "file": "scripts/spark/flow/write_flow_page.py",

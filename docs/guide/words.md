@@ -33,5 +33,14 @@ is a board's hardware revision (`replies.py:34`, `physics_check.py:404`). "Chang
 "Spark's section" is the block between spark's two marker lines in a person's file, `AGENTS.md` or `.gitignore` (the Value
 `SparkSection`, P1150). "Your ignore list" is the person's whole `.gitignore`, and spark's section is a part of it.
 
+Words for a check's kept answer ([P1209](https://github.com/xmejkal/spark/issues/1758)).
+
+| Word | Means | It is not | Where |
+|---|---|---|---|
+| check record | the file `.spark/<op>.json` that a check Operation keeps of its last answer (`check-firmware` today, `check-design` with P1255), written and read through `CheckRecordStore` | "kept check": *kept* is `--keep`'s, the kept step's and the kept document's | `scripts/spark/records/check_record.py` |
+| free checks | the import check and the own tests together, the line's label "Free checks" | the paid scenario run | `flow/checks_reading.FREE_CHECKS_LABEL` |
+| current, older | the record's inputs hash to its kept sha256, or they do not | "stale", a phase status word | `CheckRecord.current` |
+| grey | the page's `muted` style of the simulation line, `guide.simulation.grey` | a status | `checks_reading.simulation_of` |
+
 Git's two words for a file differ (P1150). "Held" is `ProjectCommit.held_as_is`: in HEAD and the same on disk. "Tracked" is git's
 word for a file in the index (`tracks`, `tracked_files`, `IgnoreList.already_tracked`), committed or not.
