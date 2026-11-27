@@ -2023,6 +2023,16 @@ class TheDeployedPageTest(unittest.TestCase):
             self.assertIn("◐", shown)
         self.assertNotIn(self.NOTHING_WAITS, text)
 
+    def test_an_unconfirmed_deploy_says_the_firmware_is_written_in_the_station_line_and_the_fold(self):
+        # P1106: the fixture holds a passed run, so DONE goes on to the simulate: read the item, not the end of the line
+        from test_flow import FILES_UNREAD_SENTENCE, SEEN_SENTENCE
+        text = self.page("ready unknown", FILES_UNREAD_SENTENCE)
+        self.assertRegex(text, r'<li data-phase="firmware" data-place="done"[^>]*>.*?<span class="note">written</span></li>')
+        self.assertRegex(text, r"<strong>DONE</strong>[^<]*firmware \(written\)")
+        seen = self.page("ready seen", SEEN_SENTENCE)
+        self.assertNotIn("written", seen.split('<li data-phase="firmware"')[1].split("</li>")[0])
+        self.assertNotIn("firmware (written)", seen)
+
     def test_a_guide_with_no_no_open_phase_key_draws_as_before(self):
         self.assertEqual(guide_page(a_guide(now=None)), guide_page(a_guide(now=None, no_open_phase=None)))
         self.assertIn("<p>said once</p>", guide_page(a_guide(now=None, no_open_phase="said once")))

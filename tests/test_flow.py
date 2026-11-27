@@ -44,7 +44,7 @@ from spark.flow import deploy_reading  # noqa: E402
 from spark.bench import board_log  # noqa: E402
 from spark.flow.deploy_reading import DeployState  # noqa: E402
 from spark.flow.guide import NO_IMAGE_FACT, ImageFact, chat_offer_of, guide_of, job_offer, names_at, requirements_now  # noqa: E402
-from spark.flow.guide import stations_of, who_and_sentence  # noqa: E402
+from spark.flow.guide import stations_of, who_and_sentence, with_start_not_seen  # noqa: E402
 from spark.flow.show_flow import ShowFlow, flow_and_guide, need_lines, read_flow  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.flow.pick_notes import own_part_of, pick_notes  # noqa: E402
@@ -1051,6 +1051,16 @@ class TheStationsTest(unittest.TestCase):
         rows = stations_of(phases_of(("one", "not-started"), ("two", OK), ("three", "not-started")), 0, set(), None)
         self.assertEqual(rows, stations(("one", "now", None), ("two", "later", "may-change"), ("three", "later", None)))
         self.assertEqual(self.lists(rows), ([], ["two (done, may change)", "three"]))
+
+    def test_the_firmware_before_now_is_written_when_the_start_was_not_seen_and_no_other_phase_is(self):
+        rows = with_start_not_seen(stations_of(ALL_OK, PHASES.index("deploy"), set(), None), True)
+        self.assertEqual([row["phase"] for row in rows if row["note"] == "start-not-seen"], ["firmware"])
+        self.assertIn("firmware (written)", self.lists(rows)[0])
+        for at in ("firmware", "breadboard"):  # the firmware now, or before it, is not written yet
+            with self.subTest(at=at):
+                rows = with_start_not_seen(stations_of(ALL_OK, PHASES.index(at), set(), None), True)
+                self.assertNotIn("start-not-seen", [row["note"] for row in rows])
+        self.assertNotIn("start-not-seen", [row["note"] for row in stations_of(ALL_OK, PHASES.index("deploy"), set(), None)])
 
     def test_the_stations_follow_the_phases_the_guide_is_given_in_their_order(self):
         rows = stations_of(phases_of(("b", OK), ("a", None)), 2, set(), None)
@@ -3157,6 +3167,69 @@ class TheDeployNowTest(FlowTest):
         for each in (a_deploy_project(), a_board_log(a_deploy_project(), "ready unknown", FILES_UNREAD_SENTENCE)):
             with self.subTest(project=each):
                 self.assertIsNone(show(each)[0]["data"]["guide"]["no_open_phase"])
+
+
+def firmware_station(said):
+    """The firmware's (phase, place, note) in the guide's stations of an envelope."""
+    return next((row["phase"], row["place"], row["note"]) for row in said["data"]["guide"]["stations"] if row["phase"] == "firmware")
+
+
+class TheFirmwareWrittenTest(FlowTest):
+    """P1106 (#1626, the PO, 2026-11-24): while a deploy is partial and spark did not see the start, the firmware before now
+    says "firmware (written)" in DONE, as "build (no simulation)" does. A lost board after ready, ready not seen, a flash that
+    did not finish, a stale deploy, ready seen and no log keep a plain firmware. A_DEPLOY_PROJECT holds a passed run, so its DONE
+    goes on to the simulate: these tests read membership and the station, never the end of the line."""
+
+    def test_each_partial_deploy_but_a_lost_board_says_the_firmware_is_written(self):
+        for name, sentence, reason in (("no read-back", FILES_UNREAD_SENTENCE, None), ("not started", NOT_STARTED_SENTENCE, None),
+                                       ("port gone", "the board's port is gone: x", "port_gone"),
+                                       ("download mode", "x", "download_mode_stayed"),
+                                       ("not recorded", "the board said something new: x", None)):
+            with self.subTest(name=name):
+                project = a_board_log(a_deploy_project(), "ready unknown", sentence, reason=reason)
+                said, _ = show(project)
+                self.assertIn("firmware (written)", said["data"]["guide"]["done"])
+                self.assertNotIn("firmware", said["data"]["guide"]["done"])
+                self.assertEqual(firmware_station(said), ("firmware", "done", "start-not-seen"))
+                self.assertIn("firmware (written)", " ".join(line for line in lines_of(project) if "DONE" in line))
+
+    def test_every_other_deploy_keeps_a_plain_firmware(self):
+        stale = a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE, image=b"another image")
+        for name, project in (
+                ("lost with a reason", a_board_log(a_deploy_project(), "ready unknown", LOST_SENTENCE, reason="board_lost")),
+                ("lost with no reason", a_board_log(a_deploy_project(), "ready unknown", LOST_SENTENCE)),
+                ("firmware error", a_board_log(a_deploy_project(), "ready not seen", "the firmware stopped with an error: Traceback ...")),
+                ("old files differ", a_board_log(a_deploy_project(), "ready not seen", "the board's /main.py is not the files of the image")),
+                ("not finished", a_not_finished_log(a_deploy_project())),
+                ("stale", stale),
+                ("ready seen", a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE)),
+                ("no log", a_deploy_project())):
+            with self.subTest(name=name):
+                said, _ = show(project)
+                self.assertIn("firmware", said["data"]["guide"]["done"])
+                self.assertNotIn("firmware (written)", said["data"]["guide"]["done"])
+                self.assertEqual(firmware_station(said), ("firmware", "done", None))
+
+    def test_ready_seen_goes_on_to_the_deploy_in_done(self):
+        said, _ = show(a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE))
+        self.assertEqual(said["data"]["guide"]["done"][-3:], ["firmware", "simulate", "deploy"])  # the fixture's passed run
+
+    def test_with_no_simulation_the_written_firmware_ends_done(self):
+        project = a_board_log(an_image(a_firmware(a_project_built_with_no_simulation())), "ready unknown", FILES_UNREAD_SENTENCE)
+        said, _ = show(project)
+        self.assertEqual(said["data"]["guide"]["done"][-1], "firmware (written)")
+        self.assertEqual([line for line in lines_of(project) if line.strip().startswith("DONE")][0][-len("firmware (written)"):],
+                         "firmware (written)")
+
+    def test_a_failed_run_keeps_the_simulate_now_and_the_deploy_later_beside_a_written_firmware(self):
+        # the refuter's finding 2 (P1106 plan): wanted, the PO's rule is about the firmware's station alone
+        project = a_board_log(a_run(an_image(a_firmware(a_built_project())), "failed"), "ready unknown", FILES_UNREAD_SENTENCE)
+        said, _ = show(project)
+        guide = said["data"]["guide"]
+        self.assertEqual(guide["now"]["phase"], "simulate")
+        self.assertEqual(firmware_station(said), ("firmware", "done", "start-not-seen"))
+        self.assertIn("firmware (written)", guide["done"])
+        self.assertIn("deploy", guide["later"])
 
 
 #: The bench's sentence in a board log of a flash that did not finish (P1092), and the flow's words for it.
