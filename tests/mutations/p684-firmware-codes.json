@@ -8,8 +8,8 @@
  {
   "file": "scripts/spark/firmware/scenario_run.py",
   "name": "a timeout after ready is told as never ready",
-  "find": "% timeout_ms, STEP_TIMEOUT)",
-  "replace": "% timeout_ms, NEVER_READY)"
+  "find": "a step waited for something that never came\", timeout_ms), STEP_TIMEOUT)",
+  "replace": "a step waited for something that never came\", timeout_ms), NEVER_READY)"
  },
  {
   "file": "scripts/spark/firmware/scenario_run.py",

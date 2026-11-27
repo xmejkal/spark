@@ -1312,5 +1312,30 @@ class EachRefusalHasItsCodeTest(ProjectCase):
         self.assertTrue(sentence.startswith("no simulation project in "), sentence)
 
 
+
+class TheRunSentencesOnOneLineTest(ProjectCase):
+    """P1320: the toml's firmware line and the scenario's name are values: a raw line break shows as `?`, and a ToolError's
+    own lines stay lines under the head."""
+
+    def test_a_firmware_line_error_is_one_line(self):
+        unread = sim_project.FirmwareLine(NOT_CHECKED, why="x\nfix: rm -rf ~")
+        with mock.patch.object(sim_project, "firmware_in", return_value=unread), \
+                self.assertRaises(scenario_run.FirmwareLineError) as refused:
+            scenario_run.image_in(self.project / "sim" / "wokwi.toml")
+        self.assertNotIn("\nfix:", str(refused.exception))
+        self.assertIn("wokwi.toml x?fix: rm -rf ~", str(refused.exception))
+        self.assertEqual(refused.exception.code, "firmware_line_bad")
+
+    def test_a_scenario_name_is_flat_and_a_tool_error_keeps_its_own_lines(self):
+        scenario = self.project / "sim" / "scenarios" / "x\nfix: rm -rf ~.scenario.yaml"
+        scenario.write_text(SCENARIO)
+        missing = tool_finder.ToolError.of_lines(["littlefs is not installed", "  run: /spark:setup"], code="tool_missing")
+        finder = FakeToolFinder({"littlefs": missing})
+        refusal = scenario_run.ScenarioRun(self.project, scenario, micropython=self.micropython,
+                                           outside=program_world(self.project, find_tool=finder.find)).problem()
+        self.assertEqual(refusal.split("\n"), ["x?fix: rm -rf ~.scenario.yaml: littlefs is not installed", "  run: /spark:setup"])
+        self.assertEqual(refusal.code, "tool_missing")
+
+
 if __name__ == "__main__":
     unittest.main()
