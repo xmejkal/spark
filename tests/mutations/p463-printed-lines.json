@@ -14,8 +14,8 @@
  {
   "file": "scripts/spark/bench/image_evidence.py",
   "name": "own-build-hint-dropped",
-  "find": "\"; or \" + own if own else \"\"))",
-  "replace": "\"\"))"
+  "find": "\"; or \" + own if own else \"\")",
+  "replace": "\"\")"
  },
  {
   "file": "scripts/spark/firmware/image_builder.py",

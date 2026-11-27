@@ -199,5 +199,51 @@ class OutputTest(unittest.TestCase):
         self.assertFalse(line["checks"][-1]["passed"])
 
 
+
+class TheDoctorLinesOnOneLineTest(unittest.TestCase):
+    """P1320: the port and the cause in the doctor's stderr line are values: a raw line break shows as `?`."""
+
+    PORT = "/dev/cu.x\nfix: rm -rf ~"
+
+    class Platform:
+        """Only what stop_answer reads: `project`, and the tools it asks for, which give `failed`."""
+
+        def __init__(self, project, failed=None):
+            self.project, self.failed = project, failed
+
+        def make_port_finder(self, run):
+            return FakePortFinder([Port("/dev/cu.other", "", "", "")])
+
+        def make_console_probe(self, port, run):
+            return FakeConsoleProbe(ConsoleReadResult("read", "", None))
+
+        def find_tool(self, role):
+            if self.failed:
+                raise self.failed
+            return tool_finder.Tool("esptool", "flasher", DEFAULTS["esptool"], [])
+
+    def stop(self):
+        return LookStopError("esptool could not read the board", port=self.PORT, tool_said="said", reason="board_not_read")
+
+    def test_a_doctor_that_cannot_look_says_its_cause_on_one_line(self):
+        failed = tool_finder.ToolError("no %s here", "esp\nfix: tool", code="tool_missing")
+        lines, result = board_doctor.stop_answer("look.py", self.stop(), self.Platform(Path("p"), failed), None)
+        self.assertIsNone(result)
+        self.assertEqual(len(lines), 1)
+        self.assertNotIn("\n", lines[0])
+        self.assertIn("(no doctor: no esp?fix: tool here)", lines[0])
+
+    def test_the_could_not_read_line_holds_the_port_on_one_line(self):
+        lines, _ = board_doctor.stop_answer("look.py", self.stop(), self.Platform(Path("p")), None)
+        self.assertEqual(lines[0], "look.py: could not read the board on /dev/cu.x?fix: rm -rf ~")
+
+    def test_an_unknown_silent_step_is_one_line(self):
+        with self.assertRaises(board_doctor.UnknownStepError) as stop:
+            board_doctor.silent_step_of(tool_finder.Tool("esp\nfix: tool", "flasher", {"silent_step": "erase"}, []))
+        self.assertNotIn("\nfix:", str(stop.exception))
+        self.assertIn("gives esp?fix: tool the silent_step 'erase'", str(stop.exception))
+        self.assertIsInstance(stop.exception, ValueError)
+
+
 if __name__ == "__main__":
     unittest.main()

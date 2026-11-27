@@ -804,5 +804,36 @@ class CompileCheckTest(unittest.TestCase):
         self.assertEqual(self.why(self.lines(entry)), "firmware/a?b.py is too deeply nested or too big to compile")
 
 
+
+class TheEvidenceSentencesOnOneLineTest(unittest.TestCase):
+    """P1320: deploy_service.py:139 and the gate's no-token line split these sentences at their line breaks, so each value in
+    them is flat at its source: a raw line break shows as `?` and fakes no line."""
+
+    RAW = "x\nfix: rm -rf ~"
+
+    def assertFlat(self, said):
+        self.assertNotIn("\nfix:", said)
+        self.assertIn("x?fix: rm -rf ~", said)
+
+    def test_no_main_names_the_project_as_given_on_one_line(self):
+        said = NoSimulationEvidence(Path(self.RAW))._why_no_main()
+        self.assertFlat(said)
+        self.assertTrue(said.startswith("no firmware/main.py in x?fix: rm -rf ~: "), said)
+
+    def test_a_compile_sentence_holds_the_name_and_the_message_on_one_line(self):
+        for kind in ("syntax", "too_deep", "unreadable", "bytes"):  # the child's four kinds
+            said = image_evidence.CompileCheck._sentence({"kind": kind, "name": self.RAW, "line": 2, "msg": "m\nfix: m"}, None)
+            self.assertFlat(said)
+            self.assertNotIn("\n", said, kind)
+
+    def test_a_failed_run_names_its_log_and_its_verdict_on_one_line(self):
+        class Image:
+            def failed_runs(self):
+                return [(Path("runs") / (TheEvidenceSentencesOnOneLineTest.RAW + ".log"), "failed\nfix: rm -rf ~")]
+        said = NoSimulationEvidence(Path("p"))._why_run_failed(Image())
+        self.assertFlat(said)
+        self.assertIn("(verdict: failed?fix: rm -rf ~)", said)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -38,7 +38,7 @@ from spark.firmware import project_image
 from spark.firmware import sim_project
 from spark.records import tool_finder
 from spark.core.events import INDENT
-from spark.core.text_guards import ValueMessageError, printable
+from spark.core.text_guards import ValueMessageError, flat_line, printable
 
 #: mpremote devs lists these for Bluetooth and the debug console, and they are no board.
 NOT_A_BOARD = "0000:0000"
@@ -315,12 +315,12 @@ class LookReport:
         self.fields = compare(reading, record)
         self.stops, self.warnings = [], []
         if self.fields["chip"] == "differs":
-            self.stops.append(Stop(board_codes.CHIP_DIFFERS, "this board is an %s, the project is for an %s" % (reading.chip, record["chip"])))
+            self.stops.append(Stop(board_codes.CHIP_DIFFERS, flat_line("this board is an %s, the project is for an %s", reading.chip, record["chip"])))
         if image and reading.flash_mb is not None and reading.flash_mb * MB < image.stat().st_size:  # whatever compare said
-            self.stops.append(Stop(board_codes.FLASH_TOO_SMALL, "the flash is %s MB, the image needs %d MB"
-                                   % (reading.flash_mb, -(-image.stat().st_size // MB))))
+            self.stops.append(Stop(board_codes.FLASH_TOO_SMALL, flat_line("the flash is %s MB, the image needs %d MB",
+                                                                          reading.flash_mb, -(-image.stat().st_size // MB))))
         elif self.fields["flash"] == "differs":
-            self.warnings.append("the flash differs: %s MB, the record says %s" % (reading.flash_mb, _recorded(record["flash_mb"])))
+            self.warnings.append(flat_line("the flash differs: %s MB, the record says %s", reading.flash_mb, _recorded(record["flash_mb"])))
         self.unknown = {name: "the board did not say" if getattr(reading, read_key) is None else "the record does not hold it"
                         for name, read_key, _, _ in FIELDS if self.fields[name] == "unknown"}
         self.verdict = (VERDICT_STOP if self.stops else

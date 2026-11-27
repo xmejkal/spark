@@ -1123,5 +1123,15 @@ class TheRecordsTest(unittest.TestCase):
         self.assertEqual(board_records.load(ROOT, "firebeetle2-esp32s3")["flash_mb"], [16, 4])
 
 
+
+class TheLookSentencesOnOneLineTest(unittest.TestCase):
+    """P1320: the chip esptool read and the record's chip are values: a raw line break in either shows as `?` in the stop."""
+
+    def test_a_chip_word_with_a_line_break_is_one_line_in_the_stop(self):
+        report = board_look.LookReport("/dev/cu.usbmodem101", board_look.BoardReading("esp32\nfix: rm -rf ~", 4, "8c:bf:ea:xx:xx:xx"),
+                                       {"id": "xiao-esp32-c6", "chip": "esp32c6\nfix: a"}, None, None, None, None)
+        self.assertEqual(report.stops, [board_look.Stop("chip_differs", "this board is an esp32?fix: rm -rf ~, the project is for an esp32c6?fix: a")])
+
+
 if __name__ == "__main__":
     unittest.main()
