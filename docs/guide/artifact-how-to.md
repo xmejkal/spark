@@ -53,9 +53,10 @@ the viewer is the owner, so the buttons show only to the owner.
   frame, no other web address, no script but spark's own.
 - It holds no path of your machine: the project's path, the store's and the home folder's are masked, and so is
   each value of the project's secrets files ([section 10](#10-secrets)).
-- It decides nothing. A button writes one request row. Nothing runs until the person types `/spark:page`, and then
-  `flow.py run-request` runs a step only when spark offers it now and the project has not changed since the page was
-  read.
+- It decides nothing. A button writes one request row, and so does one Send of the picks chosen for several needs
+  ([P1067](https://github.com/xmejkal/spark/issues/1565)); `flow.py run-request --help` says the row's shape. Nothing
+  runs until the person types `/spark:page`, and then `flow.py run-request` runs a step only when spark offers it now
+  and the project has not changed since the page was read.
 
 ## 6. The route of a republish
 
