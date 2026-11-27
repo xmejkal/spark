@@ -122,6 +122,16 @@ def now_steps(project, phases, guide):
     return phase_steps.steps_of(project, phases, guide)
 
 
+def without_default_store(step):
+    """`step` with no SPARK_HOME in its env when that names the default store (`store.default_store()`, both sides
+    resolved), and no env at all when nothing else is left (P1286). Only the page's line reads it: `next` keeps P473's env."""
+    env = dict(step.env or {})
+    if "SPARK_HOME" not in env or Path(env["SPARK_HOME"]).resolve() != store.default_store().resolve():
+        return step
+    del env["SPARK_HOME"]
+    return step._replace(env=env or None)
+
+
 def phases_of(project, readers=None, deploy=None, board=None):
     """The Phases of `project`, one per reader in the readers' order: the one source of the phases, for `show`, the page
     (P827) and a request (P829), which needs no guide. `readers` are the PhaseReaders a test swaps (None: `READERS`).

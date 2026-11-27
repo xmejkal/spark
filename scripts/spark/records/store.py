@@ -56,9 +56,15 @@ def _spark_home():
 
 
 def home():
-    """The store's folder, read from the environment on every call (§6.1)."""
+    """The store's folder, read from the environment on every call (§6.1): SPARK_HOME, else `default_store()`."""
     if _spark_home():
         return Path(_spark_home())
+    return default_store()
+
+
+def default_store():
+    """The store's folder when no SPARK_HOME is set, whatever SPARK_HOME says now: XDG_DATA_HOME/spark, else the person's
+    home folder's .local/share/spark (P1286: the page's line names no env for this store)."""
     if os.environ.get("XDG_DATA_HOME"):
         return Path(os.environ["XDG_DATA_HOME"]) / "spark"
     return Path.home() / ".local" / "share" / "spark"

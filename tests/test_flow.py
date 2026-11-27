@@ -3390,7 +3390,55 @@ class TheWiringWithNowTest(unittest.TestCase):
         self.assertIs(self.now([("build", "not-started", "○"), ("breadboard", None, "·")])["with_wiring"], False)
 
 
-GOAL = "a button switches a light on and off"
+class TheDefaultStoreEnvTest(unittest.TestCase):
+    """P1286 step 1: `without_default_store(step)` drops a SPARK_HOME that names the default store (`store.default_store()`,
+    both sides resolved), so the page's line needs no env there; any other env and the step's other fields stay. HOME is a
+    temp folder, never the person's; `next` keeps its env (only the page's line reads this)."""
+
+    def setUp(self):
+        self.folder = Path(tempfile.mkdtemp()).resolve()
+        self.addCleanup(shutil.rmtree, self.folder, True)
+        patch = mock.patch.dict(os.environ, {"HOME": str(self.folder / "h")})
+        patch.start()
+        self.addCleanup(patch.stop)
+        os.environ.pop("XDG_DATA_HOME", None)
+        self.default = self.folder / "h" / ".local" / "share" / "spark"
+
+    def step(self, env):
+        return NextStep("look", ["--project", "/x"], "why", ["effect"], False, True, env)
+
+    def without(self, step):
+        from spark.flow.show_flow import without_default_store
+        return without_default_store(step)
+
+    def test_an_env_that_names_the_default_store_is_dropped(self):
+        self.assertEqual(self.without(self.step({"SPARK_HOME": str(self.default)})), self.step(None))
+
+    def test_both_sides_are_resolved(self):
+        self.default.mkdir(parents=True)
+        (self.folder / "link").symlink_to(self.folder / "h")
+        named = self.folder / "link" / ".local" / "share" / "spark"
+        self.assertEqual(self.without(self.step({"SPARK_HOME": str(named)})), self.step(None))
+        with mock.patch.dict(os.environ, {"HOME": str(self.folder / "link")}):
+            self.assertEqual(self.without(self.step({"SPARK_HOME": str(self.default)})), self.step(None))
+
+    def test_another_store_keeps_its_env(self):
+        other = {"SPARK_HOME": str(self.folder / "scratch")}
+        self.assertEqual(self.without(self.step(other)), self.step(other))
+
+    def test_the_other_variables_of_an_env_and_the_other_fields_stay(self):
+        env = {"SPARK_HOME": str(self.default), "OTHER": "1"}
+        self.assertEqual(self.without(self.step(env)), self.step({"OTHER": "1"}))
+        self.assertEqual(self.without(self.step({"OTHER": "1"})), self.step({"OTHER": "1"}))
+        self.assertEqual(self.without(self.step(None)), self.step(None))
+
+    def test_the_xdg_data_home_store_is_the_default_when_it_is_set(self):
+        with mock.patch.dict(os.environ, {"XDG_DATA_HOME": str(self.folder / "xdg")}):
+            self.assertEqual(self.without(self.step({"SPARK_HOME": str(self.folder / "xdg" / "spark")})), self.step(None))
+            self.assertEqual(self.without(self.step({"SPARK_HOME": str(self.default)})), self.step({"SPARK_HOME": str(self.default)}))
+
+
+GOAL ="a button switches a light on and off"
 GOAL_LINE = "your goal is “%s”" % GOAL
 NO_GOAL_LINE = "the brief holds no goal"
 
