@@ -3,7 +3,7 @@
 Card: [P1135 #1670](https://github.com/xmejkal/spark/issues/1670). The plan council ran on 2026-11-27, from about 03:56 to 04:06
 CET: the UX and AI-UX lens, the architecture lens and the refuter, all on Opus. The delegated council of three on Opus (the PO
 assistant, the tech lead and the architect) answered the open choices at 04:10 CET, delegated and the PO's to change. A second
-refuter round on Opus ran until 04:27 CET. The builder built it on 2026-11-27, from about 04:35 to 05:40 CET, and fixed the review's findings from about 06:05 to 06:40 CET. This file holds the acted,
+refuter round on Opus ran until 04:27 CET. The builder built it on 2026-11-27, from about 04:35 to 05:40 CET, and fixed the review's findings from about 06:05 to 06:30 CET. This file holds the acted,
 raised and rejected findings only.
 
 | # | claim | source | status | evidence / where it went |
@@ -49,8 +49,8 @@ raised and rejected findings only.
 | 39 | `WriteFlowPage.details` names "the three files flow.py's own text names" and says "The page adds no tick of its own"; `ShowFlow.details` holds the text view's sentence, frontend text | the review | acted | it names `.spark/needs.json`, `requirements.json` and `.spark/build.json` and says "No tick on a phase that is not ok."; the text view's sentence stands in EPILOG |
 | 40 | `PICK_ROW` writes "Part: have", which reads wrong for a part's name with a colon | the review | acted | "Part (have)", as `show` and the developer fold write it; the three pinned rows, the sample's copy and the node fake change, each named in its commit |
 | 41 | `EDGE_PAIRS` does not check the new edge on the ground it stands on | the review | acted | ("--accent-edge", "--bg") is checked in both themes |
-| 42 | EPILOG still holds `show`'s paragraphs (the guide, the deploy phase, the fingerprint, the build phase), which are `ShowFlow`'s job | the review | raised | a card from spark-main's next batch |
-| 43 | the page puts a ✓ on a pick whose part spark does not know (no record), as on any other pick | the review | raised | a card from spark-main's next batch |
-| 44 | NOW says "Pick a part for each" when a need has nothing to pick | the review | raised | a card from spark-main's next batch |
+| 42 | EPILOG still holds `show`'s paragraphs (the guide, the deploy phase, the fingerprint, the build phase), which are `ShowFlow`'s job | the review | raised | [P1281 #1845](https://github.com/xmejkal/spark/issues/1845): EPILOG's paragraphs into each Operation's details |
+| 43 | the page puts a ✓ on a pick whose part spark does not know (no record), as on any other pick | the review | raised | [P1282 #1846](https://github.com/xmejkal/spark/issues/1846): an unknown pick named as unknown, with no tick |
+| 44 | NOW says "Pick a part for each" when a need has nothing to pick | the review | raised | [P1283 #1847](https://github.com/xmejkal/spark/issues/1847): a NOW sentence that matches what the page offers for a need with no pick offer |
 | 45 | the names `PICKED_SAID` and the like | the review, a nit | closed | they follow the existing `*_SAID` constants of flow_codes |
 | 46 | the node test's fake words keep the old NOW sentence "Tell Claude a pick for each." | the review, a nit | closed | nothing pins it: the script keeps a NOW sentence the words do not name as it is, which is what that fake tests |
