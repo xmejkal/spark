@@ -22,5 +22,5 @@ its own rows. 2026-11-27.
 | 13 | after the merge of P1209, commands/page.md named a kind of offer ("On the deploy") | build, test_routes | acted | the sentence names `data.guide.now.command` |
 | 14 | flow_codes.py (606) and store.py (605) passed 600 lines, `page_words` 40 lines, and a test's `patch.start()` counted as a `mock.patch` | build, test_architecture (R1, T2) | acted | the words fold as P1209's did; the test's local is `patcher` |
 | 15 | store.py's docstring said the module imports only the standard library and `text_guards` | build (prune) | acted | the wrong claim is gone: it imports records_codes, outcomes and errors too |
-| 16 | the build's next step should agree with show's NOW, and the `now:` line come for check_spine only | council O1 | raised | a card that spark-main files |
-| 17 | the image-build line should stand alone on its line | council O1 | raised | an XS card that spark-main files |
+| 16 | the build's next step should agree with show's NOW, and the `now:` line come for check_spine only | council O1 | raised | P1292 [#1859](https://github.com/xmejkal/spark/issues/1859), in Ready |
+| 17 | the image-build line should stand alone on its line | council O1 | raised | P1293 [#1860](https://github.com/xmejkal/spark/issues/1860) (XS), in Ready |
