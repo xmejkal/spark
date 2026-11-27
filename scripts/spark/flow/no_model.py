@@ -1,6 +1,6 @@
 """The one rule that counts a build with no simulation as done (P977, P1008, P1207): Wokwi has no model of the board.
 The guide, the build phase and the page's answer read a build record, or a run's own stages, through it. Beside it, the
-one rule that says why a simulation was skipped (P999): the skipped code's own meaning."""
+flow's rule that says why a simulation was skipped (P999): the skipped code's own meaning."""
 
 from spark.build import build_codes
 from spark.build.stages import SIMULATION
