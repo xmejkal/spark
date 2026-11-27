@@ -1,20 +1,30 @@
 """
 check-firmware as an Operation on the core (P1208, #1757): the free checks of a project's firmware in one call, with no sim/ and
 no board. They are the import check (`import_probe.look`: each firmware module imported on this machine over the stand-ins)
-and the project's own tests (`own_tests`: PROJECT/tests run with unittest). `check_firmware.py` is its CLI. It writes
-nothing, so it blocks no deploy: the deploy reads the logs of sim/runs/ only.
+and the project's own tests (`own_tests`: PROJECT/tests run with unittest). `check_firmware.py` is its CLI. It keeps its
+answer in one file, the check record `.spark/check-firmware.json` (P1209, `records/check_record`), which `flow.py show` and
+the page read. No gate reads it, so it blocks no deploy: the deploy reads the logs of sim/runs/ only.
 """
 
-from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, RUNS, Operation
+from pathlib import Path
+
+from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, RUNS, WRITES, Operation
 from spark.core.outcomes import COULD_NOT_RUN, NONE_RECORDED, NOT_CHECKED, PROBLEMS, RECORDED
 from spark.core.result import Finding, OperationResult
+from spark.core.zone_time import stamp
 from spark.firmware import firmware_codes
 from spark.firmware.import_probe import IMPORT_TIMEOUT_S, IMPORTED, look
 from spark.firmware.own_tests import OWN_TESTS_TIMEOUT_S, TESTS_FOLDER, UnittestReader
+from spark.firmware.project_secrets import FIRMWARE_FOLDER, is_secret_path
+from spark.records.check_record import CheckRecordStore
 
 # --- MVP ---
 #: The notes and lines of the answer, one sentence each.
 NO_TESTS_NOTE = "no tests/ folder: this project has no own tests"
+#: What a run that could not keep its check record says, as a note and a line, with the class of what failed (P1209).
+NOT_KEPT_SENTENCE = "did not keep the check record: %s"
+#: The folders the free checks read, which the check record hashes and its older line names, and the keys of `data` it keeps.
+INPUTS, KEPT_KEYS = (FIRMWARE_FOLDER + "/", TESTS_FOLDER + "/"), ("imports", "tests")
 IMPORTS_LINE, IMPORTS_NOT_CHECKED_LINE = "imports: %d of %d imported", "imports: not checked (no firmware/ folder)"
 TESTS_LINE, SKIPPED_PART = "tests: %d of %d passed (%s/)", ", %d skipped"
 NO_TESTS_LINE, TESTS_NOT_CHECKED_LINE = "tests: none (no %s/ folder)", "tests: not checked (%s)"
@@ -22,7 +32,10 @@ NO_TESTS_LINE, TESTS_NOT_CHECKED_LINE = "tests: none (no %s/ folder)", "tests: n
 FIRMWARE_SUBJECT = "firmware"
 
 #: What `--help` says after the arguments (P481).
-DETAILS = """It needs no sim/, no board and no token, and it writes nothing.
+DETAILS = """It needs no sim/, no board and no token. It writes one file, .spark/check-firmware.json, the check record that
+`flow.py show` and the page read: the status, the counts, the two result lines, the time and the sha256 of each file
+under firmware/ and tests/ (the secrets files left out), kept only when firmware/ is there. No gate reads it, so it
+blocks no deploy. When the project has a page.html, it writes that page again.
 
 The import check imports each PROJECT/firmware/*.py and each package there (a folder holding __init__.py) except the boot
 files, main.py and boot.py. PROJECT defaults to `.`. Each import is a process of its own, with spark's machine stand-in first
@@ -51,7 +64,7 @@ problem, not a pass: the firmware cannot be imported without running main.py, so
 module that main.py calls. No firmware/ folder is could-not-run.
 
 The own tests are PROJECT/tests, run with unittest in a process of their own (`own_tests_child.py`), %g s at most.
-The tests' code runs on this machine too, in the project folder, and can write files there: spark writes nothing. The
+The tests' code runs on this machine too, in the project folder, and can write files there: spark writes only its record. The
 answer's `data.tests` holds `passed` of `total` and the ids of the tests that failed. A failed or raising test is a problem
 (`own_test_failed`). A run that timed out, gave no count or ran no test is could-not-run (`own_tests_not_run`), never ok. No
 tests/ folder is a note and `data.tests.state` `none-recorded`. A test that passes proves what it asserts, on this machine,
@@ -65,7 +78,8 @@ class CheckFirmware(Operation):
     gives: `module`, `status`, `detail`, and `code` for one not imported) and `tests` (the OwnTests: `state`, and `passed`,
     `total`, `failed` and `skipped` only when recorded). A module not imported and a failed own test are problems; a firmware/
     that is not there and a run of tests that gave no count are could-not-run, never ok; a project with no tests/ is a note.
-    It reads files, runs children on this machine and writes none.
+    It reads files, runs children on this machine and writes one file, the check record (P1209): `data.written` says
+    whether this run wrote it, and a write that failed is a note and a line, never a finding.
     """
 
     name = "check-firmware"
@@ -73,8 +87,8 @@ class CheckFirmware(Operation):
     details = DETAILS
     arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder with firmware/ and tests/ (default: here)"),
                  COMMON_ARGUMENTS[JSON_DEST])
-    effects = (READS, RUNS)
-    data_keys = ("project", "imports", "modules", "tests")
+    effects = (READS, RUNS, WRITES)
+    data_keys = ("project", "imports", "modules", "tests", "written")
 
     def __init__(self, import_timeout_s=IMPORT_TIMEOUT_S, tests_timeout_s=None, own_tests_reader=None):
         """The timeouts are constants of the firmware area, no setting; a test gives a shorter one. `own_tests_reader` is the
@@ -93,8 +107,30 @@ class CheckFirmware(Operation):
         findings = self.import_findings(modules, import_problems, unchecked) + self.own_test_findings(tests)
         imports = self.imports_of(modules, unchecked)
         data = {"project": str(project), "imports": imports, "modules": modules, "tests": self.tests_data(tests)}
-        notes = [NO_TESTS_NOTE] if tests.state == NONE_RECORDED else None
-        return OperationResult(data, findings, lines=self.lines_of(modules, imports, tests), notes=notes)
+        notes = [{"subject": TESTS_FOLDER, "sentence": NO_TESTS_NOTE}] if tests.state == NONE_RECORDED else None
+        kept_lines = self.result_lines(imports, tests)
+        result = OperationResult(data, findings, lines=self.module_lines(modules) + kept_lines, notes=notes)
+        return self.keep(project, result, kept_lines, outside)
+
+    def keep(self, project, result, kept_lines, outside):
+        """`result` with `data.written`, after its check record is saved (P1209): its status, the data of KEPT_KEYS and
+        `kept_lines`, at `outside.clock`'s time. With no firmware/ nothing is kept. A write that fails adds its sentence
+        as a note and a line, and the result stands."""
+        if result.data["imports"].get("state") == NOT_CHECKED:
+            return result._replace(data=dict(result.data, written=False))
+        answer = {"status": result.status(), "data": {key: result.data[key] for key in KEPT_KEYS}, "lines": kept_lines}
+        records = CheckRecordStore(project, self.name, leave_out=is_secret_path)
+        try:
+            records.save(INPUTS, stamp(outside.clock.now()), answer)
+        except OSError as failed:
+            sentence = NOT_KEPT_SENTENCE % type(failed).__name__
+            return result._replace(data=dict(result.data, written=False), lines=list(result.lines) + [sentence],
+                                   notes=list(result.notes or []) + [{"subject": records.path.relative_to(project).as_posix(), "sentence": sentence}])
+        return result._replace(data=dict(result.data, written=True))
+
+    def written_project(self, values):
+        """The project whose check record a run writes, so the core writes its page again (P1035)."""
+        return Path(values["project"])
 
     @staticmethod
     def import_findings(modules, problems, unchecked):
@@ -128,10 +164,15 @@ class CheckFirmware(Operation):
         return {"state": tests.state, "passed": tests.passed, "total": tests.total, "failed": tests.failed, "skipped": tests.skipped}
 
     @staticmethod
-    def lines_of(modules, imports, tests):
-        """The text: a line per module, then the imports line (from IMPORTS, `imports_of`'s count) and the tests line."""
-        lines = ["%-9s %s%s" % (entry["status"], entry["module"], "  " + entry["detail"] if entry["detail"] else "") for entry in modules]
-        lines.append(IMPORTS_NOT_CHECKED_LINE if imports.get("state") == NOT_CHECKED else IMPORTS_LINE % (imports["imported"], imports["total"]))
+    def module_lines(modules):
+        """The text's first lines: one per module, its status, its name and its detail."""
+        return ["%-9s %s%s" % (entry["status"], entry["module"], "  " + entry["detail"] if entry["detail"] else "") for entry in modules]
+
+    @staticmethod
+    def result_lines(imports, tests):
+        """The text's last two lines, which the check record keeps too (P1209): the imports line (`imports_of`'s count) and
+        the tests line."""
+        lines = [IMPORTS_NOT_CHECKED_LINE if imports.get("state") == NOT_CHECKED else IMPORTS_LINE % (imports["imported"], imports["total"])]
         if tests.state == NONE_RECORDED:
             return lines + [NO_TESTS_LINE % TESTS_FOLDER]
         if tests.state == NOT_CHECKED:

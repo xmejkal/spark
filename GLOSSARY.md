@@ -525,7 +525,7 @@ to rank meant a second copy (P211).
 One thing a need can match: a record with the drawer entries that say they are it, or a drawer entry with no record.
 It lives in `scripts/spark/sourcing/matching.py` as `Offer`. `parts.py --offer KEY` prints its whole text. **The
 failure behind it:** a chooser saw only a score and a label for a candidate, not what the part says of itself. The
-flow's offer is another word: a step a phase lists, `{key, label, effect, makes_stale, part, have}` (`phase_readers.Offer`,
+flow's offer is another word (a person reads it as a button, or as a choice in a need's row for a pick, [the rule](docs/guide/agents/flow.md#the-page-script)): a step a phase lists, `{key, label, effect, makes_stale, part, have}` (`phase_readers.Offer`,
 P829), where `have` says what the person has of a pick's part in the breadboard sheet's words (P1135).
 
 ### Station, and place
@@ -553,7 +553,7 @@ of your 3 …", with no file of the project changed. So the offers count too.
 One click on the project's page, or one Send of several picks, one per need
 ([P1067](https://github.com/xmejkal/spark/issues/1565)), written down for spark (`PageRequest` in
 `scripts/spark/flow/run_request.py`, P829); `flow.py run-request --help` says its shape. `/spark:page` writes it as
-`.spark/page-request.json`, and `flow.py run-request` reads it, deletes it and runs the step only when spark offers each
+`.spark/page-request.json`, and `flow.py run-request` reads it, deletes it and runs the step only when spark can run each
 key now and the page was read at the fingerprint now. Several picks run as one pick: all of them are saved, or none.
 The values of the step come from spark's offers, never from the request. **The failure behind it:** a
 page stays open while the project changes. A second Build from the same page, or a pick the drawer no longer allows,

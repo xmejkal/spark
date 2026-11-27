@@ -125,7 +125,8 @@ class TheOffersTest(unittest.TestCase):
                           "offer:write-firmware": False, "offer:run-simulation": False, "offer:look-at-board": False})
         self.assertEqual({one["key"]: one["tell"] for one in group("offer")},
                          {"offer:pick": None, "offer:requirements": None, "offer:build": None, "offer:needs-drop": None,
-                          "offer:write-firmware": "Write the firmware for this project's board.",
+                          "offer:write-firmware": ("Write the firmware for this project's board, with a thin main that calls "
+                                                   "modules the free checks can import."),
                           "offer:run-simulation": "Help me run the simulation of this project.",
                           "offer:look-at-board": "Look at this project's board with me."})
         build = flow_codes.OFFER_KINDS["build"]._replace(from_page=False)

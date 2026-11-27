@@ -1,0 +1,170 @@
+[
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1209: an older record reads as current (test_check_record.TheCheckRecordTest.test_a_changed_file_reads_as_not_current)",
+  "find": "now == record[\"inputs_sha256\"]",
+  "replace": "True"
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1209: the hash skips the bytes (test_check_record.TheCheckRecordTest.test_a_changed_file_reads_as_not_current)",
+  "find": "hashed[relative] = hashlib.sha256(file.read_bytes()).hexdigest()",
+  "replace": "hashed[relative] = \"\""
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1209: a missing input adds nothing (test_check_record.TheCheckRecordTest.test_a_missing_input_folder_is_hashed_not_skipped)",
+  "find": "            hashed[name] = hashlib.sha256(MISSING).hexdigest()\n",
+  "replace": "            pass\n"
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1209: a broken record reads as recorded (test_check_record.TheCheckRecordTest.test_a_record_of_another_shape_is_not_checked)",
+  "find": "            return CheckRecord(self.name, outcomes.NOT_CHECKED, why)\n",
+  "replace": "            return CheckRecord(self.name, outcomes.RECORDED, why)\n"
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1209: a line that is no text reads as recorded (test_check_record.TheCheckRecordTest.test_a_record_reader_never_raises_on_an_input_of_dot_or_a_line_that_is_no_text)",
+  "find": "    if not wrong and not all(isinstance(line, str) for line in record[\"lines\"]):\n",
+  "replace": "    if False:\n"
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1209: the store makes a mistyped project folder (test_check_record.TheCheckRecordTest.test_the_store_never_makes_the_project_folder)",
+  "find": "(self.project / SPARK_FOLDER).mkdir(exist_ok=True)",
+  "replace": "(self.project / SPARK_FOLDER).mkdir(parents=True, exist_ok=True)"
+ },
+ {
+  "file": "scripts/spark/records/folder_walk.py",
+  "name": "P1209: pycache makes the check record older (test_check_record.TheCheckRecordTest.test_a_pycache_does_not_make_the_record_older)",
+  "find": " and \"__pycache__\" not in path.parts]",
+  "replace": "]"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_check.py",
+  "name": "P1209: the check record is not written (test_check_firmware.TheCheckRecordTest.test_a_run_keeps_its_answer_in_the_check_record)",
+  "find": "            records.save(INPUTS, stamp(outside.clock.now()), answer)\n",
+  "replace": "            None\n"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_check.py",
+  "name": "P1209: a failed write of the check record fails the check (test_check_firmware.TheCheckRecordTest.test_a_record_that_cannot_be_written_is_a_note_and_the_result_stands)",
+  "find": "            sentence = NOT_KEPT_SENTENCE % type(failed).__name__\n",
+  "replace": "            raise\n"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_check.py",
+  "name": "P1209: a failed write is no line of the text (test_check_firmware.TheCheckRecordTest.test_a_record_that_cannot_be_written_is_a_note_and_the_result_stands)",
+  "find": "lines=list(result.lines) + [sentence],",
+  "replace": "lines=list(result.lines),"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_check.py",
+  "name": "P1209: no written project, no page refresh (test_check_firmware.TheCheckRecordTest.test_the_page_is_written_again_after_a_check)",
+  "find": "        return Path(values[\"project\"])\n",
+  "replace": "        return None\n"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_check.py",
+  "name": "P1209: no firmware/ still keeps a record (test_check_firmware.TheCheckRecordTest.test_no_firmware_folder_keeps_no_record)",
+  "find": "        if result.data[\"imports\"].get(\"state\") == NOT_CHECKED:\n",
+  "replace": "        if False:\n"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_check.py",
+  "name": "P1209: the record hashes the secrets file (test_check_firmware.TheCheckRecordTest.test_the_record_names_no_secrets_file)",
+  "find": "CheckRecordStore(project, self.name, leave_out=is_secret_path)",
+  "replace": "CheckRecordStore(project, self.name)"
+ },
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "P1209: the reader hashes the secrets file (test_checks_reading.TheSimulationLineTest.test_a_secrets_file_never_makes_the_record_older)",
+  "find": "CheckRecordStore(project, name, leave_out=is_secret_path)",
+  "replace": "CheckRecordStore(project, name)"
+ },
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "P1209: a failed check is grey (test_checks_reading.TheSimulationLineTest.test_a_failed_check_is_never_grey)",
+  "find": "return check.state == RECORDED and check.current and check.status == OK",
+  "replace": "return check.state == RECORDED and check.current"
+ },
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "P1209: a covered board is grey (test_checks_reading.TheSimulationLineTest.test_a_board_wokwi_covers_has_the_free_checks_part_alone_and_is_not_grey)",
+  "find": "grey = no_model and (",
+  "replace": "grey = True and ("
+ },
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "P1209: an older record shows its counts (test_checks_reading.TheSimulationLineTest.test_a_record_of_older_firmware_says_run_again_and_shows_no_counts)",
+  "find": "    if not check.current:\n        return OLDER",
+  "replace": "    if False:\n        return OLDER"
+ },
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "P1209: the older line names fixed folders (test_checks_reading.TheSimulationLineTest.test_an_older_record_names_its_own_inputs)",
+  "find": "INPUTS_JOIN.join(check.inputs)",
+  "replace": "\"firmware/ or tests/\""
+ },
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "P1209: a failed current check names no status (test_checks_reading.TheSimulationLineTest.test_a_failed_check_is_never_grey)",
+  "find": "    if check.status != OK:\n        return CURRENT_NOT_OK",
+  "replace": "    if False:\n        return CURRENT_NOT_OK"
+ },
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "P1209: the line drops why there is no simulation (test_flow.TheOfferStepTest.test_show_prints_the_same_simulation_line_as_the_page)",
+  "find": "flow_codes.NO_SIMULATION_NOW if no_model else None",
+  "replace": "None"
+ },
+ {
+  "file": "scripts/spark/flow/page_sections.py",
+  "name": "P1209: the grey simulation line is never drawn grey (test_flow_page.TheGuideSectionTest.test_the_simulation_line_is_grey_only_where_nothing_more_runs)",
+  "find": "(\"muted\" if simulation.get(\"grey\") else \"simulation\"",
+  "replace": "(\"simulation\" if simulation.get(\"grey\") else \"simulation\""
+ },
+ {
+  "file": "scripts/spark/flow/show_flow.py",
+  "name": "P1209: show prints the no-simulation flag, not the line (test_flow.TheOfferStepTest.test_show_prints_the_same_simulation_line_as_the_page)",
+  "find": "    lines += [\"  \" + simulation[\"line\"]] if simulation.get(\"line\") else []\n",
+  "replace": "    lines += [\"  \" + guide[\"no_simulation\"]] if guide[\"no_simulation\"] else []\n"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "P1209: the guide counts firmware that is not written (test_flow.TheGuideTest.test_a_board_wokwi_has_no_model_of_passes_the_build_and_the_firmware_and_the_wiring_are_now)",
+  "find": "firmware is not None and firmware.status != flow_codes.NOT_STARTED",
+  "replace": "True"
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1209 fix pass: a record that cannot be read says it is no JSON (test_check_record.TheCheckRecordTest.test_a_record_that_cannot_be_read_is_not_checked_with_its_own_reason)",
+  "find": "            return CheckRecord(self.name, outcomes.NOT_CHECKED, WHY_CANNOT_READ % type(failed).__name__)\n",
+  "replace": "            return CheckRecord(self.name, outcomes.NOT_CHECKED, WHY_NO_JSON)\n"
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1209 fix pass: the exists() of the record stands outside the try, so a .spark/ that cannot be searched raises (test_check_record.TheCheckRecordTest.test_a_spark_folder_that_cannot_be_searched_is_not_checked_with_its_own_reason)",
+  "find": "        try:\n            if not self.path.exists():  # raises under a .spark/ that cannot be searched\n                return CheckRecord(self.name, outcomes.NONE_RECORDED)\n",
+  "replace": "        if not self.path.exists():\n            return CheckRecord(self.name, outcomes.NONE_RECORDED)\n        try:\n"
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1209 fix pass: JSON's true reads as schema 1 (test_check_record.TheCheckRecordTest.test_schema_true_is_not_schema_1)",
+  "find": "    if type(record[\"schema\"]) is not int or record[\"schema\"] != SCHEMA",
+  "replace": "    if record[\"schema\"] != SCHEMA"
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1209 fix pass: a record over no inputs reads as current (test_check_record.TheCheckRecordTest.test_a_record_with_no_inputs_is_not_checked)",
+  "find": "    if record[\"inputs\"] == []:\n        return WHY_NO_INPUTS\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1209 fix pass: save keeps a record over inputs that are not plain (test_check_record.TheCheckRecordTest.test_save_refuses_an_input_that_is_not_plain)",
+  "find": "        if not inputs or not all(is_plain_input(each) for each in inputs):\n",
+  "replace": "        if False:\n"
+ }
+]

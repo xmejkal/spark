@@ -47,6 +47,7 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
   A build whose only stop is a simulation stage with the code `board_not_in_wokwi` is counted as
   done: `done` says `build (no simulation)`, a simulate with no status or not started is in `later` as `simulate (no
   Wokwi model of this board)`, and `no_simulation` says why (else `null`). Since [P1207](https://github.com/xmejkal/spark/issues/1756) the build ends that stage `skipped`, so the build phase has no status and `flow.py show` exits 0.
+  `simulation` ([P1209](https://github.com/xmejkal/spark/issues/1758)) is `{line, grey, check}`. `no_simulation` is the flag (`look --no-simulation` reads it), and `simulation.line` is the line: a renderer reads only the line. `check` is the check record `.spark/check-firmware.json` as read (`name`, `state`, `why`, `at`, `current`, `status`, `data`, `lines`, `inputs`): `none-recorded` with no record, `not-checked` with `why` for one that cannot be read (`the check record cannot be read (<error>)`), is no JSON, is of another shape (a line that is no text, a `schema` of `true`, an input `.` or outside the project) or names no input, or whose files cannot be read, else `recorded`, and then `current` is false when a file under its `inputs` changed since, never true. A file that Finder makes in an input folder, such as `.DS_Store`, makes the record older too: the walk leaves out only `__pycache__` and the secrets files. The line is the free checks' sentence (`Free checks: not run yet. Ask Claude to run them, for free.`, `Free checks, <time>: <the two result lines>.`, the status word after the time when the run did not end ok, `Free checks, <time>, on older firmware/ or tests/: ask Claude to run them again.` with no counts, or `Free checks: <why>. Ask Claude to run them again.`), then the `no_simulation` sentence when Wokwi has no model of the board. With no firmware written and no record there is no free checks' part, and with neither part the line is `null`. `grey` is true only with no Wokwi model and either no free checks' part or a current record whose status is `ok`: a failed, older or unread check is never grey. `flow.py show` runs no check: it reads the record and the input files only.
   An older record has the stage `could-not-run`: its build phase keeps `could-not-run`, and the exit stays 2 until the next build. Else the simulate is `now` while a run failed on its image, a file under `firmware/` changed after the
   image, or no run tested it, each with its own sentence and who acts (`claude` for the first two, which name the failed log
   or ask for a new image). Relay `now.says` as it is.
@@ -166,8 +167,7 @@ Under the line stands the guide
 muted, SET ASIDE, and a list with no item draws no line. A line the parts phase says twice stands once. On a board that can be wired, the parts fold's first line is the wired line, and a pick's or a build's confirm opens with its fixed sentence ([P1044](https://github.com/xmejkal/spark/issues/1534)).
 
 When `now.steps` is set and the page holds wiring
-steps, NEXT ends in the link "One at a time: start at step N", the wiring section's own link, to the first step's own `#step-N`. The sentence about why there is
-no simulation stands as a muted line of its own under NEXT. A `now` that is `null` draws no NOW line: the box holds only the line that nothing is open, if any. With a guide the line "The
+steps, NEXT ends in the link "One at a time: start at step N", the wiring section's own link, to the first step's own `#step-N`. The simulation line, `guide.simulation.line` ([P1209](https://github.com/xmejkal/spark/issues/1758)), stands as a line of its own under NEXT and before SET ASIDE: `<p class="muted">` (grey) when `guide.simulation.grey` is true, else `<p class="simulation">`. The page decides nothing about it, and a guide with no `simulation` key draws no line. `flow.py show` prints the same line after LATER. A `now` that is `null` draws no NOW line: the box holds only the line that nothing is open, if any. With a guide the line "The
 project stands at" is not drawn; a page from a caller that gives no guide keeps it.
 
 Then come three folds, each a `<details class="fold" data-fold="NAME">` with a one-line summary, open only while its job is NOW: the parts
@@ -282,10 +282,11 @@ Its box says each pick, a line two picks share once, and "Spark checks the picks
 The answer row holds `flow.py run-request`'s `data` unchanged ([a page request](#a-page-request)). The script says it in
 the page's words, after "Your last request, <its time in the browser's zone>: <its offer's label, else its kind's words (`request_kinds`), else `request_other`; for picks their count and needs, else "your picks">." (the request lives in the page's database, not in `show`): what ran ok by its kind, the step's first problem (`line`), spark's line for a step that ran and could not run, or why it could not run. A refusal shows as
 its code's own words only when `line` is exactly that code's meaning, in grey; any other `line` with `ran: false` shows
-as could not run. Picks that ran ok say "Saved as the picks.", picks that ran with problems say first "No pick was saved.", and a not-offered refusal of picks says that spark no longer offers one of them. Never "done" alone.
+as could not run. Picks that ran ok say "Saved as the picks.", picks that ran with problems say first "No pick was saved.", and a `request_not_offered` refusal of picks says that spark cannot save one of them now. Never "done" alone.
 
-Never take an offer only because `flow.py` lists it. A pick, a drop and a build change files, so say what the effect
-line says and ask the person first.
+To a person, an offer the page sends is a button (`flow_codes.BUTTON_WORD`), or a choice in a need's row for a pick. Name a button by its label, such as click **Build the board**, and say "button" alone only where no label exists. `offer` is spark's code and data word: never say it to the person.
+
+Never take an offer only because `flow.py` lists it. A pick, a drop and a build change files, so say what the effect line says and ask the person first.
 
 ## The next step
 
@@ -370,7 +371,7 @@ envelope's. A refusal is one `unchecked` item, and its fix tells you what to do:
 | `request_malformed` | the request file is missing, is no regular file or no JSON object, holds an id, key or seen that cannot be read, or could not be deleted, so nothing ran | write the page's request to the file as the page sent it; if it was written that way, ask the person to click again |
 | `request_in_chat` | the key is a need's drop or a chat offer, which are asked in the chat | tell Claude in the chat, for example: drop the light need |
 | `request_stale` | the project changed after the page was read: `seen` is not the fingerprint now | write the page again with `flow.py page`, then click again |
-| `request_not_offered` | spark does not offer a key now, the page never runs its kind or its step's op, the step's argv does not parse, or a request of picks names a key that is no pick or two picks of one need | write the page again with `flow.py page`, then click again |
+| `request_not_offered` | spark cannot run a key now, the page never runs its kind or its step's op, the step's argv does not parse, or a request of picks names a key that is no pick or two picks of one need | write the page again with `flow.py page`; after a reload the page shows only the steps spark can run now |
 | `request_secrets_unreadable` | a secrets file in `firmware/` cannot be read or parsed, so spark cannot mask its values; the item's subject names it | repair or remove that file, then click again |
 
 A stale refusal is normal: a second Build from the same page is stale once the first one ran. The exit is 0 when the step

@@ -73,7 +73,9 @@ NO_SHEET_MESSAGE = "no breadboard.md yet"
 SHEET_NOT_JUDGED_MESSAGE = "breadboard.md, spark does not judge the wiring"
 SHEET_STALE_MESSAGE = "breadboard.md is from other requirements than requirements.json"
 FIRMWARE_MESSAGE = "firmware/main.py written %s"
-NO_FIRMWARE_MESSAGE = "No firmware/main.py yet. Ask Claude to write it in the chat."
+#: The thin-main rule (P1209 #1758, page-check step 7): main.py runs on import, so the free checks import the modules it calls; the tell says it with no file name.
+THIN_MAIN_RULE, WRITE_FIRMWARE_TELL = "Keep main.py thin, with the code in modules it calls, so the free checks can import them.", "Write the firmware for this project's board, with a thin main that calls modules the free checks can import."
+NO_FIRMWARE_MESSAGE = "No firmware/main.py yet. Ask Claude to write it in the chat. " + THIN_MAIN_RULE
 TESTED_MESSAGE = "a passed run tested the current image"
 NEWER_MESSAGE = "changed after the image: %s"
 LOOK_FIRST_MESSAGE = "Ask Claude to look at the board first (/spark:deploy)."
@@ -159,7 +161,7 @@ OFFER_KINDS = {PICK: OfferKind(PARTS, PICK_LABEL, True, None),
                WRITE_REQUIREMENTS: OfferKind(REQUIREMENTS, REQUIREMENTS_LABEL, True, None),
                BUILD_BOARD: OfferKind(BUILD, BUILD_LABEL, True, None),
                NEEDS_DROP: OfferKind(NEEDS, DROP_LABEL, False, None),
-               WRITE_FIRMWARE: OfferKind(FIRMWARE, WRITE_FIRMWARE_LABEL, False, "Write the firmware for this project's board."),
+               WRITE_FIRMWARE: OfferKind(FIRMWARE, WRITE_FIRMWARE_LABEL, False, WRITE_FIRMWARE_TELL),
                RUN_SIMULATION: OfferKind(SIMULATE, RUN_SIMULATION_LABEL, False, "Help me run the simulation of this project."),
                LOOK_AT_BOARD: OfferKind(DEPLOY, LOOK_AT_BOARD_LABEL, False, "Look at this project's board with me.")}
 
@@ -194,12 +196,10 @@ RESERVE_UNKNOWN_MESSAGE = "Uses 1 of your “%s” for the %s, if you have one: 
 TO_GET_MESSAGE = "You have none, so it goes on the list to get."
 #: A pick that `needs.plan_holds` refuses writes nothing, so it is no offer (P976). When another need's pick cannot get
 #: its part, the need's says line holds the problem's own sentence once, and the need gets no offers. P993: it says that
-#: no new pick can be saved, so it does not read as a refusal of the pick named above it: the need, the other needs, the
-#: part's name and the problem's sentence.
+#: no new pick can be saved, so it is no refusal of the pick above it: the need, the other needs, the part, the problem.
 NO_NEW_PICK_MESSAGE = "Spark can save no new pick for %s: the pick for %s cannot get “%s” (%s)."
 #: The says line of a need with picks left out: how many more are not shown, and each pick its own part refuses, by
-#: REFUSED_PART (P991 review, the PO: "even if taken"), "; " between two; then LIST_PICKS_MESSAGE. A count of 0 is left
-#: out. The %s after a count is that count's word, from PICK_WORDS.
+#: REFUSED_PART (P991 review, the PO: "even if taken"), "; " between two; then LIST_PICKS_MESSAGE. A count of 0 is left out.
 MORE_PICKS_MESSAGE = "Not shown for %s: %d more %s."
 MORE_AND_REFUSED_MESSAGE = "Not shown for %s: %d more %s; refused: %s."
 REFUSED_PICKS_MESSAGE = "Not shown for %s, refused: %s."
@@ -302,9 +302,8 @@ def picked_sentence(names):
     return PICKED_SAID % quoted(names)
 
 
-#: The page's script (P829 PR 3): every word the script shows, for the kinds of offer the page sends (`SENDABLE`). Python
-#: writes them into the page's inert words block; the script fills in only a time, an offer's label or spark's own line.
-#: No word says "done" alone.
+#: The page's script (P829 PR 3): every word the script shows, for the kinds of offer the page sends (`SENDABLE`), written
+#: into the page's inert words block; the script fills in a time, an offer's label or spark's own line. No word says "done" alone.
 CONFIRM_STALE = "These steps may be marked out of date: %s."
 SEND, CANCEL, COPY, WITHDRAW = "Send", "Cancel", "Copy", "Withdraw"
 #: What Copy puts on the clipboard: the command that carries the request to spark.
@@ -315,14 +314,17 @@ WITHDRAWN_SAYS = "Withdrawn. If Claude had already started it, its answer shows 
 #: A write the database refused: the page puts its state back.
 NOT_SENT_SAYS = "Could not send. Nothing ran."
 NOT_WITHDRAWN_SAYS = "Could not withdraw. The request still waits."
-#: The intro of the published page, for its owner: the script puts it in place of PAGE_INTRO.
-PUBLISHED_INTRO = "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page."
+#: The person's word for an offer the page sends (P1138); the rule is in docs/guide/agents/flow.md. The intro of the
+#: published page, for its owner, is put in place of PAGE_INTRO by the script.
+BUTTON_WORD = "button"
+USE_BUTTON_SAYS = "Use the %s." % BUTTON_WORD
+PUBLISHED_INTRO = "Where this project stands. Use a %s to ask spark for a step; Claude runs it at your next /spark:page." % BUTTON_WORD
 WAITING_FOR = "Waiting for Claude: %s."
 #: The last request under the NOW box (P1062): its time in the browser's zone and its label, then what the page says of it.
 LAST_REQUEST_SAYS = "Your last request, %s: %s."
 #: The last request's words when its offer is no longer on the page (the review of #1619): by its kind, else one sentence.
 LAST_REQUEST_KINDS = {PICK: "a pick", WRITE_REQUIREMENTS: "the parts list", BUILD_BOARD: "the build"}
-LAST_REQUEST_OTHER = "a step this page no longer offers"
+LAST_REQUEST_OTHER = "a step this page no longer shows"
 #: Several picks in one Send (P1067, the P1038 design of 2026-11-23): each need's radios, "not now" first; the Send of the
 #: picks named by the count and their needs (PICKS_SAID: one, many), with CHOOSE_FIRST under it while none is chosen; the
 #: Send box's last line; the wait; an ok answer; and the last request's words when its picks left the page.
@@ -353,11 +355,11 @@ NO_PICK_SAVED_SAYS = "No pick was saved."
 COULD_NOT_RUN_SAYS = "Could not run: %s. " + NEW_STATE
 #: What the page says of each refusal of `flow.py run-request`, by the code's name: nothing ran, in grey, never red.
 REFUSED_SAYS = {"request_stale": "Nothing ran. The project changed after you clicked. Reload this page and click again.",
-                "request_not_offered": "Nothing ran. This button is no longer offered. Reload the page.",
+                "request_not_offered": "Nothing ran. Spark cannot run this step now. Reload this page to see the steps you can ask for.",
                 "request_in_chat": "Nothing ran. This step is asked in the chat: tell Claude.",
                 "request_malformed": "Nothing ran. The request could not be read. Reload the page and click again."}
-#: The refusals of a request of several picks (P1067): as REFUSED_SAYS, but one that spark no longer offers.
-REFUSED_PICKS_SAYS = "Nothing ran. Spark no longer offers one of these picks. Reload this page."
+#: The refusals of a request of several picks (P1067): as REFUSED_SAYS, but one that spark cannot save now.
+REFUSED_PICKS_SAYS = "Nothing ran. Spark cannot save one of these picks now. Reload this page and choose again."
 REFUSED_PICKS = dict(REFUSED_SAYS, request_not_offered=REFUSED_PICKS_SAYS)
 #: The mark of a request that ran nothing: a dash, grey.
 NOT_RUN_MARK = "–"
@@ -437,22 +439,21 @@ STALE_REQUIREMENTS = {True: (REQUIREMENTS_STALE_MESSAGE, REQUIREMENTS_STALE_NOW)
 BUILD_NOW = "Ask Claude in the chat to build the board. It takes seconds and costs nothing."
 BUILD_STALE_NOW = "The parts list changed since the last build. Ask Claude to build again."
 #: The NOW sentences that can carry the page's button (`page_sections.sendable_now`), each with what the published page says
-#: in its place where its script adds the button (P993): the step, and to use the button. The page from disk, a viewer
-#: who is not the owner and `flow.py show` keep the sentence that names Claude.
-NOW_BUTTON = {REQUIREMENTS_NOW: "Write the parts list from your picks. Use the button.",
-              REQUIREMENTS_STALE_NOW: "Your picks changed. Write the parts list again. Use the button.",
+#: in its place where its script adds it (P993). The page from disk, a viewer who is not the owner and `flow.py show` keep
+#: the sentence that names Claude.
+NOW_BUTTON = {REQUIREMENTS_NOW: "Write the parts list from your picks. " + USE_BUTTON_SAYS,
+              REQUIREMENTS_STALE_NOW: "Your picks changed. Write the parts list again. " + USE_BUTTON_SAYS,
               REQUIREMENTS_EDITED_NOW: ("The parts list was changed by hand. Writing it again keeps its parts and puts back what your "
-                                        "picks give. Use the button."),
-              REQUIREMENTS_DIFFERS_NOW: "The parts list differs from what your picks give. Write it from your picks. Use the button.",
-              BUILD_NOW: "Build the board. It takes seconds and costs nothing. Use the button.",
-              BUILD_STALE_NOW: "The parts list changed since the last build. Build the board again. Use the button."}
+                                        "picks give. " + USE_BUTTON_SAYS),
+              REQUIREMENTS_DIFFERS_NOW: "The parts list differs from what your picks give. Write it from your picks. " + USE_BUTTON_SAYS,
+              BUILD_NOW: "Build the board. It takes seconds and costs nothing. " + USE_BUTTON_SAYS,
+              BUILD_STALE_NOW: "The parts list changed since the last build. Build the board again. " + USE_BUTTON_SAYS}
 BUILD_PARTIAL_NOW = "The build stopped. Ask Claude what stopped it and what to do."
 SHEET_NOW = "No wiring sheet yet. Ask Claude to build the board."
 SHEET_STALE_NOW = "The wiring sheet is out of date. Ask Claude to build the board again."
 #: The firmware with a current wiring sheet: two jobs in any order, and the count of the sheet's steps.
-TWO_JOBS_NOW = ("Two jobs, in any order: wire the breadboard (%d steps, power off), and ask Claude to write the firmware. "
-                "Spark cannot see your wiring.")
-FIRMWARE_NOW = "Ask Claude in the chat to write the firmware for this board."
+TWO_JOBS_NOW = "Two jobs, in any order: wire the breadboard (%d steps, power off), and ask Claude to write the firmware. Spark cannot see your wiring. " + THIN_MAIN_RULE
+FIRMWARE_NOW = "Ask Claude in the chat to write the firmware for this board. " + THIN_MAIN_RULE
 SIMULATE_NOW = "Ask Claude for the scenario command, and run it in your terminal. It uses Wokwi CI minutes."
 #: The simulate phase's closing hint is the same sentence (P979).
 SCENARIO_HINT = SIMULATE_NOW
@@ -556,8 +557,7 @@ STATION_NOTES_BY_PHASE = {(NO_MODEL_NOTE, SIMULATE): "no Wokwi model of this boa
 #: A fact is NO_MODEL_NOTE for a board Wokwi has no model of.
 #: Each row says a fact and no action.
 #: The NOW sentence and NEXT say what to do, so a failed run is not said twice on the page.
-#: The row is data only. No code refuses on it.
-#: An empty `shut_by` never means that gate A is open.
+#: The row is data only. No code refuses on it, and an empty `shut_by` never means that gate A is open.
 GATE_A_SAYS = {RUN_FAILED: "A run failed on this image (%s).", IMAGE_TESTED: "A run passed on this image.",
                IMAGE_OLDER: "Your firmware changed after the image, so no run tested it as it is now.",
                IMAGE_UNTESTED: "No run tested this image.",
