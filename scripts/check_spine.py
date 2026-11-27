@@ -66,8 +66,9 @@ from spark.core.outcomes import OK as OK, PROBLEMS as PROBLEMS, COULD_NOT_RUN as
 from spark.core.outside import build_bare_outside_world  # noqa: E402
 from spark.flow.now_follow_up import FlowFollowUp  # noqa: E402
 
-#: What check_spine.py says, and its follow-up: after an ok build with --keep, the step flow.py show names now (P1035).
-HELP = HelpText("check_spine.py", follow_up=FlowFollowUp())
+#: What check_spine.py says, and its follow-up: after an ok build with --keep, the steps flow.py show names now (P1035),
+#: else show's NOW line (`says_now`, P1292).
+HELP = HelpText("check_spine.py", follow_up=FlowFollowUp(says_now=True))
 
 
 def main(argv=None, outside=None):

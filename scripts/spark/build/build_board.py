@@ -98,8 +98,9 @@ def said_of(stages, code, requirements, kept):
     board (`unserved`, `left_off`) and the facts the board record lacks (`missing_facts`, P464) when there are any, and
     with --keep or --sim-dir what was kept (`kept`, P124), each entry without its `line`,
     which the person reads on stderr. A stage that has a code has its `code` too, after its detail; an ok stage has none
-    (P936, the PO 2026-11-20: "Every stage with a code"). The next steps (P517) are the result's `next`, which
-    `FlatJsonLine` writes as the last key (P1035).
+    (P936, the PO 2026-11-20: "Every stage with a code"). The next steps, the research steps (P945) and with --keep after
+    an ok build the steps of `flow.py show` (P1035, P1292), are the result's `next`, which `FlatJsonLine` writes as the
+    last key.
     """
     said = {"check": "spine", "status": STATUS_FOR[code],
             "stages": [{"name": s.name, "status": s.status, "detail": s.detail, **({"code": s.code} if s.code else {})} for s in stages],
@@ -115,8 +116,8 @@ class BuildBoard(Operation):
     Operation: the build. It runs the chain on a requirements file (None: the reference design) with the
     RequirementsBuildService it was given, keeps what --keep and --sim-dir ask for (`kept_files.keep_all`) and removes
     the work folder, after a crash in its own steps too; the service removes one it raised past (P939). Its data is the
-    dict check_spine printed with --json (`said_of`), its `next` its own steps (the drawing's research, the firmware's
-    look), and with --keep the project it kept into is its written project (P1035), its lines the verdict's text, its diagnostics each kept entry's
+    dict check_spine printed with --json (`said_of`), its `next` its own steps (the drawing's research, P945; no look of
+    its own since P1292: the follow-up adds show's steps, else show's NOW line), and with --keep the project it kept into is its written project (P1035), its lines the verdict's text, its diagnostics each kept entry's
     line, after the service's own lines (the service gives them to `outside.add_diagnostics`, so a crash later keeps
     them, P840, P938), and its Findings `build_service.findings_of` the stages.
     """
@@ -129,8 +130,8 @@ class BuildBoard(Operation):
                           "\"board_only\": true with no parts builds the board alone. A file that names no board takes the "
                           "project's board: its requirements.json's, else boards/active.json's", nargs="?"),
                  COMMON_ARGUMENTS["json"]._replace(help="the verdict as one JSON object: check, status, stages, kept with --keep or --sim-dir, "
-                                                   "and next last (the firmware step after an ok build in a project; with --keep and an ok "
-                                                   "build, then the step that flow.py show names now, P1035)"),
+                                                   "and next last: the research steps (P945), then with --keep and an ok build the steps that "
+                                                   "flow.py show names now (P1035); with no step from show, the text ends with show's NOW line (P1292)"),
                  Argument(("--keep",), "keep", Path,
                           "write the built board into DIR: board.tsx, its footprint and "
                           "dist/, where every check already looks; after a build that left no dist/board/circuit.json, an earlier dist/ stays and is named as an earlier build's here, and check_all says the last build did not write it (P816); a build that left it replaces dist/ whole (P1088). After a build whose build stage ended ok, a board.tsx that spark wrote and nobody changed is `replaced` "
@@ -167,9 +168,8 @@ class BuildBoard(Operation):
         try:
             code = verdict(built.stages)
             kept = keep_all(built.stages, built.workdir, KeepAsked(requirements, keep, sim_dir), tabbed_page.TscircuitExport(built.toolchain), write_kept_page)
-            # P945: find the facts that draw a part before the wiring, then P517: write the firmware next
-            own_steps = (drawing_next_steps(kept, project_of(requirements))
-                         + board_envelope.firmware_next_steps(code == EXIT_OK, requirements))
+            # P945: find the facts that draw a part before the wiring; the follow-up adds show's steps (P1292)
+            own_steps = drawing_next_steps(kept, project_of(requirements))
             text = guard_lines(render(built.stages, code, left_off(built.requirements)))
             # P1256 (B4): the step lines join after the split, as PastedLines the mask leaves whole
             return OperationResult(said_of(built.stages, code, built.requirements, kept), findings_of(built.stages),
