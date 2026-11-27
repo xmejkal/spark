@@ -2687,21 +2687,23 @@ class TheClosingLineTest(FlowTest):
         self.assertIsNotNone(follow_up.closing_line(project))
         self.assertIsNone(follow_up.closing_line(project))
 
-    def test_one_steps_and_one_closing_line_read_the_flow_once(self):
-        from spark.flow import now_follow_up
-        project, follow_up = a_built_project(), now_follow_up.FlowFollowUp(says_now=True)
-        with mock.patch.object(now_follow_up, "flow_and_guide", wraps=flow_and_guide) as read:
-            follow_up.steps(project)
-            self.assertIsNotNone(follow_up.closing_line(project))
-        self.assertEqual(read.call_count, 1)
+    def test_the_closing_line_reads_the_flow_of_its_steps_and_nothing_more(self):
+        # one steps and one closing_line read the flow once: after steps, the project moves on to a simulate now with a
+        # step, and the closing line still says the firmware now that steps read (T2: no mock.patch counts the reads)
+        from spark.flow.now_follow_up import FlowFollowUp
+        project, follow_up = a_built_project(), FlowFollowUp(says_now=True)
+        self.assertEqual(follow_up.steps(project), [])
+        an_image(a_firmware(project))
+        self.assertTrue(lines_of(project)[0].startswith("  NOW (simulate): "), lines_of(project)[0])
+        self.assertTrue(follow_up.closing_line(project).startswith("  NOW (firmware): Two jobs, in any order:"))
 
     def test_steps_that_raise_leave_no_reading_of_an_earlier_run(self):
-        from spark.flow import now_follow_up
-        project, follow_up = a_built_project(), now_follow_up.FlowFollowUp(says_now=True)
+        # the flow of no project raises TypeError, as any reading that fails: the earlier run's reading is gone
+        from spark.flow.now_follow_up import FlowFollowUp
+        project, follow_up = a_built_project(), FlowFollowUp(says_now=True)
         follow_up.steps(project)
-        with mock.patch.object(now_follow_up, "flow_and_guide", side_effect=OSError("the flow")):
-            with self.assertRaises(OSError):
-                follow_up.steps(project)
+        with self.assertRaises(TypeError):
+            follow_up.steps(None)
         self.assertIsNone(follow_up.closing_line(project))
 
     def test_only_check_spine_sets_the_flag(self):
