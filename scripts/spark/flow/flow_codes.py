@@ -537,15 +537,17 @@ DONE_PLACE, NOW_PLACE, LATER_PLACE = "done", "now", "later"
 #: A station's one note (P1119), or None: a requirements file with no needs or picks behind it (P980) and the needs and parts
 #: nobody did then, a build or simulate counted as done because Wokwi has no model of the board, a breadboard before now with
 #: a current sheet (spark cannot see the wires) or with none, and a later phase whose status is ok (a change before it can
-#: make it stale, the PO's lens, P977 PR 2 review).
-NO_PICKS_NOTE, NOT_DONE_NOTE, NO_MODEL_NOTE, UNSEEN_NOTE, NO_SHEET_NOTE, MAY_CHANGE_NOTE = (
-    "no-picks", "not-done", "no-model", "unseen", "no-sheet", "may-change")
+#: make it stale, the PO's lens, P977 PR 2 review), and the firmware before now while the deploy is partial and spark did not
+#: see the start (P1106, the PO's "firmware (written)").
+NO_PICKS_NOTE, NOT_DONE_NOTE, NO_MODEL_NOTE, UNSEEN_NOTE, NO_SHEET_NOTE, MAY_CHANGE_NOTE, START_NOT_SEEN_NOTE = (
+    "no-picks", "not-done", "no-model", "unseen", "no-sheet", "may-change", "start-not-seen")
 #: The notes that leave a phase out of DONE and LATER: nobody did it, or there is no current sheet to wire from.
 LEFT_OUT_NOTES = frozenset((NOT_DONE_NOTE, NO_SHEET_NOTE))
 #: The words of each other note, which DONE and LATER put after the phase (NOTED_PHASE): "requirements (no needs or picks
 #: behind it)". The no-model note of the simulate has its own words (STATION_NOTES_BY_PHASE).
 STATION_NOTES = {NO_PICKS_NOTE: "no needs or picks behind it", NO_MODEL_NOTE: "no simulation",
-                 UNSEEN_NOTE: "spark cannot see it", MAY_CHANGE_NOTE: "done, may change"}
+                 UNSEEN_NOTE: "spark cannot see it", MAY_CHANGE_NOTE: "done, may change",
+                 START_NOT_SEEN_NOTE: "written"}
 STATION_NOTES_BY_PHASE = {(NO_MODEL_NOTE, SIMULATE): "no Wokwi model of this board"}
 #: Gate A's row "Tested before the board" (P1220, D10), with its words by fact.
 #: A fact is NO_MODEL_NOTE for a board Wokwi has no model of.

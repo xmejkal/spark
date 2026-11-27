@@ -3123,7 +3123,7 @@ class TheFirmwareWrittenTest(FlowTest):
 
     def test_ready_seen_goes_on_to_the_deploy_in_done(self):
         said, _ = show(a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE))
-        self.assertEqual(said["data"]["guide"]["done"][-2:], ["firmware", "deploy"])
+        self.assertEqual(said["data"]["guide"]["done"][-3:], ["firmware", "simulate", "deploy"])  # the fixture's passed run
 
     def test_with_no_simulation_the_written_firmware_ends_done(self):
         project = a_board_log(an_image(a_firmware(a_project_built_with_no_simulation())), "ready unknown", FILES_UNREAD_SENTENCE)
