@@ -84,7 +84,7 @@ def page_words(phases):
             "not_now": flow_codes.NOT_NOW, "picks_said": list(flow_codes.PICKS_SAID), "send_picks": flow_codes.SEND_PICKS,
             "choose_first": flow_codes.CHOOSE_FIRST, "picks_together": flow_codes.PICKS_TOGETHER_MESSAGE,
             "waiting_picks": flow_codes.WAITING_PICKS_SAYS, "ok_picks": flow_codes.RAN_OK_PICKS_SAYS,
-            "last_request_picks": flow_codes.LAST_REQUEST_PICKS,
+            "last_request_picks": flow_codes.LAST_REQUEST_PICKS, "needs_join": flow_codes.NEEDS_JOIN, "label_join": flow_codes.LABEL_JOIN,
             "marks": dict(marks, **{"not-run": flow_codes.NOT_RUN_MARK})}
 
 

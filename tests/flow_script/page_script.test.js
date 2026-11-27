@@ -46,7 +46,7 @@ const WORDS = {
   picks_together: "Spark checks the picks together. If one fails, spark saves none.",
   waiting_picks: "Sent at %s: %s. Nothing has run yet. To run it, type /spark:page in Claude Code.",
   ok_picks: "Saved as the picks. Nothing is built yet. Reload to see the new state.",
-  last_request_picks: "your picks",
+  last_request_picks: "your picks", needs_join: ", ", label_join: ": ",
   refused_picks: { "the request names a step that spark does not offer now, so nothing ran":
                    "Nothing ran. Spark no longer offers one of these picks. Reload this page." },
 };

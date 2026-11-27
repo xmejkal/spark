@@ -301,6 +301,8 @@ CHOOSE_FIRST = "Choose a part first."
 PICKS_TOGETHER_MESSAGE = "Spark checks the picks together. If one fails, spark saves none."
 WAITING_PICKS_SAYS = "Sent at %s: %s. Nothing has run yet. To run it, type /spark:page in Claude Code."
 LAST_REQUEST_PICKS = "your picks"
+#: The script's two joins (P1067): between the needs PICKS_SAID names, and between a pick's label and its words in the Send box.
+NEEDS_JOIN, LABEL_JOIN = ", ", ": "
 NEW_STATE = "Reload to see the new state."
 #: What the page says when a step ran ok, by its kind: what it did and what is not done yet.
 RAN_OK_SAYS = {PICK: "Saved as the pick. Nothing is built yet. " + NEW_STATE,

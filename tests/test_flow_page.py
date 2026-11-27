@@ -2132,13 +2132,13 @@ class TheSliceOneOrderTest(unittest.TestCase):
         """P1067: the words of the radios, the Send of picks, its box, its wait and its answers, written by Python."""
         words = page_words([])
         self.assertEqual({name: words[name] for name in ("not_now", "picks_said", "send_picks", "choose_first", "picks_together",
-                                                          "waiting_picks", "ok_picks", "last_request_picks")},
+                                                          "waiting_picks", "ok_picks", "last_request_picks", "needs_join", "label_join")},
                          {"not_now": "not now", "picks_said": ["%d pick (%s)", "%d picks (%s)"], "send_picks": "Send %s",
                           "choose_first": "Choose a part first.",
                           "picks_together": "Spark checks the picks together. If one fails, spark saves none.",
                           "waiting_picks": "Sent at %s: %s. Nothing has run yet. To run it, type /spark:page in Claude Code.",
                           "ok_picks": "Saved as the picks. Nothing is built yet. Reload to see the new state.",
-                          "last_request_picks": "your picks"})
+                          "last_request_picks": "your picks", "needs_join": ", ", "label_join": ": "})
         not_offered = "the request names a step that spark does not offer now, so nothing ran"
         self.assertEqual(words["refused_picks"], dict(words["refused"], **{
             not_offered: "Nothing ran. Spark no longer offers one of these picks. Reload this page."}))

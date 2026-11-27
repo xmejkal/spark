@@ -278,7 +278,7 @@ watching that request's answer. The script watches the latest request by `at`, a
 page's own request, then the row `answers/<id>`.
 
 Several picks go in one row ([P1067](https://github.com/xmejkal/spark/issues/1565)). Each need's row in the parts fold, `<li class="need" data-need="…">`, is a radiogroup named by the need: "not now" first and checked, then a native radio per pick, labelled by its `part`. The browser keeps one choice per need, and a choice sends nothing. After the need rows one teal Send names the chosen picks, "Send 2 picks (display, button)", grey with "Choose a part first." under it while none is chosen.
-Its box says each pick, a line two picks share once, and "Spark checks the picks together. If one fails, spark saves none.". Its Send writes the row with `keys`, the chosen keys in the page's order, in place of `key`. While it waits the radios are grey and keep their choice, back after "Could not send" or Withdraw. The NOW line's pick keeps its one-click button.
+Its box says each pick, a line two picks share once, and "Spark checks the picks together. If one fails, spark saves none." Its Send writes the row with `keys`, the chosen keys in the page's order, in place of `key`. While it waits the radios are grey and keep their choice, back after "Could not send" or Withdraw. The NOW line's pick keeps its one-click button.
 
 The answer row holds `flow.py run-request`'s `data` unchanged ([a page request](#a-page-request)). The script says it in
 the page's words, after "Your last request, <its time in the browser's zone>: <its offer's label, else its kind's words (`request_kinds`), else `request_other`; for picks their count and needs, else "your picks">." (the request lives in the page's database, not in `show`): what ran ok by its kind, the step's first problem (`line`), spark's line for a step that ran and could not run, or why it could not run. A refusal shows as
@@ -343,7 +343,7 @@ offers' own steps: any problem saves none. The fingerprint comes first, so a sec
 once it ran, is stale. It runs the offer's step, its argv parsed by the Operation of its op. A step whose argv does not
 parse runs nothing. The values come from spark's offers, never from the request: a pick of each part for its need, the
 parts list with no `--dry-run` and no `--replies`, so it removes nothing, and the build of the project's `requirements.json`
-with `--keep` the project. The step writes what the offer's effect says. After any run, run `flow.py page`, so the page
+with `--keep` the project. The step writes what the offer's effect says. A deploy, a simulation, a look or a grant is never an offer here, so a request for one runs nothing. After any run, run `flow.py page`, so the page
 carries the new fingerprint (only the build writes the page by itself), and `flow.py show` for the next step.
 
 The envelope has `op` `run-request`. Its `data` holds:

@@ -55,7 +55,7 @@ function picksSaid(words, keys) {
     if (!offers.length || offers.some((offer) => !offer || !offer.need))
         return "";
     const said = words.picks_said[offers.length === 1 ? 0 : 1].replace("%d", () => String(offers.length));
-    return fill(said, offers.map((offer) => offer.need).join(", "));
+    return fill(said, offers.map((offer) => offer.need).join(words.needs_join));
 }
 /**
  * The label of a request: for picks, `picksSaid`, else `last_request_picks` (P1067); for a key, its offer's label on this
@@ -395,7 +395,7 @@ class PageView {
         offers.forEach((offer) => offer.says.forEach((said) => counts.set(said, (counts.get(said) || 0) + 1)));
         const lines = offers.map((offer) => {
             const alone = offer.says.filter((said) => counts.get(said) === 1);
-            return alone.length ? offer.label + ": " + alone.join(" ") : offer.label;
+            return alone.length ? offer.label + this.words.label_join + alone.join(" ") : offer.label;
         });
         const shared = [...counts.keys()].filter((said) => counts.get(said) > 1);
         this.confirm(row, this.picks.textContent, lines.concat(shared, this.words.picks_together), () => this.requests.sendPicks(keys));
