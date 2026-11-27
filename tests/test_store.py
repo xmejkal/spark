@@ -81,6 +81,30 @@ class TheHomeTest(unittest.TestCase):
             self.assertEqual(store.place("tools"), Path(second) / "tools.json")
 
 
+class TheDefaultStoreTest(unittest.TestCase):
+    """P1286: `default_store()` is the store's folder when no SPARK_HOME is set, whatever SPARK_HOME says; `home()` reads it
+    after SPARK_HOME. HOME and XDG_DATA_HOME are temp folders, never the person's."""
+
+    def setUp(self):
+        self.folder = Path(tempfile.mkdtemp()).resolve()
+        self.addCleanup(shutil.rmtree, self.folder, True)
+
+    def test_the_xdg_data_home_first(self):
+        env = {"HOME": str(self.folder / "h"), "XDG_DATA_HOME": str(self.folder / "xdg"), "SPARK_HOME": str(self.folder / "s")}
+        with mock.patch.dict(os.environ, env):
+            self.assertEqual(store.default_store(), self.folder / "xdg" / "spark")
+
+    def test_then_the_home_folder(self):
+        with mock.patch.dict(os.environ, {"HOME": str(self.folder / "h"), "SPARK_HOME": str(self.folder / "s")}):
+            os.environ.pop("XDG_DATA_HOME", None)
+            self.assertEqual(store.default_store(), self.folder / "h" / ".local" / "share" / "spark")
+
+    def test_home_is_the_default_store_with_no_spark_home(self):
+        with mock.patch.dict(os.environ, {"HOME": str(self.folder / "h"), "XDG_DATA_HOME": str(self.folder / "xdg")}):
+            os.environ.pop("SPARK_HOME", None)
+            self.assertEqual(store.home(), store.default_store())
+
+
 class AStorePathThatIsAFileTest(unittest.TestCase):
     """P496 (#678): a SPARK_HOME that names a file is a StoreError with the way out, never a traceback."""
 

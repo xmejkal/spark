@@ -11,11 +11,13 @@ from spark.flow.guide import stands_at_of
 
 
 # --- MVP ---
-class FlowReading(namedtuple("FlowReading", "name phases guide fingerprint deploy stamp artifact")):
+class FlowReading(namedtuple("FlowReading", "name phases guide fingerprint deploy stamp artifact steps", defaults=((),))):
     """Value: every fact of one read of a project's flow. `name` is the project folder's name, `phases` its Phases in
-    order, `guide` its guide (`guide_of`, P977), `fingerprint` its sha256 (`fingerprint_of`, P829), `deploy` the newest
-    board log (`deploy_reading.deploy_data`, P1043), `stamp` `{"newest": time or None}`, the newest change of the
-    fingerprint's files, and `artifact` the id of the Artifact the page is published as, or None (P829). It holds no path."""
+    order, `guide` its guide (`guide_of`, P977, with the line to type of `show_flow.with_command`, P1286), `fingerprint`
+    its sha256 (`fingerprint_of`, P829), `deploy` the newest board log (`deploy_reading.deploy_data`, P1043), `stamp`
+    `{"newest": time or None}`, the newest change of the fingerprint's files, `artifact` the id of the Artifact the page is
+    published as, or None (P829), and `steps` the NextSteps of its now (`show_flow.now_steps`), whose argv hold whole paths:
+    `show` puts them in `next`, so `to_dict` leaves them out."""
 
     __slots__ = ()
 

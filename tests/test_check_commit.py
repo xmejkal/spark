@@ -168,6 +168,27 @@ class TheGateNeedsNodeForThePageScriptTest(unittest.TestCase):
         self.assertIsNone(check_commit.node_refusal(None, lambda _name: None), "the full run")
 
 
+class TheGateNeedsTheShellsForThePasteTest(unittest.TestCase):
+    """P1286: test_paste_line skips a shell that is missing, and a skip is no pass, so a story run that holds it stops."""
+
+    story = staticmethod(TheGateNeedsNodeForThePageScriptTest.story)
+
+    def test_without_zsh_a_story_run_that_holds_the_paste_test_could_not_run(self):
+        self.assertEqual(check_commit.shell_refusal(self.story("test_core", "test_paste_line"),
+                                                    lambda name: None if name == "zsh" else "/bin/" + name),
+                         "could not run: the story run holds test_paste_line, which pastes the page's line into zsh, "
+                         "and zsh is not installed")
+
+    def test_without_bash_it_names_bash(self):
+        self.assertIn("bash is not installed", check_commit.shell_refusal(self.story("test_paste_line"),
+                                                                          lambda name: None if name == "bash" else "/bin/" + name))
+
+    def test_with_both_shells_or_without_the_paste_test_the_story_runs(self):
+        self.assertIsNone(check_commit.shell_refusal(self.story("test_paste_line"), lambda name: "/bin/" + name))
+        self.assertIsNone(check_commit.shell_refusal(self.story("test_core"), lambda _name: None))
+        self.assertIsNone(check_commit.shell_refusal(None, lambda _name: None), "the full run")
+
+
 #: The page script's four files (P1061), each from the root, and what a tree holds of them in the tests below.
 FLOW = "scripts/spark/flow/"
 PAGE_TS = {FLOW + "page_script.ts": "const a: number = 1;\n", FLOW + "page_script.js": "const a = 1;\n"}
