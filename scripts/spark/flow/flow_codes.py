@@ -361,7 +361,7 @@ REFUSED_PICKS = dict(REFUSED_SAYS, request_not_offered=REFUSED_PICKS_SAYS)
 NOT_RUN_MARK = "–"
 #: The NOW box's blocks to copy: a bold head (never a button) over a code box, and the owner's COPY, which never sends. A chat
 #: offer's (P1122) holds its tell; the deploy's run block (P1286, O4), also in `flow.py show`, its line, else NO_LINE_TO_TYPE_SAYS.
-ASK_CLAUDE, COPIED_SAYS = "Ask Claude", "Copied: paste it in Claude Code."
+ASK_CLAUDE, COPIED_SAYS, NOT_COPIED_SAYS = "Ask Claude", "Copied: paste it in Claude Code.", "Could not copy. Select the text and copy it."  # P1290: a refused Copy says so
 LINE_TO_TYPE_LABEL, COPIED_LINE_SAYS, NO_LINE_TO_TYPE_SAYS = "In your own terminal", "Copied: paste it in your own terminal.", "Ask Claude in the chat for this step's line: spark shows it here only for the default store, with the project and spark itself in your home folder."
 
 #: The page of the project (P827): its code when the file cannot be written, the words a status has no word for, and the
@@ -447,10 +447,11 @@ NOW_BUTTON = {REQUIREMENTS_NOW: "Write the parts list from your picks. " + USE_B
 BUILD_PARTIAL_NOW = "The build stopped. Ask Claude what stopped it and what to do."
 SHEET_NOW = "No wiring sheet yet. Ask Claude to build the board."
 SHEET_STALE_NOW = "The wiring sheet is out of date. Ask Claude to build the board again."
-#: The firmware with a current wiring sheet: two jobs in any order, and the count of the sheet's steps.
-TWO_JOBS_NOW = "Two jobs, in any order: wire the breadboard (%d steps, power off), and ask Claude to write the firmware. Spark cannot see your wiring. " + THIN_MAIN_RULE
+#: The firmware with a current wiring sheet: two jobs in any order, and the count of the sheet's steps. Three words stand once (P1290), next_words.py reuses them.
+TWO_JOBS_START, WIRING_UNSEEN_MESSAGE, WOKWI_COST_MESSAGE = "Two jobs, in any order: wire the breadboard (%d steps, power off),", "Spark cannot see your wiring.", "It uses Wokwi CI minutes."
+TWO_JOBS_NOW = TWO_JOBS_START + " and ask Claude to write the firmware. " + WIRING_UNSEEN_MESSAGE + " " + THIN_MAIN_RULE
 FIRMWARE_NOW = "Ask Claude in the chat to write the firmware for this board. " + THIN_MAIN_RULE
-SIMULATE_NOW = "Ask Claude for the scenario command, and run it in your terminal. It uses Wokwi CI minutes."
+SIMULATE_NOW = "Ask Claude for the scenario command, and run it in your terminal. " + WOKWI_COST_MESSAGE
 #: The simulate phase's closing hint is the same sentence (P979).
 SCENARIO_HINT = SIMULATE_NOW
 DEPLOY_NOW = ("When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then run the deploy "
@@ -517,7 +518,7 @@ IMAGE_NOW = {RUN_FAILED: ([BY_CLAUDE], RUN_FAILED_NOW), IMAGE_OLDER: ([BY_CLAUDE
              IMAGE_UNTESTED: ([BY_TERMINAL], SIMULATE_NOW)}
 #: SIMULATE_NOW while no scenario is written (P1034): Claude writes one first, and the terminal still runs it.
 SCENARIO_FIRST_NOW = ("No scenario is written yet, so ask Claude to write one first. Then ask for the scenario command, and "
-                      "run it in your terminal. It uses Wokwi CI minutes.")
+                      "run it in your terminal. " + WOKWI_COST_MESSAGE)
 #: The value a simulate's SCENARIO_FIRST_NOW is chosen by (P1133): no scenario is written. Its one CHAT_NOW row keeps the tell.
 NO_SCENARIO = "no-scenario"
 #: A simulate not started with no sim/wokwi.toml (P1034): the build writes it, so the sentence asks for the build.

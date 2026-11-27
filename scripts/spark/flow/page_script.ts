@@ -35,6 +35,7 @@ interface Words {
   cancel: string;
   copy: string;
   copied: string;
+  not_copied: string;
   copied_line: string;
   withdraw: string;
   command: string;
@@ -536,7 +537,7 @@ class PageView {
   /**
    * P1122: one Copy in each chat offer's block, after its tell, and P1286: one in the deploy's run block, after its line to
    * type. A click writes the block's `code` text to the clipboard and then says `copied`, or `copied_line` for the run
-   * block. It never sends and never touches the channel, and it is not among `buttons`, so a waiting request leaves it as
+   * block, and on a refusal or with no clipboard it says `not_copied` and can be clicked again (P1290). It never sends and never touches the channel, and it is not among `buttons`, so a waiting request leaves it as
    * it is.
    */
   drawAsks() {
@@ -552,10 +553,15 @@ class PageView {
 
   copyTell(tell: string, made: HTMLButtonElement, said: string) {
     const clipboard = this.win.navigator && this.win.navigator.clipboard;
-    if (!clipboard) return Promise.resolve();
+    if (!clipboard) {
+      made.textContent = this.words.not_copied;
+      return Promise.resolve();
+    }
     return clipboard.writeText(tell).then(() => {
       made.textContent = said;
-    }, () => {});
+    }, () => {
+      made.textContent = this.words.not_copied;
+    });
   }
 
   /** The confirm box in `item`: its title, its lines, Send, which closes it and does `send`, and Cancel. It scrolls into
