@@ -64,6 +64,7 @@ class FakeElement {
     Object.assign(this, { tag, attributes, children: [], listeners: {}, style: {}, textContent: "", hidden: false, disabled: false });
   }
   get tagName() { return this.tag.toUpperCase(); }
+  get firstChild() { return this.children[0] || null; }
   get lastChild() { return this.children[this.children.length - 1] || null; }
   getAttribute(name) { return Object.prototype.hasOwnProperty.call(this.attributes, name) ? this.attributes[name] : null; }
   setAttribute(name, value) { this.attributes[name] = String(value); }
@@ -459,6 +460,7 @@ test("P1067: each need gets native radios, not now first and checked, each label
   const labels = made.filter((element) => element.tag === "label");
   assert.deepEqual(labels.map(textOf), [" not now", " OLED 128", " LCD 1602", " not now", " Tactile 6 mm", " Tactile 12 mm"]);
   assert.equal(display.children[1], labels[0], "not now stands first, before the need's picks");
+  assert.equal(labels[1].parentNode.children[0], labels[1], "a pick's choice leads its row, as the design draws it");
   assert.deepEqual([labels[1].style.minHeight, labels[1].style.display], ["var(--button-height)", "inline-flex"]);
   choose(made, radio(OLED));
   assert.equal(db.rows.size, 0);
@@ -488,7 +490,7 @@ test("P1067: the Send box says each pick, a line they share once, and that spark
   const box = sendRow.children[2];
   assert.equal(box.attributes.role, "group");
   assert.deepEqual(box.children.map((child) => child.textContent), ["Send " + TWO_PICKS,
-    "Pick “OLED 128” for display Saves “OLED 128” as the pick.", "Pick “Tactile 6 mm” for button Saves “Tactile 6 mm” as the pick.",
+    "Pick “OLED 128” for display: Saves “OLED 128” as the pick.", "Pick “Tactile 6 mm” for button: Saves “Tactile 6 mm” as the pick.",
     STALE, "Spark checks the picks together. If one fails, spark saves none.", "Send", "Cancel"]);
 });
 

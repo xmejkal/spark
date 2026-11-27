@@ -319,8 +319,9 @@ class PageView {
             if (need) {
                 if (!needs.includes(need))
                     needs.push(this.drawNeed(need));
-                item.appendChild(this.doc.createTextNode(" "));
-                item.appendChild(this.radio(need, key, offer.part || offer.label));
+                // The choice leads its row, as the design draws it (P1067's look in Chrome, 27 Nov); the offer's words follow.
+                item.insertBefore(this.doc.createTextNode(" "), item.firstChild);
+                item.insertBefore(this.radio(need, key, offer.part || offer.label), item.firstChild);
                 return;
             }
             const made = this.button(offer.label, () => this.confirm(item, offer.label, offer.says, () => this.requests.send(key)));
@@ -392,7 +393,10 @@ class PageView {
         const offers = keys.map((key) => own(this.words.offers, key));
         const counts = new Map();
         offers.forEach((offer) => offer.says.forEach((said) => counts.set(said, (counts.get(said) || 0) + 1)));
-        const lines = offers.map((offer) => [offer.label].concat(offer.says.filter((said) => counts.get(said) === 1)).join(" "));
+        const lines = offers.map((offer) => {
+            const alone = offer.says.filter((said) => counts.get(said) === 1);
+            return alone.length ? offer.label + ": " + alone.join(" ") : offer.label;
+        });
         const shared = [...counts.keys()].filter((said) => counts.get(said) > 1);
         this.confirm(row, this.picks.textContent, lines.concat(shared, this.words.picks_together), () => this.requests.sendPicks(keys));
     }
