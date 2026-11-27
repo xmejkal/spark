@@ -416,6 +416,19 @@ class ThePhasesTest(FlowTest):
         self.assertEqual(said["data"]["stands_at"], "firmware")
         self.assertFalse([line for line in lines_of(project) if "✓ build" in line])
 
+    def test_a_simulation_skipped_for_a_pin_the_wokwi_part_lacks_says_its_codes_meaning(self):
+        # P999: the build phase says why, in the code's own words, and has no status, as any skipped simulation alone
+        said, code = show(a_project_built_with_no_simulation_now("pin_not_in_wokwi_part"))
+        self.assertEqual((code, statuses(said)["build"]), (0, None))
+        self.assertEqual(says(said, "build")[-1], "not simulated: the design wires a board pin that the board's Wokwi part has "
+                                                  "no pin for, so no diagram is written; the board built")
+
+    def test_every_part_skipped_and_a_code_the_build_does_not_know_keep_the_every_part_line(self):
+        for skipped in ("every_part_skipped", "no_such_code"):
+            with self.subTest(code=skipped):
+                said, _ = show(a_project_built_with_no_simulation_now(skipped))
+                self.assertEqual(says(said, "build")[-1], "every part is skipped from the simulation, so spark did not judge the diagram")
+
     def test_any_other_skipped_stage_makes_the_build_partly_done(self):
         for stages in ({"board": "ok", "footprint": "skipped", "build": "ok"},
                        {"board": "ok", "footprint": "skipped", "build": "ok", "simulation": "skipped"}):
@@ -689,13 +702,13 @@ def a_project_built_with_no_simulation(code="board_not_in_wokwi", status="could-
     return project
 
 
-def a_project_built_with_no_simulation_now():
+def a_project_built_with_no_simulation_now(code="board_not_in_wokwi"):
     """The same build as a_project_built_with_no_simulation's, recorded as the build ends it since P1207 (D11): the
-    simulation stage skipped with board_not_in_wokwi, and the record ok."""
+    simulation stage skipped with `code`, and the record ok."""
     project = a_built_project()
     record = BuildRecordStore(project).read()
     record["stages"] = [{"name": "board", "status": "ok"}, {"name": "build", "status": "ok"},
-                        {"name": "simulation", "status": "skipped", "code": "board_not_in_wokwi"}]
+                        {"name": "simulation", "status": "skipped", "code": code}]
     BuildRecordStore(project, clock=FakeClock()).write({key: value for key, value in record.items() if key not in ("schema", "at")})
     return project
 

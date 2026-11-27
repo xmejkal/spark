@@ -97,7 +97,7 @@ A phase that spark did not judge is never a pass, and a skipped stage is not one
 - A breadboard sheet that is current. Spark does not judge the wiring.
 - A build on the board alone, whose `build` stage is skipped. No board was built, and the breadboard phase has
   nothing to wire. A rebuild skips the same stages, so `stands_at` passes both phases and the build phase has no offer.
-- A build that ended `ok` and skipped only its `simulation` stage, because every part is skipped from the simulation (`every_part_skipped`) or because Wokwi has no model of the board (`board_not_in_wokwi`, P1207). The second one's build phase ends its `says` with the sentence of the guide's `no_simulation`, and the guide counts it as done.
+- A build that ended `ok` and skipped only its `simulation` stage, because every part is skipped from the simulation (`every_part_skipped`), because Wokwi has no model of the board (`board_not_in_wokwi`, P1207), or because the design wires a pin that the board's kept Wokwi definition lacks (`pin_not_in_wokwi_part`, [P999](https://github.com/xmejkal/spark/issues/1455)). The second one's build phase ends its `says` with the sentence of the guide's `no_simulation`, and the guide counts it as done. Any other code's build phase ends its `says` with that code's meaning (`build_codes.CODES`), such as `not simulated: the design wires a board pin that the board's Wokwi part has no pin for, so no diagram is written; the board built`, and `every_part_skipped`, or a code an older spark wrote, with `every part is skipped from the simulation, so spark did not judge the diagram`. The guide gives `pin_not_in_wokwi_part` no `no_simulation` and no `(no simulation)` note, because pinning each signal the build names fixes it. The build's stage `detail` names the pin, and the code's fix says how to move it.
 
 A build that ended `ok` and skipped any other stage is `partial`. No build does that today. With no log in
 `sim/runs/`, the simulate phase says to run a scenario. It blames an older spark only for a log that names no image.
@@ -357,7 +357,7 @@ The envelope has `op` `run-request`. Its `data` holds:
 - `line`: one sentence. For a step, its first problem or reason, or `ran <label>: ok` when it ended ok. For a refusal,
   the code's meaning below.
 - `note`: `null`, or one sentence beside an ok answer. A build that skipped only its simulation, for
-  `board_not_in_wokwi`, built the board, sheet and pin map, and the guide counts it done ([P1008](https://github.com/xmejkal/spark/issues/1467)).
+  `board_not_in_wokwi`, built the board, sheet and pin map, and the guide counts it done ([P1008](https://github.com/xmejkal/spark/issues/1467)). A build skipped for `pin_not_in_wokwi_part` (P999) is `ok` with no `note` today; read its stage's `detail` for the pin.
   Its `status` is `ok`, `line` is `ran <label>: ok` and `note` is that code's meaning. Since [P1207](https://github.com/xmejkal/spark/issues/1756) the build itself is `ok`,
   so the envelope has no `unchecked` item for it and the run exits 0, not 2. A parts-list write's `note` is its notes joined by `; `, only when ok, such as the
   entries it kept that no pick explains ([P1139](https://github.com/xmejkal/spark/issues/1674)). A pick's notes never reach it.

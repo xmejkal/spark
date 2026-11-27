@@ -112,6 +112,8 @@ FACT_MISSING_ENDING = StageEnding(build_codes.SIMULATION_FACT_MISSING, COULD_NOT
 #: A board Wokwi has no model of (P1207, D11): the stage had nothing to simulate, so it is skipped and the build exits 0.
 NO_WOKWI_PART_TYPE_ENDING = StageEnding(build_codes.BOARD_NOT_IN_WOKWI, SKIPPED,
                                         "the board record names no wokwi_part_type")
+#: A pad whose GPIO the board's kept Wokwi definition lacks (P999): skipped as above, with one line for each such pad.
+PIN_NOT_IN_WOKWI_PART_ENDING = StageEnding(build_codes.PIN_NOT_IN_WOKWI_PART, SKIPPED, "%s")
 CHIP_NOT_COMPILED_ENDING = StageEnding(build_codes.CHIP_NOT_COMPILED, COULD_NOT_RUN, "%s")
 #: A limit of the converter's mapping, not a defect in the design (audit B11): the converter's words follow.
 CONVERTER_LACKS_PART_ENDING = StageEnding(build_codes.CONVERTER_LACKS_PART, COULD_NOT_RUN,
@@ -146,7 +148,7 @@ BUILD = StageDefinition("build", "the board engine (tsci) builds board.tsx, and 
                          NOT_ROUTED_ENDING, BOARD_ONLY_ENDING))
 SIMULATION = StageDefinition("simulation", "the Wokwi diagram, its chips and wokwi.toml; no simulation runs",
                              (CONVERTER_MISSING_ENDING, FACT_MISSING_ENDING, NO_WOKWI_PART_TYPE_ENDING,
-                              CHIP_NOT_COMPILED_ENDING, TIMED_OUT_ENDING, CONVERTER_LACKS_PART_ENDING, NO_DIAGRAM_ENDING,
+                              PIN_NOT_IN_WOKWI_PART_ENDING, CHIP_NOT_COMPILED_ENDING, TIMED_OUT_ENDING, CONVERTER_LACKS_PART_ENDING, NO_DIAGRAM_ENDING,
                               DIAGRAM_UNWIRED_ENDING, EVERY_PART_SKIPPED_ENDING))
 CHECK_SPINE = StageDefinition("check_spine", "not a stage the build runs: an error of the run itself that no stage caught",
                               (CHECK_SPINE_CRASHED_ENDING,))

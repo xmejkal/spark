@@ -258,6 +258,31 @@ picture and `pins.py` are still written, and the run exits 0. A skipped stage is
 test the firmware on the board itself. To simulate it, name Wokwi's part for the board, or a devkit with the same chip
 and `wokwi_is_stand_in: true`.
 
+### Making a stand-in board
+
+The FireBeetle 2 ESP32-C6 was the first board made this way ([P999](https://github.com/xmejkal/spark/issues/1455)).
+
+1. Find a devkit with the same chip in Wokwi's registry, [wokwi/wokwi-boards](https://github.com/wokwi/wokwi-boards).
+2. Keep its `board.json` in your store with `parts.py --keep <file> --url <its URL at a commit>`, and cite the entry that
+   `--keep` gives back as `documents["wokwi-board"]`, with a title and the commit as the version. Wokwi's file is a vendor
+   file: it stays in the store and is never committed.
+3. Set the five keys: `wokwi_part_type` (the devkit's type), `wokwi_pin_naming: "gpio"`, `wokwi_power_pins` (each power
+   pad by the devkit's name for it, such as `"GND1": "GND.1"`), `wokwi_is_stand_in: true`, and `physical.wokwi_size_px`,
+   the file's millimetres at 96 dpi. Say in the `//wokwi_part_type` note what the devkit lacks and what it adds.
+4. Run `boards.py --validate`.
+5. Build. A design that wires a pad whose GPIO the kept definition lacks ends its simulation stage `skipped` with the code
+   `pin_not_in_wokwi_part`, before the converter runs, and the detail names the signal, the pad, the GPIO and the part:
+   `LED_STATUS_LED on D3 (GPIO14): Wokwi has no DFRobot FireBeetle 2 ESP32-C6, so it simulates a stand-in,
+   board-esp32-c6-devkitc-1, which has no pin on GPIO14`. Move that signal to a free pad with a `"signals"` entry,
+   `{"name": <the signal>, "pin": <the pad>}`, and build again. A bus line cannot be pinned that way. The assigner may
+   then put the next signal on the same pad: in the C6 clock, EPD_CS moved to D6 put EPD_DC on D3. Pin each signal that
+   the build names until none is named ([P1310](https://github.com/xmejkal/spark/issues/1885) makes the assigner take such
+   a pin last).
+   With no kept definition the guard says nothing, and the converter refuses the pin with its own words.
+6. A known gap: a devkit that names a pin by a word, as the C6 devkit names GPIO16 and GPIO17 `TX` and `RX`, passes the
+   guard, and the converter still refuses `"16"`. The assigner takes those pins last (a cost of 40), and a signal
+   pinned there by name passes the guard too ([P1312](https://github.com/xmejkal/spark/issues/1888)).
+
 Wokwi custom boards exist but are a browser-only feature (F1 → "Load custom board file"):
 `wokwi.toml` has no board key, and the simulator loads boards from a bundle Wokwi hosts. Getting
 a board supported headlessly means a PR to `wokwi/wokwi-boards`.

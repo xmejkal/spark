@@ -233,5 +233,96 @@ class TheBundleConvertsOnNodeTest(unittest.TestCase):
         self.assertEqual(set(pressed.component_ids) - set(sim_project.component_ids_in(self.out).ids), set())
 
 
+#: P999: the FireBeetle 2 C6 record with its Wokwi stand-in, the ESP32-C6 DevKitC-1 (tests/data/stand-in-c6).
+STAND_IN_C6 = ROOT / "tests" / "data" / "stand-in-c6"
+#: A design's LED, as a mapping names it for the converter.
+LED = {"wokwiType": "wokwi-led", "pins": {"A": "A", "C": "C"}}
+
+
+class TheC6StandInConvertsOnNodeTest(unittest.TestCase):
+    """
+    P999, a characterization of the shipped bundle on the C6 stand-in: a pad's Wokwi name is its GPIO number, the serial
+    monitor takes the devkit's TX and RX, D3 (GPIO14) is refused because the devkit has no pin 14, and the board-only
+    path wires the board's own LED and button to pins the devkit has, so that path needs no guard.
+    """
+
+    write_circuit = TheBundleConvertsOnNodeTest.write_circuit  # the helper alone: a subclass would run the parent's tests twice
+
+    def setUp(self):
+        import tempfile
+        here = Path(tempfile.mkdtemp())
+        self.circuit, self.out, self.chips, self.mapping = here / "circuit.json", here / "diagram.json", here / "chips", here / "wokwi-mapping.json"
+        self.chips.mkdir()
+
+    def convert(self, *source):
+        """The bundle on `source` (["--circuit", path] or ["--netlist", path], and what follows), with the C6 record."""
+        import os
+        env = dict(os.environ, SPARK_BOARD_JSON=str(STAND_IN_C6 / "boards" / "firebeetle2-esp32c6.json"))
+        return subprocess.run(node() + [str(BUNDLE), *source, "--out", str(self.out), "--chips", str(self.chips),
+                                        "--mapping", str(self.mapping)],
+                              cwd=str(self.chips.parent), capture_output=True, text=True, timeout=120, env=env)
+
+    def onboard_input(self, extra_mapping=None):
+        """The netlist of the board's own LED and button, as the build writes it, and the mapping beside it."""
+        import json
+        from spark.build import board_alone_input
+        from spark.records import board_records
+        from spark.records.onboard_parts import OnboardPartReader
+        reader = OnboardPartReader(board_records.load(STAND_IN_C6, "firebeetle2-esp32c6"))
+        files, why = board_alone_input.make_converter_input(reader.parts(), reader.ground(), ROOT)
+        self.assertIsNone(why)
+        self.mapping.write_text(json.dumps(dict(files["wokwi-mapping.json"], **(extra_mapping or {}))))
+        netlist = self.out.parent / "netlist.json"
+        netlist.write_text(json.dumps(files["netlist.json"]))
+        return netlist
+
+    def wires(self):
+        import json
+        return [wire[:2] for wire in json.loads(self.out.read_text())["connections"]]
+
+    def led_on(self, pad):
+        """The converter's run on a circuit of one LED on `pad`, and the mapping that makes it a Wokwi LED."""
+        import json
+        self.write_circuit({"Mcu": [pad, "GND1"], "Led": ["A", "C"]},
+                           [("LED", ["Mcu:%s" % pad, "Led:A"]), ("GND", ["Mcu:GND1", "Led:C"])])
+        self.mapping.write_text(json.dumps({"Led": LED}))
+        return self.convert("--circuit", str(self.circuit))
+
+    @unittest.skipUnless(node(), "node is not installed")
+    def test_a_pad_is_wired_by_its_gpio_number_and_the_serial_monitor_by_tx_and_rx(self):
+        done = self.led_on("SDA")
+        self.assertEqual(done.returncode, 0, done.stderr + done.stdout)
+        wires = self.wires()
+        self.assertIn(["mcu:19", "led:A"], wires)
+        self.assertIn(["mcu:TX", "$serialMonitor:RX"], wires)
+        self.assertIn(["mcu:RX", "$serialMonitor:TX"], wires)
+
+    @unittest.skipUnless(node(), "node is not installed")
+    def test_d3_is_refused_because_the_devkit_has_no_pin_14(self):
+        done = self.led_on("D3")
+        self.assertNotEqual(done.returncode, 0, done.stdout)
+        self.assertIn('"14" is not a pin of board-esp32-c6-devkitc-1', done.stderr + done.stdout)
+
+    @unittest.skipUnless(node(), "node is not installed")
+    def test_the_board_only_path_wires_the_boards_own_led_and_button_to_pins_the_devkit_has(self):
+        # as `build_service.board_alone` runs it: the netlist alone, no circuit
+        done = self.convert("--netlist", str(self.onboard_input()))
+        self.assertEqual(done.returncode, 0, done.stderr + done.stdout)
+        self.assertIn(["mcu:15", "onboard_led:A"], self.wires())
+        self.assertIn(["mcu:9", "onboard_button:1.l"], self.wires())
+
+    @unittest.skipUnless(node(), "node is not installed")
+    def test_the_full_build_adds_the_boards_own_led_and_button_beside_a_part(self):
+        # as `BuildService._simulation` runs it on a stand-in board: the circuit, then --add-netlist (P792)
+        self.write_circuit({"Mcu": ["D6", "GND1"], "Led": ["A", "C"]},
+                           [("LED", ["Mcu:D6", "Led:A"]), ("GND", ["Mcu:GND1", "Led:C"])])
+        netlist = self.onboard_input({"Led": LED})
+        done = self.convert("--circuit", str(self.circuit), "--add-netlist", str(netlist))
+        self.assertEqual(done.returncode, 0, done.stderr + done.stdout)
+        self.assertIn(["mcu:1", "led:A"], self.wires())
+        self.assertIn(["mcu:15", "onboard_led:A"], self.wires())
+        self.assertIn(["mcu:9", "onboard_button:1.l"], self.wires())
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -27,15 +27,34 @@ from spark.flow.write_flow_page import write_kept_page
 
 #: What the closing line adds when a full build's simulation stage is skipped: every part's record skips the simulation (P778).
 EVERY_PART_SKIPPED_LINE = "; every part is skipped from the simulation, so the diagram holds none of the project's parts"
-#: The closing line's addition by the skipped simulation stage's code: a board with no Wokwi part (P1207) says its code's
-#: own meaning. A skipped simulation stage has one of these two codes today. The fallback keeps the old line for any other.
-SKIPPED_SIMULATION_LINES = {build_codes.EVERY_PART_SKIPPED: EVERY_PART_SKIPPED_LINE,
-                            build_codes.BOARD_NOT_IN_WOKWI: "; " + build_codes.BOARD_NOT_IN_WOKWI.meaning}
 
 
 def skipped_line(stages):
-    """What the closing line of an ok full build adds for its skipped stage, or "" when no stage is skipped."""
-    return next((SKIPPED_SIMULATION_LINES.get(stage.code, EVERY_PART_SKIPPED_LINE) for stage in stages if stage.status == SKIPPED), "")
+    """What the closing line of an ok full build adds for its skipped stage, or "" when no stage is skipped: the skipped
+    code's own meaning (P1207, P999), and EVERY_PART_SKIPPED_LINE for every_part_skipped or a code CODES lacks."""
+    skipped = [stage.code for stage in stages if stage.status == SKIPPED]
+    if not skipped:
+        return ""
+    meaning = None if skipped[0] == build_codes.EVERY_PART_SKIPPED else build_codes.CODES.get(skipped[0])
+    return "; " + meaning if meaning else EVERY_PART_SKIPPED_LINE
+
+
+#: The skipped codes whose closing line opens with the code's meaning (P999): a pin the Wokwi part lacks is fixed in the
+#: design, so the line must not open as a pass.
+MEANING_FIRST = (build_codes.PIN_NOT_IN_WOKWI_PART,)
+#: That closing line, filled with the code's meaning.
+MEANING_FIRST_LINE = "  %s; the chain runs end to end up to the simulation"
+
+
+def ok_line(stages):
+    """The closing line of a build that exits 0: the board alone, a skipped code of MEANING_FIRST with its meaning first,
+    or the chain run end to end with what `skipped_line` adds."""
+    if skipped_the_build(stages):
+        return "  the chain runs end to end for the board alone: nothing to wire, so no board was built"
+    skipped = [stage.code for stage in stages if stage.status == SKIPPED]
+    if skipped and skipped[0] in MEANING_FIRST:
+        return MEANING_FIRST_LINE % build_codes.CODES[skipped[0]]
+    return "  the chain runs end to end" + skipped_line(stages)
 
 
 def render(stages, code, unserved=()):
@@ -45,8 +64,7 @@ def render(stages, code, unserved=()):
         lines.append("  [%s] %-16s %s" % (mark[stage.status], stage.name, stage.detail))
     lines.append("")
     lines.append({
-        EXIT_OK: "  the chain runs end to end" + (" for the board alone: nothing to wire, so no board was built" if skipped_the_build(stages)
-                                                  else skipped_line(stages)),
+        EXIT_OK: ok_line(stages),
         EXIT_PROBLEMS: "  the chain is broken",
         EXIT_COULD_NOT_RUN: "  the chain was NOT exercised — this is not a pass",
     }[code] + (" — but not every need is on the board: %s" % ", ".join(unserved) if unserved and code == EXIT_OK else ""))

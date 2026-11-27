@@ -3515,7 +3515,8 @@ class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
         "file_refused", "tools_list_broken",  # P1058: a tools file the engine lookup cannot read, or no tools list
         "tool_cannot_build", "design_not_built", "stage_timed_out", "part_stranded", "design_not_built", "not_routed",
         "simulation_fact_missing", "diagram_unwired", "every_part_skipped", "chip_not_compiled",
-        "board_not_in_wokwi", "board_only", "simulation_fact_missing",  # P977: the board with no Wokwi part has its own code
+        "board_not_in_wokwi", "pin_not_in_wokwi_part",  # P977: the board with no Wokwi part has its own code; P999: a pin it lacks
+        "board_only", "simulation_fact_missing",
         "broken.code", "stage_timed_out", "stage_crashed",
     ]
 
@@ -3613,6 +3614,27 @@ class AnAllSkippedSimulationKeepsTheBuildTest(unittest.TestCase):
                          "  the chain runs end to end for the board alone: nothing to wire, so no board was built")
         self.assertEqual(build_board.render([Stage("build", check_spine.OK, "x"), Stage("simulation", check_spine.OK, "y")], check_spine.EXIT_OK).splitlines()[-1],
                          "  the chain runs end to end")
+
+    def closing_line(self, code):
+        """The closing line of an ok full build whose simulation stage was skipped with `code`."""
+        stages = [Stage("build", check_spine.OK, "3 trace(s)"), Stage("simulation", check_spine.SKIPPED, "x", code)]
+        return build_board.render(stages, check_spine.EXIT_OK).splitlines()[-1]
+
+    def test_a_skipped_simulation_says_its_codes_meaning_and_not_simulated_first(self):
+        # P999: a pin the Wokwi part lacks says its own words first, never "every part is skipped" and never the pass phrase first
+        said = self.closing_line("pin_not_in_wokwi_part")
+        self.assertEqual(said, "  not simulated: the design wires a board pin that the board's Wokwi part has no pin for, so no "
+                               "diagram is written; the board built; the chain runs end to end up to the simulation")
+
+    def test_every_part_skipped_and_the_board_with_no_wokwi_part_keep_their_words(self):
+        self.assertEqual(self.closing_line("every_part_skipped"),
+                         "  the chain runs end to end; every part is skipped from the simulation, so the diagram holds none of the project's parts")
+        self.assertEqual(self.closing_line("board_not_in_wokwi"),
+                         "  the chain runs end to end; the board's record names no Wokwi part, so Wokwi has no model of it and nothing is simulated")
+
+    def test_a_code_the_build_does_not_know_keeps_the_old_line(self):
+        self.assertEqual(self.closing_line("no_such_code"),
+                         "  the chain runs end to end; every part is skipped from the simulation, so the diagram holds none of the project's parts")
 
 
 

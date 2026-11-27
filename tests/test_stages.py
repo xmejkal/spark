@@ -65,6 +65,8 @@ ENDS_AS = {
     # P977: a board Wokwi has no model of has its own code, so the flow's guide can pass that build and no other.
     # P1207 (D11): the stage is skipped with that code, never could-not-run, so the build exits 0
     ("simulation", "NO_WOKWI_PART_TYPE_ENDING"): ("board_not_in_wokwi", "skipped"),
+    # P999: a pin the board's kept Wokwi definition lacks is skipped the same way, with its own code
+    ("simulation", "PIN_NOT_IN_WOKWI_PART_ENDING"): ("pin_not_in_wokwi_part", "skipped"),
     ("simulation", "CHIP_NOT_COMPILED_ENDING"): ("chip_not_compiled", "could-not-run"),
     ("simulation", "TIMED_OUT_ENDING"): ("stage_timed_out", "could-not-run"),
     ("simulation", "CONVERTER_LACKS_PART_ENDING"): ("converter_lacks_part", "could-not-run"),
