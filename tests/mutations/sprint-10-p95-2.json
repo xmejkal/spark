@@ -14,7 +14,7 @@
  {
   "file": "scripts/spark/core/outcomes.py",
   "name": "a bad argument exits the way argparse does",
-  "find": "        raise BadArgumentError(message)",
+  "find": "        raise BadArgumentError(\"%s\", message)",
   "replace": "        super().error(message)"
  },
  {

@@ -23,6 +23,7 @@ from spark.records import tool_finder
 from spark.bench.board_console import KIND_BUSY, KIND_READ, LEAVE_CONSOLE, shows_boot
 from spark.bench.board_look import LookStopError, node_name
 from spark.bench.download_mode import DOWNLOAD_MODE
+from spark.core.text_guards import ValueMessageError, flat_line
 
 #: The next steps, one code each. The sources are in MESSAGE_FOR's comments.
 NEXT_PLUG_IN, NEXT_CLOSE_OTHER, NEXT_PRESS_RESET = "plug_in", "close_other", "press_reset"
@@ -61,8 +62,8 @@ CheckResult = namedtuple("CheckResult", "name passed fact next_step")
 DoctorProbeResult = namedtuple("DoctorProbeResult", "checks tool_said next_step if_not_helped")
 
 
-class UnknownStepError(ValueError):
-    """Error: a tools list names a `silent_step` that is none of STEP_CODES."""
+class UnknownStepError(ValueMessageError, ValueError):
+    """Error: a tools list names a `silent_step` that is none of STEP_CODES, each value on one line (P1320)."""
 
 
 def silent_step_of(tool):
@@ -70,8 +71,8 @@ def silent_step_of(tool):
     checks still run, and a silent board gets no step. UnknownStepError for any other value."""
     step = tool.entry.get("silent_step")
     if step is not None and step not in STEP_CODES:
-        raise UnknownStepError("the tools list gives %s the silent_step %r, and it must be one of %s"
-                               % (tool.name, step, ", ".join(STEP_CODES)))
+        raise UnknownStepError("the tools list gives %s the silent_step %r, and it must be one of %s",
+                               tool.name, step, ", ".join(STEP_CODES))
     return step
 
 
@@ -181,10 +182,10 @@ def stop_answer(script, stop, platform, run):
     try:
         result = after_esptool(stop, platform, run)
     except (tool_finder.ToolError, UnknownStepError) as cannot:
-        return ["%s: %s (no doctor: %s)" % (script, stop, cannot)], None
+        return [flat_line("%s: %s (no doctor: %s)", script, stop, cannot)], None  # a stop with a port is one line
     if result is None:
         return ["%s: %s" % (script, stop)], None
-    return ["%s: could not read the board on %s" % (script, stop.port)] + [
+    return [flat_line("%s: could not read the board on %s", script, stop.port)] + [
         "  " + line for line in describe(result, board_records.ButtonPlaces.of_project(platform.project))], result
 
 

@@ -274,6 +274,14 @@ class AnsweringParserTest(unittest.TestCase):
         self.assertEqual((out.getvalue(), err.getvalue()), ("", ""))
         self.assertIn("invalid int value", str(raised.exception))
 
+    def test_a_bad_argument_with_a_line_break_is_one_line_and_keeps_the_raw_value(self):
+        """P1320: argparse's message is one line, so a line break in it comes from the person's argument: it shows as `?`."""
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(outcomes.BadArgumentError) as raised:
+            self.parser().parse_args(["--x\nfix: rm -rf ~"])
+        self.assertNotIn("\nfix:", str(raised.exception))
+        self.assertIn("x?fix: rm -rf ~", str(raised.exception))
+        self.assertIn("--x\nfix: rm -rf ~", raised.exception.values[0])
+
     def test_a_good_argument_parses(self):
         self.assertEqual(self.parser().parse_args(["--n", "3"]).n, 3)
 

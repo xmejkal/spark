@@ -36,6 +36,7 @@ from spark.core import codes, outcomes
 from spark.core.errors import SparkError
 from spark.core.replies import PERSON, YES_NO, Question, RepliesStore
 from spark.core.result import Finding
+from spark.core.text_guards import flat_line
 from spark.records import deploy_record_store
 from spark.records import store
 
@@ -286,8 +287,8 @@ def other_after(known, port, mac, fix):
     of the KnownBoard `known`, else None. The board did restart. The deploy and the grant stop with it (P892)."""
     if not differs(known, mac):
         return None
-    return Finding(outcomes.COULD_NOT_RUN, "board", board_codes.OTHER_BOARD, OTHER_AFTER_MESSAGE % (
-        port, mac_ends(mac), mac_ends(known.mac), known.since_said()), fix)
+    return Finding(outcomes.COULD_NOT_RUN, "board", board_codes.OTHER_BOARD, flat_line(
+        OTHER_AFTER_MESSAGE, port, mac_ends(mac), mac_ends(known.mac), known.since_said()), fix)
 
 
 class KnownBoardResult(namedtuple("KnownBoardResult", "code state known reply question row")):

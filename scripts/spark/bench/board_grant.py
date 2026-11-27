@@ -173,12 +173,14 @@ def may_be_mac(serial):
 
 class GrantRefusedError(GateClosedError):
     """Error: no grant, for one of the WHY_ codes. Its exit code is 1, a refusal, as the deploy gate's stops are, or 2
-    for a code in COULD_NOT_RUN_WHYS."""
+    for a code in COULD_NOT_RUN_WHYS. Its one argument is the WHY_ code, not a template as its base class takes, so the
+    `of_lines` and `of_error` it inherits do not apply to it. A raise gives it as `why=`, so rule V1 does not count the
+    name as a template (P1320)."""
 
     def __init__(self, why):
         said = MESSAGE_FOR[why] + (ALLOW_AGAIN % shlex.quote(printable(str(GrantStore.disallowed_path())))
                                    if why == WHY_DIRECT_FLASHING_DISALLOWED else "")
-        super().__init__(said, EXIT_COULD_NOT_RUN if why in COULD_NOT_RUN_WHYS else EXIT_PROBLEMS, reason=CODE_FOR_WHY[why])
+        super().__init__("%s", said, code=EXIT_COULD_NOT_RUN if why in COULD_NOT_RUN_WHYS else EXIT_PROBLEMS, reason=CODE_FOR_WHY[why])
         self.why = why
 
 
@@ -224,7 +226,7 @@ class GrantStore:
             return store.write_mark("grants", DIRECT_FLASHING_DISALLOWED, text)
 
     def find(self, mac, scope=SCOPE_LIVE):
-        """The Grant of this `scope` kept for this MAC, or None when there is none. GrantRefusedError(WHY_NOT_A_GRANT)
+        """The Grant of this `scope` kept for this MAC, or None when there is none. GrantRefusedError(why=WHY_NOT_A_GRANT)
         when the file is there but holds no grant of this scope for this MAC."""
         path = self.path_of(mac, scope)
         if not mac_key(mac) or not path.is_file():
@@ -232,11 +234,11 @@ class GrantStore:
         try:
             grant = Grant(**json.loads(path.read_text()))
         except (OSError, ValueError, TypeError, RecursionError):  # P919: a deeply nested file is refused, not a crash
-            raise GrantRefusedError(WHY_NOT_A_GRANT)
+            raise GrantRefusedError(why=WHY_NOT_A_GRANT)
         if not isinstance(grant.mac, str) or grant.scope != scope or mac_key(grant.mac) != mac_key(mac) \
                 or not isinstance(grant.no_simulation, bool) \
                 or grant.board_token != board_look.board_token(mac_key(mac)):
-            raise GrantRefusedError(WHY_NOT_A_GRANT)
+            raise GrantRefusedError(why=WHY_NOT_A_GRANT)
         return grant
 
 
@@ -259,8 +261,8 @@ class StandingConsentStrategy(ConsentStrategy):
 
     def require_ready(self):
         if self.grant.why_not_valid(self.now()):
-            raise GateClosedError("the deploy grant ended before the erase. not flashed. The person runs %s again"
-                                  % DEPLOY_GRANT_COMMAND, reason=board_codes.GRANT_ENDED)
+            raise GateClosedError("the deploy grant ended before the erase. not flashed. The person runs %s again",
+                                  DEPLOY_GRANT_COMMAND, reason=board_codes.GRANT_ENDED)
 
     def ask(self, question):
         self.require_ready()
@@ -285,30 +287,30 @@ class GrantService:
         touched while the store disallows direct flashing. Raises GrantRefusedError, board_look.LookStopError, or
         GateClosedError when consent cannot ask. It saves nothing then."""
         if not 1 <= minutes <= MAX_MINUTES:
-            raise GrantRefusedError(WHY_BAD_MINUTES)
+            raise GrantRefusedError(why=WHY_BAD_MINUTES)
         if scope not in SCOPES:
-            raise GrantRefusedError(WHY_BAD_SCOPE)
+            raise GrantRefusedError(why=WHY_BAD_SCOPE)
         if scope == SCOPE_DEPLOY and not consent.opens_erase:  # P675: before the board is touched
-            raise GrantRefusedError(WHY_RELAYED_YES)
+            raise GrantRefusedError(why=WHY_RELAYED_YES)
         if no_simulation and scope != SCOPE_DEPLOY:  # P1029: before the board is touched
-            raise GrantRefusedError(WHY_BAD_SCOPE)
+            raise GrantRefusedError(why=WHY_BAD_SCOPE)
         if no_simulation and not self.grants.direct_flashing_allowed():
-            raise GrantRefusedError(WHY_DIRECT_FLASHING_DISALLOWED)
+            raise GrantRefusedError(why=WHY_DIRECT_FLASHING_DISALLOWED)
         board = self.finder.require_one_board("grant.py", port)
         if scope == SCOPE_LIVE and not may_be_mac(board.serial):  # P892, decision 6: before the board is touched
-            raise GrantRefusedError(WHY_SERIAL_NOT_MAC)
+            raise GrantRefusedError(why=WHY_SERIAL_NOT_MAC)
         consent.require_ready()
         before_look(board)
         mac = mac_key(self.reader.read(port or board.device).mac)  # P892: the port the person named, a tty. one too
         if not mac:
-            raise GrantRefusedError(WHY_NO_MAC)
+            raise GrantRefusedError(why=WHY_NO_MAC)
         if scope == SCOPE_LIVE and mac_key(board.serial) != mac:  # a deploy grant is found by the look's MAC instead
-            raise GrantRefusedError(WHY_SERIAL_NOT_MAC)
+            raise GrantRefusedError(why=WHY_SERIAL_NOT_MAC)
         token = board_look.board_token(mac)
         question = (DEPLOY_NO_SIMULATION_QUESTION if no_simulation else
                     (DEPLOY_QUESTION if scope == SCOPE_DEPLOY else LIVE_QUESTION)) % (mac, token, minutes)
         if not consent.ask(question):
-            raise GrantRefusedError(WHY_ANSWERED_NO)
+            raise GrantRefusedError(why=WHY_ANSWERED_NO)
         now = self.now()
         grant = Grant(mac, token, consent.granted_by(self.user_name), stamp(now), stamp(now + datetime.timedelta(minutes=minutes)), scope,
                       no_simulation is True)

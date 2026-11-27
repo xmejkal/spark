@@ -31,7 +31,7 @@ def record_of(project):
             raise OSError("it is not a file")
         return board_records.load(project)
     except (OSError, ValueError, AttributeError, board_records.BoardError) as cannot:
-        raise DeployError("the board's chip cannot be read from %s: %s" % (requirements, cannot), reason=board_codes.CHIP_UNKNOWN)
+        raise DeployError("the board's chip cannot be read from %s: %s", requirements.absolute(), cannot, reason=board_codes.CHIP_UNKNOWN)
 
 
 #: How spark finds mpremote and esptool, said once for the `--help` of the look and the deploy (P1264).

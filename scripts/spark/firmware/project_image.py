@@ -9,6 +9,7 @@ import functools
 import hashlib
 
 from spark.core import outcomes
+from spark.core.text_guards import ValueMessageError, flat_line
 from spark.records import folder_walk
 from spark.firmware import firmware_codes, image_builder, scenario_steps, sim_project
 
@@ -22,12 +23,13 @@ NO_SIMULATION_HINT = "or, with no simulation, the board is the test: %srun look.
 
 
 # --- MVP ---
-class DeployError(Exception):
-    """Error: why the image cannot go on the board yet. The message is the whole sentence. `reason` is the code that names the
-    cause, firmware_codes' here and board_codes' in the bench, a required keyword, so no raise site goes without one (P433)."""
+class DeployError(ValueMessageError):
+    """Error: why the image cannot go on the board yet, a template and its values, each value on one line (P1320). `reason`
+    is the code that names the cause, firmware_codes' here and board_codes' in the bench, a required keyword, so no raise
+    site goes without one (P433). A sentence of a masked code names the project absolute, so Privacy masks it."""
 
-    def __init__(self, message, *, reason):
-        super().__init__(message)
+    def __init__(self, template, *values, reason):
+        super().__init__(template, *values)
         self.reason = reason
 # --- end MVP ---
 
@@ -46,20 +48,20 @@ class ProjectImage:
         if toml.is_file():
             named = sim_project.firmware_in(toml)
             if named.state == outcomes.NOT_CHECKED:
-                raise DeployError("sim/wokwi.toml %s%s" % (named.why, named.fix()), reason=firmware_codes.FIRMWARE_LINE_BAD)
+                raise DeployError("sim/wokwi.toml %s%s", named.why, named.fix(), reason=firmware_codes.FIRMWARE_LINE_BAD)
             self.path = toml.parent / (named.name or sim_project.DEFAULT_IMAGE)
-            outside = sim_project.why_outside_sim(toml.parent, self.path)
+            outside = sim_project.why_outside_sim(toml.parent, self.path, absolute=True)  # P1320: masked as <project>
             if outside:
-                raise DeployError(outside, reason=firmware_codes.FIRMWARE_LINE_BAD)
+                raise DeployError("%s", outside, reason=firmware_codes.FIRMWARE_LINE_BAD)
         elif default_without_toml:
             self.path = toml.parent / sim_project.DEFAULT_IMAGE
         else:
-            raise DeployError("no sim/wokwi.toml in %s: build with /spark:build --keep . first" % project,
+            raise DeployError("no sim/wokwi.toml in %s: build with /spark:build --keep . first", project.absolute(),
                               reason=firmware_codes.NO_SIM_TOML)
         if not self.path.is_file():
             build = BUILD_IMAGE_HINT % image_builder.build_command(project, self.path)
-            raise DeployError("no %s yet: run a scenario first (run_scenario.py), which writes the image and tests it, "
-                              % self.path + NO_SIMULATION_HINT % (build + ", then "), reason=firmware_codes.NO_IMAGE)
+            raise DeployError("no %s yet: run a scenario first (run_scenario.py), which writes the image and tests it, %s",
+                              self.path, NO_SIMULATION_HINT % (build + ", then "), reason=firmware_codes.NO_IMAGE)
         self.project = project
         #: run_scenario.py writes every log here, in whichever sub-folder of sim/ the image is
         self.runs = project / "sim" / "runs"
@@ -81,7 +83,7 @@ class ProjectImage:
             try:
                 records.append((log,) + scenario_steps.run_record(log))
             except OSError as cannot:
-                raise DeployError("cannot read %s: %s" % (log, cannot), reason=firmware_codes.LOG_UNREADABLE)
+                raise DeployError("cannot read %s: %s", log.absolute(), cannot, reason=firmware_codes.LOG_UNREADABLE)
         return records
 
     def why_untested(self):
@@ -94,12 +96,12 @@ class ProjectImage:
         named = [(log, verdict) for log, verdict, sha256 in logs if sha256 == self.sha256]
         failed = self.failed_runs(logs)
         if failed:
-            return ("%s did not pass on this image (verdict: %s): deploy.py flashes only an image that passed"
-                    % (failed[0][0].name, failed[0][1]))
+            return flat_line("%s did not pass on this image (verdict: %s): deploy.py flashes only an image that passed",
+                             failed[0][0].name, failed[0][1])
         if not named:
             older = ", and a log from an older spark names no image" if any(sha256 is None for _, _, sha256 in logs) else ""
-            return ("no run in sim/runs/ tested %s as it is now%s: %s with run_scenario.py, "
-                    % (self.path.name, older, "run its scenario again" if logs else "run a scenario") + NO_SIMULATION_HINT % "")
+            return flat_line("no run in sim/runs/ tested %s as it is now%s: %s with run_scenario.py, %s", self.path.name, older,
+                             "run its scenario again" if logs else "run a scenario", NO_SIMULATION_HINT % "")
         return None
 
     def failed_runs(self, logs=None):
@@ -134,8 +136,8 @@ class ProjectImage:
         older = [name for name, sha256 in logs if not sha256]
         said = []
         if others:
-            said.append("%s tested another image, not this one" % ", ".join(others))
+            said.append(flat_line("%s tested another image, not this one", ", ".join(others)))
         if older:
-            said.append("%s %s no image (an older spark)" % (", ".join(older), "names" if len(older) == 1 else "name"))
+            said.append(flat_line("%s %s no image (an older spark)", ", ".join(older), "names" if len(older) == 1 else "name"))
         again = "that scenario" if len(logs) == 1 else "those scenarios"
         return "%s: run %s again to test this one" % (", and ".join(said), again)

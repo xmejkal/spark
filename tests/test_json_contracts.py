@@ -385,8 +385,11 @@ class TheBenchCodesTableTest(unittest.TestCase):
 
     def test_every_why_a_site_raises_a_grant_refusal_with_has_a_code(self):
         tree = ast.parse(Path(board_grant.__file__).read_text())
-        raised = {node.args[0].id for node in ast.walk(tree) if isinstance(node, ast.Call) and node.args
-                  and getattr(node.func, "id", "") == "GrantRefusedError" and isinstance(node.args[0], ast.Name)}
+        # P1320: GateClosedError is a ValueMessageError, so V1 counts a name given by position, and a site names its why
+        # as `why=`; the scan reads both forms
+        calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "GrantRefusedError"]
+        given = [node.args[0] if node.args else next((each.value for each in node.keywords if each.arg == "why"), None) for node in calls]
+        raised = {each.id for each in given if isinstance(each, ast.Name)}
         self.assertTrue(raised, "the scan found no raise site")
         self.assertEqual(sorted(name for name in raised if getattr(board_grant, name) not in board_grant.CODE_FOR_WHY), [])
 

@@ -29,7 +29,7 @@ from spark.core.events import Event
 from spark.core.operation import ASKS, BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
 from spark.core.privacy import PastedLine
 from spark.core.result import Finding, OperationResult
-from spark.core.text_guards import guard_lines, guard_sentence, printable
+from spark.core.text_guards import flat_line, guard_lines, guard_sentence, printable
 
 # --- MVP ---
 #: The lines of a refusal name the script that printed them before the core, so they read the same from every frontend.
@@ -91,7 +91,7 @@ class IssueGrant(Operation):
             reader = known_board.ComparingBoardReader(platform.make_board_reader(outside.run, flasher.EsptoolFlasher.boot_hint_for(places)),
                                                       self.board_question.known_store, known_board.GRANT, project)  # P892, decision 10
             issued = board_grant.GrantService(finder, reader, now=outside.clock.now).issue(
-                port, minutes, outside.make_consent(self._rerun_line(minutes, scope, project, port, no_simulation)),
+                port, minutes, outside.make_consent(flat_line("%s", self._rerun_line(minutes, scope, project, port, no_simulation))),
                 no_simulation=no_simulation, before_look=ask_then_tell, scope=scope)
         except known_board.BoardQuestionError as stopped:  # P892: before the read, or after a read of another board
             return stops.question_result(stopped, SCRIPT)
