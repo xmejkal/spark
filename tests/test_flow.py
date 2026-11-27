@@ -31,6 +31,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import check_firmware  # noqa: E402
 import flow  # noqa: E402
 from fakes import FakeClock, FakeOutsideWorld, FakeTextFileWriter  # noqa: E402
 from spark.build.build_record import BUILD_RECORD_FILE, EARLIER_DIST, BuildRecordStore, sha256_of  # noqa: E402
@@ -3370,6 +3371,66 @@ class TheFirmwareWrittenTest(FlowTest):
         self.assertIn("deploy", guide["later"])
 
 
+
+class ThePinMapTest(FlowTest):
+    """P882 (#1250): the firmware phase is problems when the current check record names a pin name that firmware/pins.py lacks."""
+
+    USES_JOY_SW = "import pins\nfrom machine import Pin\nJOY = Pin(pins.JOY_SW, Pin.IN)\n"
+    LINE = "pin map: 0 of 1 uses found in firmware/pins.py, not found: JOY_SW (firmware/main.py:3)"
+
+    def checked(self, pins):
+        """A built project whose firmware uses pins.JOY_SW and whose pin map is `pins`, with a check record from the CLI."""
+        project = a_firmware(a_built_project())
+        (project / "firmware" / "main.py").write_text(self.USES_JOY_SW)
+        (project / "firmware" / "pins.py").write_text(pins)
+        with contextlib.redirect_stdout(io.StringIO()):
+            check_firmware.main(["--project", str(project)])
+        return project
+
+    def test_a_missing_pin_name_makes_the_firmware_problems_with_the_pin_line_first_and_the_written_line_after(self):
+        project = self.checked("LED = 2\n")
+        said, code = show(project)
+        self.assertEqual(statuses(said)["firmware"], "problems")
+        first, second = says(said, "firmware")
+        self.assertEqual(first, self.LINE)
+        self.assertTrue(second.startswith("firmware/main.py written "), second)
+        self.assertEqual(code, 1)
+        self.assertIn("JOY_SW", [found for found in said["problems"] if found["subject"] == "firmware"][0]["sentence"])
+
+    def test_the_firmware_is_now_with_the_problems_sentence_and_no_chat_offer(self):
+        said, _ = show(self.checked("LED = 2\n"))
+        now = said["data"]["guide"]["now"]
+        self.assertEqual((now["phase"], now["says"], now["chat_offer"]),
+                         ("firmware", "The firmware phase has problems. Ask Claude to go through them with you.", None))
+
+    def test_the_free_checks_line_says_the_pin_line_too_so_it_shows_twice_on_purpose(self):
+        said, _ = show(self.checked("LED = 2\n"))
+        self.assertIn(self.LINE, said["data"]["guide"]["simulation"]["line"])
+
+    def test_every_name_present_gives_no_status(self):
+        said, code = show(self.checked("JOY_SW = 4\n"))
+        self.assertEqual((statuses(said)["firmware"], code), (None, 0))
+
+    def test_a_record_older_than_the_firmware_gives_no_status(self):
+        project = self.checked("LED = 2\n")
+        (project / "firmware" / "main.py").write_text(self.USES_JOY_SW + "# changed\n")
+        self.assertIsNone(statuses(show(project)[0])["firmware"])
+        self.assertEqual(says(show(project)[0], "firmware")[0][:len("firmware/main.py written")], "firmware/main.py written")
+
+    def test_with_no_pin_map_show_says_it_is_not_there_and_not_a_count_of_found_uses(self):
+        project = a_firmware(a_built_project())
+        (project / "firmware" / "main.py").write_text(self.USES_JOY_SW)
+        with contextlib.redirect_stdout(io.StringIO()):
+            check_firmware.main(["--project", str(project)])
+        said, code = show(project)
+        self.assertEqual((statuses(said)["firmware"], code, says(said, "firmware")[0]),
+                         ("problems", 1, "pin map: firmware/pins.py is not there, and 1 use needs it, first firmware/main.py:3"))
+
+    def test_no_check_record_gives_no_status(self):
+        project = a_firmware(a_built_project())
+        self.assertIsNone(statuses(show(project)[0])["firmware"])
+
+
 #: The bench's sentence in a board log of a flash that did not finish (P1092), and the flow's words for it.
 NOT_FINISHED_SENTENCE = "a flash command failed, so the board may be erased and not written"
 FLASH_NOT_FINISHED_WORDS = "flash not finished, nothing read back, the board may be erased"
@@ -3550,7 +3611,8 @@ class TheChatOfferTest(FlowTest):
                 self.assertEqual((show(project)[0]["data"]["guide"]["now"]["phase"], chat_offer(project)), ("simulate", None))
 
     def test_a_firmware_with_problems_or_that_could_not_run_names_none(self):
-        # FirmwareReader gives only not-started or no status, so D3's last firmware row is reached with a Phase value
+        # FirmwareReader gives problems only from a check record's missing pin name (P882) and never could-not-run, so D3's last
+        # firmware row is reached with a Phase value
         for status in ("problems", "could-not-run"):
             with self.subTest(status=status):
                 self.assertIsNone(chat_offer_of(who_and_sentence(Phase("firmware", status, "?", "Claude", ["said"], []), [], NO_IMAGE_FACT)))

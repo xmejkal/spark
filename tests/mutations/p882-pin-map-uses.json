@@ -1,0 +1,134 @@
+[
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: an attribute read on the module alias is not compared",
+  "find": "            uses.add((parent.attr, node.lineno, False))",
+  "replace": "            pass"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: import pins as p binds pins, not p",
+  "find": "aliases[each.asname or each.name] = min(aliases.get(each.asname or each.name, node.lineno), node.lineno)",
+  "replace": "aliases[each.name] = min(aliases.get(each.name, node.lineno), node.lineno)"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: from pins import X is not compared",
+  "find": "uses.update((each.name, node.lineno, True) for each in node.names if each.name != \"*\" and not _is_dunder(each.name))",
+  "replace": "None"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: a from-import's name falls under the rebinding rule",
+  "find": "uses.update((each.name, node.lineno, True) for each in node.names if each.name != \"*\" and not _is_dunder(each.name))",
+  "replace": "uses.update((each.name, node.lineno, True) for each in node.names if each.name != \"*\" and not _is_dunder(each.name)\n                        and each.name not in {t.id for t in ast.walk(tree) if isinstance(t, ast.Name) and not isinstance(t.ctx, ast.Load)})"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: a place that cannot be compared gives no assumption",
+  "find": "places.update(Place(name, line, form) for line, form in not_compared)",
+  "replace": "None"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: used counts names, not uses",
+  "find": "has_map, len(uses), missing,",
+  "replace": "has_map, len({each.name for each in uses}), missing,"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: the map takes a name bound inside a def of pins.py",
+  "find": "        return [statement.name], []\n    if isinstance(statement, ast.Import):",
+  "replace": "        return [statement.name], list(getattr(statement, \"body\", []))\n    if isinstance(statement, ast.Import):"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: an open map is recorded, not not-checked",
+  "find": "            if open_why:\n",
+  "replace": "            if False and open_why:\n"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: lib/ and the secrets files are read",
+  "find": "relative == PIN_MAP or relative.startswith(LIB_FOLDER) or is_secret_path(name)",
+  "replace": "relative == PIN_MAP"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: a file that does not parse is skipped, not not-checked",
+  "find": "                return cls(NOT_CHECKED, failure, name)",
+  "replace": "                continue"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: line_from drops the not-compared part",
+  "find": "        if places:\n            first = min(",
+  "replace": "        if False:\n            first = min("
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: line_from drops printable",
+  "find": "        return printable(line)\n",
+  "replace": "        return line\n"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_check.py",
+  "name": "P882: pin_findings is not added",
+  "find": "findings += self.pin_findings(pins)\n",
+  "replace": "pass\n"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_check.py",
+  "name": "P882: the record drops the pin map",
+  "find": "(\"imports\", \"tests\", \"pin_map\")",
+  "replace": "(\"imports\", \"tests\")"
+ },
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "P882: the pin line comes for an older record",
+  "find": "if check.state != RECORDED or not check.current:",
+  "replace": "if check.state != RECORDED:"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P882: the pin line comes after the written line",
+  "find": "[pin_line, written]",
+  "replace": "[written, pin_line]"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: a guarded name is a missing use",
+  "find": "    guarded = _guarded(tree, aliases)\n",
+  "replace": "    guarded = set()\n"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: a two-argument getattr is a guard",
+  "find": "\"getattr\": 3}",
+  "replace": "\"getattr\": 2}"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: the line has no no-map branch",
+  "find": "if data.get(\"has_map\") is False and missing:",
+  "replace": "if False and missing:"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: to_data drops has_map",
+  "find": "return data if self.has_map else dict(data, has_map=False)",
+  "replace": "return data"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "P882: one use and many say the same",
+  "find": "NO_MAP_ONE % (file, line) if count == 1 else",
+  "replace": "NO_MAP_ONE % (file, line) if count else"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_check.py",
+  "name": "P882: no pin map is a problem for each use",
+  "find": "if not pins.has_map and pins.missing:",
+  "replace": "if False and pins.missing:"
+ }
+]

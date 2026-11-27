@@ -125,5 +125,47 @@ class TheSimulationLineTest(unittest.TestCase):
         self.assertNotIn("outside", names)
 
 
+class ThePinLineTest(unittest.TestCase):
+    """P882: `missing_pin_line` is the line of a current record that names a pin name the pin map lacks, else None."""
+
+    LINE = "pin map: 0 of 1 uses found in firmware/pins.py, not found: JOY_SW (firmware/main.py:3)"
+    MISSING = {"state": "recorded", "used": 1, "missing": [{"name": "JOY_SW", "file": "firmware/main.py", "line": 3}], "not_compared": []}
+
+    def with_pin_map(self, pin_map, project=None, **keywords):
+        project = project or a_project()
+        CheckRecordStore(project, "check-firmware").save(INPUTS, AT, dict({"status": "problems", "lines": OK_LINES,
+                                                                           "data": {"pin_map": pin_map}}, **keywords))
+        return project
+
+    def test_a_current_record_that_names_a_missing_name_gives_the_line(self):
+        self.assertEqual(checks_reading.missing_pin_line(self.with_pin_map(self.MISSING)), self.LINE)
+
+    def test_a_record_of_older_firmware_gives_none(self):
+        project = self.with_pin_map(self.MISSING)
+        (project / "firmware" / "main.py").write_text("import clock  # changed\n")
+        self.assertIsNone(checks_reading.missing_pin_line(project))
+
+    def test_a_record_with_no_pin_map_gives_none(self):
+        self.assertIsNone(checks_reading.missing_pin_line(with_record(a_project())))  # P1209's records hold data {}
+
+    def test_no_record_and_a_record_that_cannot_be_read_give_none(self):
+        project = a_project()
+        self.assertIsNone(checks_reading.missing_pin_line(project))
+        (project / ".spark").mkdir()
+        (project / ".spark" / "check-firmware.json").write_text("{not json")
+        self.assertIsNone(checks_reading.missing_pin_line(project))
+
+    def test_a_pin_map_that_lacks_nothing_or_was_not_read_gives_none(self):
+        for pin_map in (dict(self.MISSING, missing=[]), {"state": "not-checked", "why": "x"}):
+            with self.subTest(pin_map=pin_map):
+                self.assertIsNone(checks_reading.missing_pin_line(self.with_pin_map(pin_map)))
+
+    def test_a_pin_map_of_another_shape_gives_none_and_never_raises(self):
+        for pin_map in ([], "x", None, dict(self.MISSING, missing="JOY_SW"), dict(self.MISSING, missing=[{"name": "A"}]),
+                        dict(self.MISSING, used="1")):
+            with self.subTest(pin_map=pin_map):
+                self.assertIsNone(checks_reading.missing_pin_line(self.with_pin_map(pin_map)))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Check a project's firmware for free: import it on this machine, and run the project's own tests (P59, #7; P1208, #1757).
+Check a project's firmware for free: import it on this machine, run the project's own tests and compare the pin names with firmware/pins.py (P59, #7; P1208, #1757).
 
     check_firmware.py [--project PROJECT] [--json]
 
@@ -26,9 +26,10 @@ from spark.firmware.firmware_check import CheckFirmware  # noqa: E402
 from spark.flow.now_follow_up import PageFollowUp  # noqa: E402
 
 #: The CLI's own text in `--help`, after the Operation's details: its exit codes.
-EPILOG = """Exit codes: 0 every module imported and every test passed, or the project has no tests/; 1 a module did not import, there is
-nothing to import, or a test failed or raised; 2 there is no firmware/ folder, or the tests gave no count or ran no test
-(an empty tests/, or every test skipped)."""
+EPILOG = """Exit codes: 0 every module imported, every test passed and every pin name is in the pin map, or the project has no tests/;
+1 a module did not import, there is nothing to import, a test failed or raised, or a firmware file uses a pin name that
+firmware/pins.py lacks; 2 there is no firmware/ folder, the tests gave no count or ran no test (an empty tests/, or every test
+skipped), or a firmware file or the pin map does not parse."""
 
 
 def main(argv=None, outside=None, operation=None):

@@ -782,11 +782,12 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
         self.assertEqual({str(code): code.fix for code in build_codes.CODES}, self.BUILD_FIXES)
         self.assertEqual(len(build_codes.CODES), 29)
 
-    def test_the_six_codes_check_firmware_answers_are_codes_with_a_fix_and_its_findings_name_them_and_give_none(self):
+    def test_the_eight_codes_check_firmware_answers_are_codes_with_a_fix_and_its_findings_name_them_and_give_none(self):
         # P1208 review A2: firmware_codes keeps plain words for the other steps, so the area is not in AREAS_WITH_FIXES; its
         # check_firmware codes are Codes read through fix_of, and the scan reads the Operation's file as an area's
-        six = ("NO_FIRMWARE_FOLDER", "NOTHING_TO_IMPORT", "IMPORT_FAILED", "IMPORT_TIMEOUT", "OWN_TEST_FAILED", "OWN_TESTS_NOT_RUN")
-        for name in six:
+        eight = ("NO_FIRMWARE_FOLDER", "NOTHING_TO_IMPORT", "IMPORT_FAILED", "IMPORT_TIMEOUT", "OWN_TEST_FAILED", "OWN_TESTS_NOT_RUN",
+                 "PIN_MAP_NAME_MISSING", "PIN_MAP_NOT_READ")
+        for name in eight:
             held = getattr(firmware_codes, name)
             self.assertEqual((type(held), held.meaning, firmware_codes.CODES[held]), (Code, firmware_codes.CODES[held], held.meaning), name)
             self.assertTrue(held.fix.strip(), name)
@@ -795,6 +796,12 @@ class EveryCodeHoldsItsFixTest(unittest.TestCase):
         used = set()
         calls, broken = calls_off_the_table({"firmware_check.py": path.read_text()}, firmware_codes, (), used, None)
         self.assertEqual((calls > 0, broken, used), (True, [], FIRMWARE_FORWARDED))
+
+    def test_the_pin_map_variant_has_its_parent_s_word_and_meaning_and_its_own_fix(self):
+        parent, variant = firmware_codes.PIN_MAP_NAME_MISSING, firmware_codes.PIN_MAP_NAME_MISSING_NO_MAP
+        self.assertEqual((str(variant), variant.meaning), (str(parent), parent.meaning))
+        self.assertNotEqual(variant.fix, parent.fix)
+        self.assertEqual(variant.fix, "build the board with --keep, which writes firmware/pins.py")
 
     def test_each_code_constant_of_the_table_is_a_word_of_codes_with_that_word_s_meaning(self):
         # P935: a variant (BAD_ARGUMENT_REPLIES_UNREADABLE) is another Code of its parent's word and meaning, never a new word;

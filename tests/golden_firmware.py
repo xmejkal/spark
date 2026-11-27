@@ -49,6 +49,9 @@ NEVER_READY_RUN = {"FAKE_WOKWI_SERIAL": "booting\n", "FAKE_WOKWI_EXIT": "42", "F
 #: A firmware module the machine stand-in imports, and one whose import raises.
 GOOD_MODULE = ("firmware/led.py", "from machine import Pin\n\nLED = Pin(2, Pin.OUT)\n")
 RAISING_MODULE = ("firmware/sensor.py", "import missing_driver\n")
+#: A main.py that uses a pin name, and a pin map without it (P882).
+USES_JOY_SW = ("firmware/main.py", "import pins\nfrom machine import Pin\n\nJOY = Pin(pins.JOY_SW, Pin.IN)\n")
+PIN_MAP_WITHOUT_JOY_SW = ("firmware/pins.py", "LED = 2\n")
 
 #: Value. One golden: its name (`<op>-<status>[-<scenario>]`, the op is the script's), the script, its arguments
 #: (PROJECT is the run's project), the exit code it must end with, `plant`: (path under the project, text) pairs written
@@ -77,6 +80,8 @@ CASES = [
          (("firmware/big.bin", bytes(3 << 20)),)),
     Case("check-firmware-ok.json", "check_firmware.py", ["--project", PROJECT, "--json"], 0, (GOOD_MODULE,)),
     Case("check-firmware-problems.json", "check_firmware.py", ["--project", PROJECT, "--json"], 1, (GOOD_MODULE, RAISING_MODULE)),
+    Case("check-firmware-problems-pin-map.json", "check_firmware.py", ["--project", PROJECT, "--json"], 1,
+         (GOOD_MODULE, USES_JOY_SW, PIN_MAP_WITHOUT_JOY_SW)),
 ]
 
 

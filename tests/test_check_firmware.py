@@ -36,6 +36,7 @@ from fakes import FakeClock  # noqa: E402
 
 LIGHT = "from machine import Pin\nLED = Pin(2, Pin.OUT)\n"
 TWO_PASSING = "import unittest\n\nclass A(unittest.TestCase):\n    def test_one(self):\n        pass\n\n    def test_two(self):\n        pass\n"
+USES_JOY = "import pins\nfrom machine import Pin\nPin(pins.JOY_SW)\n"
 ONE_FAILING = "import unittest\n\nclass A(unittest.TestCase):\n    def test_fine(self):\n        pass\n\n    def test_bad(self):\n        self.assertEqual(1, 2)\n"
 
 
@@ -164,6 +165,52 @@ class TheFreeChecksTogetherTest(unittest.TestCase):
         found = CheckFirmware.import_findings([{"module": "pins", "status": "imported", "detail": ""}], [nothing], [])
         self.assertEqual([(each.subject, each.code) for each in found], [("firmware", "nothing_to_import")])
 
+    def test_a_pin_name_the_map_lacks_is_a_problem_with_its_name_and_line(self):
+        result = check(a_project({"light": LIGHT, "main": USES_JOY, "pins": "LED = 2\n"}))
+        self.assertEqual(result.status(), outcomes.PROBLEMS)
+        problems = [found for found in result.findings if found.code == "pin_map_name_missing"]
+        self.assertEqual([(found.severity, found.subject, found.sentence) for found in problems],
+                         [("problems", "firmware/main.py:3", "firmware/main.py:3 uses pins.JOY_SW, and firmware/pins.py has no JOY_SW")])
+        self.assertIn("Do not edit pins.py by hand", problems[0].fix)
+        self.assertEqual(result.data["pin_map"], {"state": "recorded", "used": 1, "not_compared": [],
+                                                  "missing": [{"name": "JOY_SW", "file": "firmware/main.py", "line": 3}]})
+        self.assertIn("pin map: 0 of 1 uses found in firmware/pins.py, not found: JOY_SW (firmware/main.py:3)", result.lines)
+
+    def test_a_firmware_whose_pin_names_all_exist_gives_no_finding(self):
+        result = check(a_project({"light": LIGHT, "main": USES_JOY, "pins": "JOY_SW = 4\n"}))
+        self.assertEqual((result.status(), result.findings), (outcomes.OK, []))
+        self.assertEqual(result.data["pin_map"]["used"], 1)
+        self.assertIn("pin map: 1 of 1 uses found in firmware/pins.py", result.lines)
+
+    def test_a_use_it_cannot_compare_is_an_assumption_and_a_line_and_the_status_stays_ok(self):
+        result = check(a_project({"light": LIGHT, "main": "from pins import *\n", "pins": "LED = 2\n"}))
+        self.assertEqual((result.status(), result.findings), (outcomes.OK, []))
+        self.assertEqual(result.assumptions, ["not checked: firmware/main.py:1 takes every name of pins.py with *, so the names it uses are not compared"])
+        self.assertEqual(result.data["pin_map"]["not_compared"][0]["line"], 1)
+        self.assertIn("pin map: none compared, not compared in 1 place, first firmware/main.py:1", result.lines)
+
+    def test_a_file_that_does_not_parse_is_could_not_run_with_pin_map_not_read(self):
+        result = check(a_project({"light": LIGHT, "main": "x = 1\ndef (:\n"}))
+        self.assertEqual(result.status(), outcomes.COULD_NOT_RUN)
+        self.assertEqual([(found.severity, found.subject, found.code, found.sentence) for found in result.findings],
+                         [("could-not-run", "firmware/main.py", "pin_map_not_read", "firmware/main.py does not parse (line 2)")])
+        self.assertEqual(result.data["pin_map"], {"state": "not-checked", "why": "firmware/main.py does not parse (line 2)"})
+        self.assertIn("pin map: not checked (firmware/main.py does not parse (line 2))", result.lines)
+
+    def test_no_pin_map_while_a_file_uses_pins_is_one_problem_that_says_how_to_build_it(self):
+        result = check(a_project({"light": LIGHT, "main": USES_JOY}))
+        problems = [found for found in result.findings if found.code == "pin_map_name_missing"]
+        self.assertEqual([(found.subject, found.sentence, found.fix) for found in problems],
+                         [("firmware/pins.py", "firmware/pins.py is not there, and 1 use needs it, first firmware/main.py:3",
+                           "build the board with --keep, which writes firmware/pins.py")])
+        self.assertEqual(len(result.data["pin_map"]["missing"]), 1)
+
+    def test_no_firmware_folder_gives_no_pin_map_finding_and_no_line(self):
+        result = check(a_project(tests={"test_a": TWO_PASSING}))
+        self.assertEqual([found.code for found in result.findings], ["no_firmware_folder"])
+        self.assertEqual(result.data["pin_map"], {"state": "not-checked", "why": "no firmware/ folder"})
+        self.assertFalse([line for line in result.lines if line.startswith("pin map")])
+
 
 class TheCheckRecordTest(unittest.TestCase):
     """P1209 (D1, D3): every run that read firmware/ keeps its answer in `.spark/check-firmware.json`, which the flow reads."""
@@ -173,10 +220,17 @@ class TheCheckRecordTest(unittest.TestCase):
         result = check(project)
         read = CheckRecordStore(project, "check-firmware").read()
         self.assertEqual((read.state, read.current, read.status), (outcomes.RECORDED, True, outcomes.OK))
-        self.assertEqual(read.data, {"imports": result.data["imports"], "tests": result.data["tests"]})
+        self.assertEqual(read.data, {"imports": result.data["imports"], "tests": result.data["tests"], "pin_map": result.data["pin_map"]})
         self.assertEqual(read.lines, ["imports: 1 of 1 imported", "tests: 2 of 2 passed (tests/)"])
         self.assertEqual(read.at, stamp(FakeClock().now()))  # the time with its zone
         self.assertIs(result.data["written"], True)
+
+    def test_the_record_keeps_the_pin_map_and_its_line(self):
+        project = a_project({"light": LIGHT, "main": USES_JOY, "pins": "LED = 2\n"})
+        check(project)
+        read = CheckRecordStore(project, "check-firmware").read()
+        self.assertEqual(read.data["pin_map"]["missing"], [{"name": "JOY_SW", "file": "firmware/main.py", "line": 3}])
+        self.assertEqual(read.lines[-1], "pin map: 0 of 1 uses found in firmware/pins.py, not found: JOY_SW (firmware/main.py:3)")
 
     def test_a_failed_check_is_kept_with_its_status(self):
         project = a_project({"light": LIGHT}, {"test_a": ONE_FAILING})
@@ -272,6 +326,12 @@ class TheCommandTest(unittest.TestCase):
         said = json.loads(out)
         self.assertEqual((code, said["status"], said["problems"][0]["code"]), (outcomes.EXIT_PROBLEMS, "problems", "own_test_failed"))
         self.assertEqual(said["data"]["tests"]["failed"], ["test_a.A.test_bad"])
+
+    def test_a_missing_pin_name_exits_1_and_the_json_names_it(self):
+        code, out = self.run_main("--project", a_project({"light": LIGHT, "main": USES_JOY, "pins": "LED = 2\n"}), "--json")
+        said = json.loads(out)
+        self.assertEqual((code, said["status"], said["problems"][0]["code"]), (outcomes.EXIT_PROBLEMS, "problems", "pin_map_name_missing"))
+        self.assertEqual(said["data"]["pin_map"]["missing"][0]["name"], "JOY_SW")
 
     def test_tests_that_gave_no_count_exit_2(self):
         project = a_project({"light": LIGHT}, {"test_a": "import unittest\n\nclass A(unittest.TestCase):\n    def test_loops(self):\n        while True:\n            pass\n"})

@@ -25,6 +25,7 @@ from spark.records import deploy_record_store  # noqa: E402
 from spark.records import board_records  # noqa: E402
 from spark.records import check_record  # noqa: E402
 from spark.core import outcomes  # noqa: E402
+from spark.firmware import pin_map_uses  # noqa: E402
 from spark.firmware import scenario_steps  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 from test_boards import DEFINITION, kept_definition_board  # noqa: E402
@@ -146,6 +147,16 @@ def read_definition(case):
     return board_records.read_simulated_part(board)
 
 
+def read_pin_map_uses(files):
+    """PinMapUses.read of a project whose firmware/ holds FILES ({name: source}); None leaves firmware/ out."""
+    project = Path(tempfile.mkdtemp())
+    if files is not None:
+        (project / "firmware").mkdir()
+        for name, source in files.items():
+            (project / "firmware" / name).write_text(source)
+    return pin_map_uses.PinMapUses.read(project)
+
+
 def read_check_record(text):
     """CheckRecordStore.read of a project with `text` as its `.spark/check-firmware.json` (None: no file), in an otherwise empty project."""
     project = Path(tempfile.mkdtemp())
@@ -206,6 +217,11 @@ READERS = {
         "input .": (CHECK_RECORD % ('["."]', '[]'), "not-checked"),
         "a line that is no text": (CHECK_RECORD % ('["firmware"]', '[1]'), "not-checked"),
         "good": (CHECK_RECORD % ('["firmware"]', '[]'), "recorded")}),
+    "PinMapUses.read": (read_pin_map_uses, {
+        "missing": (None, "not-checked"),
+        "malformed": ({"main.py": "def (:\n"}, "not-checked"),
+        "an open map": ({"main.py": "x = 1\n", "pins.py": "from x import *\n"}, "not-checked"),
+        "good": ({"main.py": "import pins\nx = pins.LED\n", "pins.py": "LED = 2\n"}, "recorded")}),
     "ScenarioSteps.from_text": (read_text, {
         "missing": (None, "none-recorded"),
         "malformed": ("steps:\n  - just-a-word\n", "not-checked"),
