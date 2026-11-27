@@ -14,7 +14,7 @@ from pathlib import Path
 
 from spark.core.follow_up import FollowUp
 from spark.flow.flow_page import FlowHtmlPage
-from spark.flow.show_flow import NEEDS_YOU, flow_and_guide, needs_you, now_steps
+from spark.flow.show_flow import NEEDS_YOU, flow_and_guide, guide_now_line, needs_you, now_steps
 from spark.flow.write_flow_page import write_page
 
 # --- MVP ---
@@ -36,13 +36,15 @@ def kept_its_page(result):
 class FlowFollowUp(FollowUp):
     """Strategy: the follow-up of a run that wrote to a project: the now steps of `flow.py show` (`show_flow.now_steps`),
     and for each the base's line (`follow_up.step_line`, P1256), with NEEDS_YOU after the command for a step that needs
-    the person or their yes (`show_flow.needs_you`). Its refresh writes page.html again (PR 2). `renderer` and `store` are what a test
-    swaps (None: the real ones)."""
+    the person or their yes (`show_flow.needs_you`). Its refresh writes page.html again (PR 2). With `says_now` (P1292,
+    check_spine.py alone), its closing line is show's NOW line when show names no step. A run uses one instance for its
+    `steps` and its `closing_line`: `steps` keeps its reading of the flow, and `closing_line` takes it, so the flow is read
+    once. `renderer` and `store` are what a test swaps (None: the real ones)."""
 
     refreshes = FlowHtmlPage.FILE_NAME
 
-    def __init__(self, renderer=None, store=None):
-        self.renderer, self.store = renderer, store
+    def __init__(self, renderer=None, store=None, says_now=False):
+        self.renderer, self.store, self.says_now, self.reading = renderer, store, says_now, None
 
     def refresh(self, project, result):
         """REFRESHED once page.html is written again, or None: the project has no page.html (decision G), or the run kept
@@ -57,8 +59,23 @@ class FlowFollowUp(FollowUp):
         return REFRESHED
 
     def steps(self, project):
+        """The now steps of `flow.py show` for `project`; the reading (the project, those steps, the guide) is kept for
+        `closing_line` (P1292), and an earlier run's is dropped first."""
+        self.reading = None
         phases, guide = flow_and_guide(project)
-        return now_steps(project, phases, guide)
+        steps = now_steps(project, phases, guide)
+        self.reading = (project, steps, guide)
+        return steps
+
+    def closing_line(self, project):
+        """Show's NOW line (`show_flow.guide_now_line`) when `says_now` is set and show names no step for `project`, else
+        None (P1292). It takes the reading of the last `steps`, so a second call, a call before `steps` or one for another
+        project gives None."""
+        reading, self.reading = self.reading, None
+        if not self.says_now or reading is None or reading[0] != project:
+            return None
+        _, steps, guide = reading
+        return None if steps else guide_now_line(guide, steps)
 
     def after_command(self, step):
         return NEEDS_YOU if needs_you(step) else ""

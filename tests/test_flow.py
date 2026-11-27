@@ -2613,6 +2613,85 @@ class TheFollowUpTest(FlowTest):
         self.assertEqual((script_of("move-hold"), script_of("research-part")), ("parts.py", "research.py"))
 
 
+class TheClosingLineTest(FlowTest):
+    """P1292: FlowFollowUp with `says_now` ends a run's text with show's own NOW line when show names no step. It reads the
+    flow once, in `steps`, and its `closing_line` takes that reading for the same project."""
+
+    def test_guide_now_line_is_the_first_line_of_guide_lines(self):
+        from spark.flow.show_flow import guide_lines, guide_now_line, now_steps
+        for project in (a_built_project(), an_image(a_firmware(a_built_project()))):
+            with self.subTest(project=project.parent.name):
+                phases, guide = flow_and_guide(project)
+                steps = now_steps(project, phases, guide)
+                self.assertEqual(guide_now_line(guide, steps), guide_lines(guide, steps)[0])
+        self.assertIsNone(guide_now_line({"now": None}))
+
+    def test_without_the_flag_there_is_no_closing_line(self):
+        from spark.flow.now_follow_up import FlowFollowUp
+        project, follow_up = a_built_project(), FlowFollowUp()
+        self.assertEqual(follow_up.steps(project), [])
+        self.assertIsNone(follow_up.closing_line(project))
+
+    def test_with_the_flag_at_a_firmware_now_the_closing_line_is_show_s_now_line(self):
+        from spark.flow.now_follow_up import FlowFollowUp
+        project, follow_up = a_built_project(), FlowFollowUp(says_now=True)
+        said, _ = show(project)
+        self.assertEqual((said["data"]["guide"]["now"]["phase"], said["next"]), ("firmware", []))
+        self.assertEqual(follow_up.steps(project), [])
+        line = follow_up.closing_line(project)
+        self.assertEqual(line, lines_of(project)[0])
+        self.assertTrue(line.startswith("  NOW (firmware): Two jobs, in any order:"), line)
+
+    def test_with_the_flag_where_show_names_a_step_there_is_no_closing_line(self):
+        from spark.flow.now_follow_up import FlowFollowUp
+        project, follow_up = an_image(a_firmware(a_built_project())), FlowFollowUp(says_now=True)
+        self.assertEqual([step.op for step in follow_up.steps(project)], ["run-scenario"])
+        self.assertIsNone(follow_up.closing_line(project))
+
+    def test_no_closing_line_before_any_steps_or_for_another_project(self):
+        from spark.flow.now_follow_up import FlowFollowUp
+        project, other, follow_up = a_built_project(), a_built_project(), FlowFollowUp(says_now=True)
+        self.assertIsNone(follow_up.closing_line(project))
+        follow_up.steps(other)
+        self.assertIsNone(follow_up.closing_line(project))
+
+    def test_the_closing_line_takes_the_reading(self):
+        # the council's F1: a second closing_line has no reading left
+        from spark.flow.now_follow_up import FlowFollowUp
+        project, follow_up = a_built_project(), FlowFollowUp(says_now=True)
+        follow_up.steps(project)
+        self.assertIsNotNone(follow_up.closing_line(project))
+        self.assertIsNone(follow_up.closing_line(project))
+
+    def test_one_steps_and_one_closing_line_read_the_flow_once(self):
+        from spark.flow import now_follow_up
+        project, follow_up = a_built_project(), now_follow_up.FlowFollowUp(says_now=True)
+        with mock.patch.object(now_follow_up, "flow_and_guide", wraps=flow_and_guide) as read:
+            follow_up.steps(project)
+            self.assertIsNotNone(follow_up.closing_line(project))
+        self.assertEqual(read.call_count, 1)
+
+    def test_steps_that_raise_leave_no_reading_of_an_earlier_run(self):
+        from spark.flow import now_follow_up
+        project, follow_up = a_built_project(), now_follow_up.FlowFollowUp(says_now=True)
+        follow_up.steps(project)
+        with mock.patch.object(now_follow_up, "flow_and_guide", side_effect=OSError("the flow")):
+            with self.assertRaises(OSError):
+                follow_up.steps(project)
+        self.assertIsNone(follow_up.closing_line(project))
+
+    def test_only_check_spine_sets_the_flag(self):
+        # P1292: parts.py and run_scenario.py keep their output; a pick prints no NOW line
+        import parts
+        import run_scenario
+        self.assertFalse(parts.HELP.follow_up.says_now)
+        self.assertNotIn("says_now", Path(run_scenario.__file__).read_text())
+        project = with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [{"id": "soil", "does": "sense", "what": "soil-moisture"}])
+        lines, code = run_main(parts.main, ["--pick", str(project), "soil=x-many"])
+        self.assertEqual(code, 0)
+        self.assertFalse([line for line in lines if line.startswith("  NOW (")], lines)
+
+
 def wrote_nothing():
     """Operation: a run that writes to `project` and changes nothing there, so two runs read the same flow (P1035 PR 2)."""
     from spark.core.operation import COMMON_ARGUMENTS, READS, WRITES, Operation
