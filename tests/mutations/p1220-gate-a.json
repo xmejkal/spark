@@ -26,13 +26,13 @@
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "P1220: a board with no Wokwi model reads no runs again (test_flow.TheGateATest)",
-  "find": "if simulate and simulate.status in (None, flow_codes.NOT_STARTED) else NO_IMAGE_FACT",
-  "replace": "if simulate and simulate.status in (None, flow_codes.NOT_STARTED) and flow_codes.SIMULATE not in no_model else NO_IMAGE_FACT"
+  "find": "if simulate and simulate.status in (None, flow_codes.NOT_STARTED) \\\n        else NO_IMAGE_FACT",
+  "replace": "if simulate and simulate.status in (None, flow_codes.NOT_STARTED) and flow_codes.SIMULATE not in no_model \\\n        else NO_IMAGE_FACT"
  },
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "P1220: a board with no Wokwi model says its image's fact (test_flow.TheGateATest)",
-  "find": "code = flow_codes.NO_MODEL_NOTE if no_model else fact.fact",
+  "find": "code = flow_codes.NO_MODEL_NOTE if no_model and fact != UNREADABLE_FACT else fact.fact",
   "replace": "code = fact.fact"
  },
  {
@@ -58,5 +58,11 @@
   "name": "P1220: the deploy reads no failed run through the one reader (test_image_evidence.NoSimulationEvidenceTest)",
   "find": "for log, verdict in image.failed_runs():",
   "replace": "for log, verdict in []:"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "P1220: a board with no model reads no default image, so a failed run is missed (test_flow.TheGateATest)",
+  "find": "image_fact(project, flow_codes.SIMULATE in no_model) if simulate",
+  "replace": "image_fact(project) if simulate"
  }
 ]

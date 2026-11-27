@@ -2365,6 +2365,11 @@ class TheTestedBeforeTheBoardRowTest(unittest.TestCase):
             with self.subTest(guide=guide["now"]):
                 self.assertNotIn("TESTED BEFORE THE BOARD", order_page(guide=guide))
 
+    def test_a_null_shut_by_is_a_row_and_is_printed(self):
+        """A null `shut_by` is not a null `gate_a`: spark cannot tell, and the page says so."""
+        gate_a = {"shut_by": None, "fact": None, "says": "Spark cannot tell. The simulation phase says why."}
+        self.assertIn(TESTED_ROW % "Spark cannot tell. The simulation phase says why.", self.box(guide=a_guide(gate_a=gate_a)))
+
     def test_the_page_and_show_print_the_same_row(self):
         from test_flow import a_project_at_the_board, lines_of
         project = a_project_at_the_board()

@@ -18,10 +18,12 @@ on it.
 | --- | --- | --- |
 | `run-failed` | `["run-failed"]` | Go through the failed log with the person before any permanent build. Gate A is shut. |
 | `image-tested`, `image-older`, `image-untested`, `no-sim-files` | `[]` | Say the row. No failed run is seen, but gate A is not open: its other conditions are not built. |
-| `no-model` | `[]` | Say the row. No simulator covers this board, so no run could fail and none tested it. Gate A is not open. |
+| `no-model` | `[]` | Say the row. No simulator covers this board, and no failed run is seen on its default image. Gate A is not open. |
 | `null` | `null` | Say that spark cannot tell, and read the simulation phase for why. Never fill the value in. |
 
 An empty `shut_by` never means that gate A is open. A `null` `shut_by` means that spark cannot read the runs, not that none failed.
 
-A failed log of an image with no `sim/wokwi.toml` is not seen: `fact` is `no-sim-files` and `shut_by` is `[]`, though
+A board with no Wokwi model has no `sim/wokwi.toml` and keeps `sim/flash-with-firmware.bin`. Spark reads that image as `deploy.py` does. A failed run on it gives `run-failed`, and a log that cannot be read gives `null`, as the deploy refuses on both.
+
+On any other board, a failed log of an image with no `sim/wokwi.toml` is not seen: `fact` is `no-sim-files` and `shut_by` is `[]`, though
 `deploy.py --no-simulation` still refuses that image.

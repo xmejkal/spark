@@ -3265,6 +3265,14 @@ class TheGateATest(FlowTest):
         self.assertFalse([line for line in lines_of(a_run(an_image(a_firmware(a_built_project())), "failed")) if "TESTED BEFORE" in line])
         self.assertFalse([line for line in lines_of(Path(tempfile.mkdtemp())) if "TESTED BEFORE" in line])
 
+    def test_show_prints_a_null_shut_by_row(self):
+        """A null `shut_by` is not a null `gate_a`: the deploy has a board log and a log cannot be read."""
+        project = a_board_log(a_deploy_project(), "ready seen", SEEN_SENTENCE)
+        log = project / "sim" / "runs" / "one.log"
+        self.addCleanup(log.chmod, 0o644)
+        log.chmod(0)
+        self.assertIn("  TESTED BEFORE THE BOARD: " + CANNOT_TELL, lines_of(project))
+
     def test_show_prints_the_row_after_the_line_that_says_nothing_is_open(self):
         lines = lines_of(a_project_at_the_board("passed"))
         self.assertEqual(lines[0], "  " + NOTHING_WAITS)
@@ -3316,6 +3324,26 @@ class TheGateATest(FlowTest):
                          {"shut_by": [], "fact": "no-model", "says": "No simulator run: none covers this board."})
         project = a_board_log(a_run(an_image(a_firmware(a_project_built_with_no_simulation())), "failed"), "ready seen", SEEN_SENTENCE)
         self.assertEqual(gate_a_of_project(project)["shut_by"], ["run-failed"])
+
+    def a_no_model_board_with_the_default_image(self):
+        """A real no-model board (P1001): no sim/wokwi.toml, and the image sim/flash-with-firmware.bin."""
+        project = a_firmware(a_project_built_with_no_simulation())
+        (project / "sim").mkdir(exist_ok=True)
+        (project / "sim" / "flash-with-firmware.bin").write_bytes(b"an image")
+        return project
+
+    def test_a_no_model_board_with_no_toml_reads_the_default_image_as_the_deploy_does(self):
+        project = a_run(self.a_no_model_board_with_the_default_image(), "failed")
+        a_board_log(project, "ready seen", SEEN_SENTENCE)
+        self.assertEqual(gate_a_of_project(project), {"shut_by": ["run-failed"], "fact": "run-failed", "says": FAILED_NOW})
+        log = project / "sim" / "runs" / "one.log"
+        self.addCleanup(log.chmod, 0o644)
+        log.chmod(0)
+        self.assertEqual(gate_a_of_project(project), {"shut_by": None, "fact": None, "says": CANNOT_TELL})
+
+    def test_a_no_model_board_with_the_default_image_and_no_failed_run_says_no_model(self):
+        project = a_board_log(self.a_no_model_board_with_the_default_image(), "ready seen", SEEN_SENTENCE)
+        self.assertEqual(gate_a_of_project(project)["fact"], "no-model")
 
     def test_a_failed_log_with_no_sim_wokwi_toml_is_not_seen_and_the_row_says_no_simulation_files(self):
         """The risk the plan names: image_fact reads no image without sim/wokwi.toml, though the deploy refuses a failed log
