@@ -1480,7 +1480,7 @@ class ThePartsNeedsTest(FlowTest):
         said, _ = show(with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", SOIL))
         self.assertEqual(offer_of(said, "pick:soil:x-many")["have"], "yours")
 
-    def test_a_wired_pick_of_an_unlisted_project_says_each_sentence_once_and_the_shared_ones_last(self):
+    def test_a_wired_pick_of_an_unlisted_project_says_each_sentence_once_the_wired_one_first(self):
         self.a_part("x-none")
         said, _ = show(with_needs(a_built_project(), SOIL))
         effect = offer_of(said, "pick:soil:x-none")["effect"]
@@ -1489,8 +1489,9 @@ class ThePartsNeedsTest(FlowTest):
         said_once = [sentence for line in lines for sentence in sentences(line)]
         self.assertEqual(sorted(said_once), sorted(sentences(effect)))
         self.assertEqual(len(said_once), len(set(said_once)))
-        self.assertEqual(lines[1:], SHARED)
-        self.assertIn("You have none, so it goes on the list to get.", lines[0])
+        # P1044: a pick's confirm opens with the wired sentence; the pick's own follow, then the other shared ones
+        self.assertEqual([lines[0]] + lines[2:], SHARED)
+        self.assertIn("You have none, so it goes on the list to get.", lines[1])
         self.assertEqual(effect_lines("Saves it. May note the choice in your history."), ["Saves it.", MAY_NOTE])
 
     def test_the_board_file_line_is_found_in_an_effect_that_holds_it_and_in_no_other(self):

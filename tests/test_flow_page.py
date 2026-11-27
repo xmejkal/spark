@@ -2233,7 +2233,7 @@ class TheLessTextTest(unittest.TestCase):
     def test_a_pick_s_send_box_says_the_shared_lines_apart_and_keep_names_a_picked_need_s_part(self):
         words = page_words([a_picked_phase()])
         self.assertEqual(words["offers"]["pick:board:c6"]["says"], [
-            "Saves “XIAO C6” as the pick."] + SHARED + ["These steps may be marked out of date: requirements."])
+            WIRED_PICK, "Saves “XIAO C6” as the pick."] + SHARED[1:] + ["These steps may be marked out of date: requirements."])
         self.assertEqual(words["keep"], {"button": "keep “Tactile 6 mm”"})
         self.assertEqual(page_words([a_need_phase()])["keep"], {})
 

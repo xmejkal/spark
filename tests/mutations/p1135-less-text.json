@@ -25,13 +25,13 @@
  },
  {
   "file": "scripts/spark/flow/flow_codes.py",
-  "name": "P1135: a shared sentence stays in the pick's own line (test_flow.ThePartsNeedsTest.test_a_wired_pick_of_an_unlisted_project_says_each_sentence_once_and_the_shared_ones_last)",
+  "name": "P1135: a shared sentence stays in the pick's own line (test_flow.ThePartsNeedsTest.test_a_wired_pick_of_an_unlisted_project_says_each_sentence_once_the_wired_one_first)",
   "find": "        own = own.replace(\" %s \" % said, \" \")",
   "replace": "        own = own"
  },
  {
   "file": "scripts/spark/flow/flow_codes.py",
-  "name": "P1135: the wired sentence is no shared sentence, so a Send of picks says it per pick (test_flow.ThePartsNeedsTest.test_a_wired_pick_of_an_unlisted_project_says_each_sentence_once_and_the_shared_ones_last, test_flow_page.TheLessTextTest.test_a_pick_s_send_box_says_the_shared_lines_apart_and_keep_names_a_picked_need_s_part)",
+  "name": "P1135: the wired sentence is no shared sentence, so a Send of picks says it per pick (test_flow.ThePartsNeedsTest.test_a_wired_pick_of_an_unlisted_project_says_each_sentence_once_the_wired_one_first, test_flow_page.TheLessTextTest.test_a_pick_s_send_box_says_the_shared_lines_apart_and_keep_names_a_picked_need_s_part)",
   "find": "PROJECT_EFFECTS = (WIRED_PICK_MESSAGE, LIST_PROJECT_MESSAGE, PICK_HISTORY_MESSAGE)",
   "replace": "PROJECT_EFFECTS = (LIST_PROJECT_MESSAGE, PICK_HISTORY_MESSAGE)"
  },
@@ -106,5 +106,11 @@
   "name": "P1135: an offer's row keeps its label beside its button (page_script.test.js, a pick's row becomes one label)",
   "find": "item.textContent = \"\";",
   "replace": "void 0;"
+ },
+ {
+  "file": "scripts/spark/flow/flow_codes.py",
+  "name": "P1135 review: a pick's Send box puts the wired sentence after the pick's own (test_flow.ThePartsNeedsTest.test_a_wired_pick_of_an_unlisted_project_says_each_sentence_once_the_wired_one_first, test_flow_page.TheLessTextTest.test_a_pick_s_send_box_says_the_shared_lines_apart_and_keep_names_a_picked_need_s_part)",
+  "find": "    return first + [own.strip()] + shared[len(first):]",
+  "replace": "    return [own.strip()] + shared"
  }
 ]

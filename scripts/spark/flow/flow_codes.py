@@ -280,13 +280,15 @@ PROJECT_EFFECTS = (WIRED_PICK_MESSAGE, LIST_PROJECT_MESSAGE, PICK_HISTORY_MESSAG
 
 
 def effect_lines(effect):
-    """A pick's effect as the Send box's lines (P1135): its own sentences, then each of PROJECT_EFFECTS that it holds, each
-    once. Sentences are joined with one space, so each one is cut out whole."""
+    """A pick's effect as the Send box's lines (P1135): the wired sentence first, as a pick's confirm opens with it (P1044),
+    then its own sentences, then each other of PROJECT_EFFECTS that it holds, each once. Sentences are joined with one
+    space, so each one is cut out whole."""
     shared = [said for said in PROJECT_EFFECTS if said in effect]
     own = " %s " % effect
     for said in shared:
         own = own.replace(" %s " % said, " ")
-    return [own.strip()] + shared
+    first = shared[:1] if WIRED_PICK_MESSAGE in shared else []  # PROJECT_EFFECTS holds it first
+    return first + [own.strip()] + shared[len(first):]
 
 
 def board_file_line(effect):
