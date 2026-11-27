@@ -14,6 +14,7 @@ from spark.breadboard import before_power, part_pictures, picture_check
 from spark.breadboard.svg_diagram import PAD_MARKS
 from spark.flow import flow_codes
 from spark.flow.guide import note_words
+from spark.flow.flow_codes import board_file_line, picked_sentence
 from spark.flow.phase_readers import MARKS, pick_need
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 from spark.core.zone_time import day_and_time
@@ -383,21 +384,19 @@ class PartsHtmlFold:
     KEYS = ("phase:parts", "status:*") + SENDABLE_KEYS
 
     def text(self, page):
-        """The parts fold (P1062): the parts phase's says in order (P1044's wired line first), one row per need with its
-        picks in the reading's order (`pick_need`), its `data-need` the script's (P1067), then the other sendable offers, the
-        parts list and the build. Each is a
-        hooked row, but the one on the NOW line. Open while the parts are NOW. Nothing with no parts phase and no row."""
+        """The parts fold (P1062): the parts phase's says in order (P1044's wired line first), one row per need of the
+        phase's `needs` in their order (`_need`, P1135), its picks in the reading's order (`pick_need`), its `data-need` the
+        script's (P1067), then the other sendable offers, the parts list and the build. Each offer is a hooked row, but the
+        one on the NOW line. Open while the parts are NOW. Nothing with no parts phase and no row."""
         phase = next((each for each in page.phases if each["phase"] == flow_codes.PARTS), None)
         on_now = (sendable_now(page) or {}).get("key")
-        needs = {}
+        by_need = {}
         for offer in (offer for each in page.phases for offer in each["offers"] if flow_codes.is_sendable(offer["key"]) and offer["key"] != on_now):
-            needs.setdefault(pick_need(offer["key"]), []).append(offer)
-        if phase is None and not needs:
+            by_need.setdefault(pick_need(offer["key"]), []).append(offer)
+        if phase is None and not by_need:
             return ""
-        rows = ['<li class="need" data-need="%s"><strong>%s</strong><ul>%s</ul></li>' % (_text(need), _text(need), "".join(
-                    self._hooked(offer) for offer in offers))
-                for need, offers in needs.items() if need is not None]
-        rows += [self._hooked(offer) for offer in needs.get(None, [])]
+        rows = [self._need(need, by_need.get(need["need"], [])) for need in (phase or {}).get("needs") or []]
+        rows = [row for row in rows if row] + [self._hooked(offer) for offer in by_need.get(None, [])]
         said = list(dict.fromkeys(phase["says"])) if phase else []  # a line the phase says for every need stands once
         body = ["<p>%s</p>" % _text(line) for line in said] + (["<ul>%s</ul>" % "\n".join(rows)] if rows else [])
         summary = _text(flow_codes.PARTS_HEADING)
@@ -406,10 +405,29 @@ class PartsHtmlFold:
             summary = "%s %s %s" % (_mark(shown), summary, _word(phase["status"], shown.word))
         return _fold("parts", summary, body, ((page.guide or {}).get("now") or {}).get("phase") == flow_codes.PARTS)
 
+    def _need(self, need, offers):
+        """A need's row (P1067, P1135): its name, the line of its picks with the tick (`picked-<need>`, which the script's
+        radiogroup points at), its pick offers' rows, then its own lines, muted. Nothing for a need with none of them."""
+        name = _text(need["need"])
+        picked = ('<p class="picked" id="picked-%s"><span aria-hidden="true">%s</span> %s</p>' % (
+            name, _text(TICK), _text(picked_sentence(need["picked"]))) if need["picked"] else "")
+        picks = "<ul>%s</ul>" % "".join(self._hooked(offer) for offer in offers) if offers else ""
+        said = "".join('<p class="muted">%s</p>' % _text(line) for line in need["says"])
+        if not (picked or picks or said):
+            return ""
+        return '<li class="need" data-need="%s"><strong>%s</strong>%s%s%s</li>' % (name, name, picked, picks, said)
+
     @staticmethod
     def _hooked(offer):
-        """A sendable offer's row: its key and `data-makes-stale` for the script, its label and its effect."""
-        return '<li data-key="%s"%s>%s: %s</li>' % (_text(offer["key"]), _makes_stale(offer), _text(offer["label"]), _text(offer["effect"]))
+        """A sendable offer's row: its key and `data-makes-stale` for the script, then its label alone (P1135): its effect
+        stands in its Send box and in the developer fold. A pick's row says its part and what you have of it, and keeps the
+        sentence that spark cannot build from it, muted (`board_file_line`)."""
+        if pick_need(offer["key"]) is None:
+            return '<li data-key="%s"%s>%s</li>' % (_text(offer["key"]), _makes_stale(offer), _text(offer["label"]))
+        refused = board_file_line(offer["effect"])
+        line = '<p class="muted">%s</p>' % _text(refused) if refused else ""
+        return '<li data-key="%s"%s>%s%s</li>' % (_text(offer["key"]), _makes_stale(offer),
+                                                 _text(flow_codes.PICK_ROW % (offer["part"], offer["have"])), line)
 
 
 class WiringHtmlFold:
@@ -503,15 +521,22 @@ class DeveloperHtmlFold:
 
     def _phase(self, phase):
         """A phase's section in the developer fold: its heading in a `<summary>`, its text in a `<div>`, always closed. An offer
-        shows its key in `<code>`, its label and its effect, with no hook: the page's buttons stand on NOW and in the folds."""
+        shows its key in `<code>`, its label, what you have of a pick's part (P1135) and its effect, with no hook: the page's
+        buttons stand on NOW and in the folds."""
         shown = shown_phase(phase)
         lines = ['<section class="phase" %s>' % _data(phase),
                  "<details><summary><h2>%s %s %s</h2></summary>" % (_mark(shown), _text(phase["phase"]), _word(phase["status"], shown.word)),
                  '<div id="phase-%s">' % _text(phase["phase"]), "<p>Done by: %s</p>" % _text(phase["by"])]
         lines += ["<p>%s</p>" % _text(said) for said in phase["says"]]
-        offers = ["<li><code>%s</code> %s: %s</li>" % (_text(offer["key"]), _text(offer["label"]), _text(offer["effect"]))
+        offers = ["<li><code>%s</code> %s%s: %s</li>" % (_text(offer["key"]), _text(offer["label"]), self._have(offer), _text(offer["effect"]))
                   for offer in phase["offers"]]
         return "\n".join(lines + (["<ul>%s</ul>" % "".join(offers)] if offers else []) + ["</div>", "</details>", "</section>"])
+
+    @staticmethod
+    def _have(offer):
+        """What you have of a pick's part, after its label in the developer fold (P1135, D22: a pick on NOW keeps it on the
+        page), or nothing for an offer that is no pick."""
+        return " (%s)" % _text(offer["have"]) if offer.get("have") else ""
 
     @staticmethod
     def _legend():

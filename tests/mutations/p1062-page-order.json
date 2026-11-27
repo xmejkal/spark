@@ -74,8 +74,8 @@
  {
   "file": "scripts/spark/flow/page_sections.py",
   "name": "P1062: an offer in the developer fold keeps data-makes-stale, a second button (test 8)",
-  "find": "offers = [\"<li><code>%s</code> %s: %s</li>\" % (_text(offer[\"key\"]),",
-  "replace": "offers = [\"<li%s><code>%s</code> %s: %s</li>\" % (_makes_stale(offer), _text(offer[\"key\"]),"
+  "find": "offers = [\"<li><code>%s</code> %s%s: %s</li>\" % (_text(offer[\"key\"]),",
+  "replace": "offers = [\"<li%s><code>%s</code> %s%s: %s</li>\" % (_makes_stale(offer), _text(offer[\"key\"]),"
  },
  {
   "file": "scripts/spark/flow/page_sections.py",

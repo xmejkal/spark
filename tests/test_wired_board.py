@@ -250,7 +250,7 @@ class ThePageTest(WiredTest):
         parts = text[text.index('<div id="phase-parts">'):]
         self.assertTrue(parts.startswith('<div id="phase-parts">\n<p>Done by: you</p>\n<p>%s' % html.escape(sheet_text())), parts[:300])
         build = re.search(r'<li data-key="build"[^>]*>(.*?)</li>', text).group(1)
-        self.assertIn(html.escape(WIRED_BUILD_MESSAGE), build)
+        self.assertNotIn(html.escape(WIRED_BUILD_MESSAGE), build)  # P1135: the row holds its label; the confirm says it
         words = page_words([phase.to_dict() for phase in read_flow(project)[0]])
         self.assertTrue(words["offers"]["build"]["says"][0].startswith(WIRED_BUILD_MESSAGE))
 

@@ -477,7 +477,7 @@ If A1 misses before the style is built, read the miss against its rival first: h
 - No logic in the page's script. TypeScript adds types only. The choice of picks is the page's own state.
 - No stored state file. `FlowReading` is an answer, made on each call.
 - No tick on `could-not-run`, skipped or null. "Issues not read" and a picture with no version are plain sentences.
-- No restyle of the CLI text. `flow.py show` gains facts only.
+- No restyle of the CLI text. `flow.py show` gains facts only. Note: P1135 gives the parts phase one line per need (Q3, delegated, the PO's to change).
 - No Flash, Deploy or Run-live-code button through the walk (Q-B, 3 of 3, delegated).
 - Privacy no worse (D1). The secret values are masked for the first time, in `show` and `run-request` too. The share window (Q-C) is the one new risk.
 
