@@ -38,6 +38,9 @@ console text (P1043). Only ready seen on the image the project holds now is ok. 
 seen is problems. Firmware newer than that image, an image that differs from the last deploy's, or no image makes it
 stale, and stale wins over problems. The says line keeps the verdict. With the deploy ok, guide.now is null and
 guide.no_open_phase says why. data.deploy holds the logged deploy: at, image, verdict, cause, fact and read_back.
+From the On the board station on, guide.gate_a (P1220) is gate A's one free condition: shut_by lists run-failed while a run
+failed on the current image, and the line TESTED BEFORE THE BOARD says it. An empty shut_by never means that gate A is open.
+It reads sim/runs/ and runs nothing, so it costs no Wokwi minutes.
 
 With --json, flow.py page prints its own keys, not show's nine: data.file, data.did, data.stands_at, data.phases (each
 phase and its status only), data.fingerprint, data.guide and data.artifact. --artifact ID keeps the id of the Artifact

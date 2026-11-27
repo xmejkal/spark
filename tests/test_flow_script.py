@@ -34,7 +34,7 @@ class PageScriptTest(unittest.TestCase):
 
     @unittest.skipIf(NODE is None, "node is not installed: check_commit stops a story run that holds this test")
     def test_the_page_script_s_own_tests_pass(self):
-        run = subprocess.run([NODE, "--test", str(JS_TESTS)], capture_output=True, text=True, cwd=str(ROOT), timeout=120)
+        run = subprocess.run([NODE, "--test", "--test-reporter=tap", str(JS_TESTS)], capture_output=True, text=True, cwd=str(ROOT), timeout=120)
         said = run.stdout + run.stderr
         self.assertEqual(run.returncode, 0, said)
         self.assertIn("# pass 29\n", said)  # P1122: three tests of a chat offer's Copy; P1067: nine of several picks; P1135: two

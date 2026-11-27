@@ -99,12 +99,13 @@ def now_tag(now, steps):
 
 def guide_lines(guide, steps=()):
     """The guide as a person reads it in a terminal (P1030): NOW with the key of its offer or the op of its next-only step
-    (`now_tag`), DONE, LATER, why there is no simulation, SET ASIDE. A list with no item draws no line. The page draws its
+    (`now_tag`), gate A's row (P1220), DONE, LATER, why there is no simulation, SET ASIDE. A list with no item draws no line. The page draws its
     station line in place of DONE and LATER (P1119); the CLI keeps them. The line that says nothing is open (P1043,
     `guide.get`, as the page reads it) stands where NOW would, right after it: the two never both hold (P1142)."""
     now = guide["now"]
     lines = [GUIDE_LINE % (flow_codes.GUIDE_NOW % now["phase"], now["says"] + now_tag(now, steps))] if now else []
     lines += ["  " + guide["no_open_phase"]] if guide.get("no_open_phase") else []
+    lines += [GUIDE_LINE % (flow_codes.TESTED_LABEL, guide["gate_a"]["says"])] if guide.get("gate_a") else []  # P1220: gate A's row
     lines += [GUIDE_LINE % (flow_codes.GUIDE_DONE, ", ".join(guide["done"]))] if guide["done"] else []
     lines += [GUIDE_LINE % (flow_codes.GUIDE_LATER, ", ".join(guide["later"]))] if guide["later"] else []
     lines += ["  " + guide["no_simulation"]] if guide["no_simulation"] else []

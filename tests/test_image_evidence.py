@@ -661,6 +661,18 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         self.assertIn("bad.log did not pass on this image", why)
         self.assertIn(FAILED, why)
 
+    def test_the_refusal_reads_the_one_function_that_names_a_failed_run(self):
+        """P1220: the deploy, the flow's guide and gate A read `ProjectImage.failed_runs`: no log is on disk, and it refuses."""
+        class OneFailedRun(ProjectImage):
+            def failed_runs(self, logs=None):
+                return [(Path("one.log"), FAILED)]
+        self.assertEqual(NoSimulationEvidence(self.project).why_not_ready(OneFailedRun(self.project)),
+                         "one.log did not pass on this image (verdict: %s): deploy.py flashes no image that a run failed" % FAILED)
+
+    def test_a_failed_run_of_another_image_does_not_refuse(self):
+        write_log(self.project, "other.log", FAILED, "0" * 64)
+        self.assertIsNone(self.why())
+
     def test_a_passed_run_of_this_image_does_not_matter(self):
         write_log(self.project, "a.log", "passed", ProjectImage(self.project).sha256)
         self.assertIsNone(self.why())
