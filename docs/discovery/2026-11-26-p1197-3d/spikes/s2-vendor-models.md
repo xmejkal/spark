@@ -19,7 +19,7 @@ Can the STEP file of a maker sit in spark's assembly at the right place?
 | --- | --- | --- |
 | Shows in Fusion on the board, named | Met | Met |
 | Pins meet the board holes within 0.2 mm | Not met. 29 of 32 are within 0.2 mm. The largest miss is 0.210 mm. | Met by calculation. With a turn of 90 degrees, 12 of 12 miss by 0.000 mm. |
-| Offset and turn written down | Yes, but see the open question | Yes |
+| Offset and turn written down | Yes, but for a mirrored footprint (see below) | Yes |
 
 The amplifier file in Fusion had no turn. The turn of 90 degrees was calculated from the loops that Fusion reported. The file was not written again with it. At that turn, each of the 12 pin names printed on the model falls on the hole with the same name in spark's record.
 
@@ -28,16 +28,25 @@ The amplifier file in Fusion had no turn. The turn of 90 degrees was calculated 
 | `Mcu` | 0, 0, 8.3 | -11, -0.429, 0.8 | 180 degrees about X |
 | `Max98357aDfr0954` | 0, 0, -1.6 | 14.7, 21, 0.8 | 90 degrees about Z, counterclockwise from above |
 
-## Open question: which edge holds the long pin row of the FireBeetle
+## Found: spark's record puts the FireBeetle's long pin row on the wrong edge
 
-The maker's model and spark's record do not agree.
+DFRobot's sources agree with the model, and spark's record does not. All views below look at the parts side with USB-C near.
 
-- The model, seen from the parts side with USB-C near: the battery socket is on the left edge. The 14-pin row is on the left, and the 18-pin row is on the right. The text on the model is not mirrored.
-- spark's record (`physical.header.row_side`, the PO's look at the board on 2026-11-20): RX is on the left edge, with the battery socket. In the record, RX starts the 18-pin row.
+| Source | Battery socket | 14-pin row | 18-pin row, with `RX` at the far end |
+| --- | --- | --- | --- |
+| Maker's STEP model | left | left | right |
+| [Wiki](https://wiki.dfrobot.com/dfr0975) pinout diagram (drawn for V1.0, shown there with USB-C far) | left | left | right |
+| Wiki board pictures, "V1.1 and earlier" and "V1.2 and later" (shown with USB-C far) | left | left | right |
+| spark's `physical.header.row_side` and footprint | left | right | left |
 
-Because of this, the pins matched only with the model upside down: parts face the carrier. One of three things is wrong: the model, the record's assignment of names to rows, or the match of board revisions. This spike does not decide it. The model's radio module carries the label `ESP-WROOM-32`, which is not the module of an ESP32-S3 board.
+- The maker's schematic V1.3 shows an 18-pin header with `IO44/RXD0` at pin 1, and a 14-pin header. spark's order of names within each row agrees with it.
+- The PO counted 14 pins on the battery socket edge of the real board on 2026-11-27. The PO also read `RX` on that edge, which DFRobot's pictures do not show.
+- The record's `row_side` is marked verified, from the PO's look on 2026-11-20. It says that `RX` and the battery socket are on the left edge. No DFRobot source shows that.
+- The label `ESP-WROOM-32` on the model also shows on DFRobot's "V1.2 and later" picture, so it is no sign of a wrong model.
 
-A look at the real board decides it: count the pins on the edge with the battery socket, and find the RX label.
+The effect: the footprint and the breadboard sheet for this board mirror the two rows. Do not wire from them until the record is corrected.
+
+The pins in this spike matched the footprint only with the model upside down, because the footprint is mirrored. If the rows are corrected, the model fits with parts up. It then needs a turn of 180 degrees about Z. The largest miss stays 0.210 mm. This placement is calculated and was not run.
 
 ## Other facts
 
