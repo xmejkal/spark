@@ -1,0 +1,44 @@
+[
+ {
+  "file": "scripts/spark/flow/flow_codes.py",
+  "name": "P1138: the person's word is the code word (test_flow_page.ThePersonsWordTest)",
+  "find": "BUTTON_WORD = \"button\"",
+  "replace": "BUTTON_WORD = \"offer\""
+ },
+ {
+  "file": "scripts/spark/flow/flow_codes.py",
+  "name": "P1138: an unknown last request is said with the code word (test_flow_page.ThePersonsWordTest, test_flow_page.ThePageScriptTest)",
+  "find": "LAST_REQUEST_OTHER = \"a step this page no longer shows\"",
+  "replace": "LAST_REQUEST_OTHER = \"a step this page no longer offers\""
+ },
+ {
+  "file": "scripts/spark/flow/flow_codes.py",
+  "name": "P1138: the refusal of picks says the code word (test_flow_page.ThePersonsWordTest, test_flow_page.ThePageScriptTest)",
+  "find": "Spark cannot save one of these picks now. Reload this page and choose again.",
+  "replace": "Spark no longer offers one of these picks. Reload this page."
+ },
+ {
+  "file": "scripts/spark/flow/flow_codes.py",
+  "name": "P1138: the refusal of a step says the code word (test_flow_page.ThePersonsWordTest, test_flow_page.ThePageScriptTest)",
+  "find": "Nothing ran. Spark cannot run this step now. Reload this page to see the steps you can ask for.",
+  "replace": "Nothing ran. This button is no longer offered. Reload the page."
+ },
+ {
+  "file": "scripts/spark/flow/request_codes.py",
+  "name": "P1138: the meaning of a request that names a step spark cannot run says the code word (test_run_request)",
+  "find": "\"the request names a step that spark cannot run now, so nothing ran\"",
+  "replace": "\"the request names a step that spark does not offer now, so nothing ran\""
+ },
+ {
+  "file": "commands/page.md",
+  "name": "P1138: the page command's bullet loses the word's constant (test_routes.ThePageCommandTest)",
+  "find": "a `flow_codes.BUTTON_WORD` by its label",
+  "replace": "a button by its label"
+ },
+ {
+  "file": "docs/guide/agents/flow.md",
+  "name": "P1138: the rule loses the choice for a pick (test_routes.ThePageCommandTest)",
+  "find": "(`flow_codes.BUTTON_WORD`), or a choice in a need's row for a pick. Name a",
+  "replace": "(`flow_codes.BUTTON_WORD`). Name a"
+ }
+]
