@@ -24,6 +24,10 @@ means only that spark declares the server and Node is on the PATH. Nothing check
 registered or that it answers ([P112](https://github.com/xmejkal/spark/issues/46)), or the Node version;
 espressif-docs needs Node 20 or newer ([docs/mcp.md](../docs/mcp.md)).
 
+A Python tool that the running Python does not hold, and that the person's shell finds, reads
+`[ok  ] mpremote 1.29.0, runs with <Python> (found through <executable>)`. Spark found it where the shell finds it and runs
+it with that Python ([P1264](https://github.com/xmejkal/spark/issues/1823)).
+
 ## 2. Everything missing installs in one go, after a yes
 
 If the project has no `package.json`, stop and run `/spark:init` first: without one, npm installs into the nearest
@@ -70,7 +74,7 @@ above.
 | `use simulator=my-sim` | `tools.py --use simulator=my-sim` | `{"roles": {"simulator": "my-sim"}}` — refused unless my-sim meets the job's contract |
 | `pin esptool=4.12.0` | `tools.py --pin esptool=4.12.0` | refused, with nothing written, when the version (also as `esptool.version=`) is below the entry's `oldest_version` or has no digits |
 | `pin tscircuit core=0.0.2700` | `tools.py --pin tscircuit.core=0.0.2700 --project .` | `{"tscircuit": {"core": "0.0.2700"}}` — the core decides the build; `tscircuit=<v>` pins the CLI (`@tscircuit/cli`, versions like 0.1.2113). Then `--install tscircuit --project .` puts the pinned one in |
-| `new` | `tools.py --new 'NAME={…}'` | the person's own entry — ask its name, what it is for, how spark finds it (`kind` and `exe`, `module` (a Python tool may add `oldest_version`, the oldest release that works; an older one is refused), `file`/`url`/`sha256`, or `mcp.command`), how it installs, and which contract it `meets` |
+| `new` | `tools.py --new 'NAME={…}'` | the person's own entry — ask its name, what it is for, how spark finds it (`kind` and `exe` (required for a path or npm tool, optional for a Python one, where it names the executable to look for on the PATH when the running Python lacks the module), `module` (a Python tool may add `oldest_version`, the oldest release that works; an older one is refused), `file`/`url`/`sha256`, or `mcp.command`), how it installs, and which contract it `meets` |
 
 `--on` installs too, so like `--install` it is in no `allowed-tools`, and Claude Code asks before it runs (unless the
 person's own settings already let it run: an allow rule of theirs, or auto mode). `--off`, `--use`, `--pin` and `--new`
@@ -88,7 +92,10 @@ with the plugin; turning one off is done in Claude Code's `/mcp`.
 ## From any other command
 
 A spark command that reports a missing tool — `… is not installed — install: …` — is answered the same
-way: ask the person once, run `tools.py --install <name> --project .`, and carry on with the step. The same
+way. The exception is a sentence that holds `but no Python spark asked holds its module`: the tool is on the PATH,
+and no Python spark can use holds its module. Do not run `--install`. Tell the person which Python holds the
+executable, and give the step at the end of the sentence. A person who wants no PATH lookup for a tool runs
+`tools.py --pin mpremote.exe=`. Otherwise: ask the person once, run `tools.py --install <name> --project .`, and carry on with the step. The same
 `package.json` rule holds: no `package.json`, `/spark:init` first. Claude Code asks before that `--install` runs, whichever
 command is open (unless the person's own settings already let it run: an allow rule of theirs, or auto mode): none
 lists it. When the line ends with `; <path> cannot be read (…) — fix it or its permissions`, the person fixes that

@@ -29,6 +29,9 @@ except importlib.metadata.PackageNotFoundError:
 print(json.dumps([sys.executable, release]))
 """
 
+#: The words that /spark:setup keys on: the tool is on the PATH, and no Python spark can use holds its module (P1264, C3).
+NO_PYTHON_HOLDS_IT = "but no Python spark asked holds its module"
+
 #: The Python that holds the module (the child's own `sys.executable`, never a shim), its release or None, and the
 #: executable on the PATH that it was found through.
 ToolPython = namedtuple("ToolPython", "python release executable")
@@ -133,8 +136,8 @@ class ToolPythonFinder:
         step = "%s %s" % (asked[0][0], install_line[len("python3 "):]) \
             if asked and install_line.startswith("python3 -m pip install --user ") \
             else "tools.py --pin %s.exe=" % entry["module"]
-        return "%s is on your PATH (%s), but no Python spark asked holds its module: %s. Copy this step: %s" % (
-            entry["exe"], executable, said or "none could be asked", step)
+        return "%s is on your PATH (%s), %s: %s. Copy this step: %s" % (
+            entry["exe"], executable, NO_PYTHON_HOLDS_IT, said or "none could be asked", step)
 
     def row(self, name, entry, command):
         """The setup report's words for a tool found through the PATH, or '' when the running Python holds it."""

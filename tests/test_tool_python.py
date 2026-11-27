@@ -317,6 +317,11 @@ class TheFinderUsesItTest(TheVenvTest):
         self.row()
         self.assertEqual(reader.count, 1)
 
+    def test_the_pages_that_answer_a_missing_tool_key_on_the_fixed_phrase(self):
+        """C3. Red: a page named another phrase than the sentence holds."""
+        for page in ("commands/setup.md", "commands/build.md", "commands/research.md", "docs/guide/agents/scripts.md"):
+            self.assertIn("`but no Python spark asked holds its module`", (ROOT / page).read_text(), page)
+
     def test_install_forgets_what_was_kept(self):
         """Red: a tool installed by /spark:setup was still missing for the process."""
         self.path("bin")
@@ -363,9 +368,8 @@ class TheLookTheFlashAndTheSetupReportAgreeTest(TheVenvTest):
 
     def test_the_one_help_sentence_is_in_the_look_and_the_deploy(self):
         """Red: the two `--help` texts said it twice, in two wordings, or not at all."""
-        said = firmware_platform.FINDING_THE_TOOLS
-        self.assertEqual(said, "Spark finds mpremote and esptool in the Python that runs it. When that Python lacks one, spark "
-                               "asks the Python of the one on your PATH. When neither has it, the stop says where spark looked.")
+        said = ("Spark finds mpremote and esptool in the Python that runs it. When that Python lacks one, spark "
+                "asks the Python of the one on your PATH. When neither has it, the stop says where spark looked.")
         self.assertIn(said, look_at_board.DETAILS)
         self.assertIn(said, deploy_image.DETAILS)
 

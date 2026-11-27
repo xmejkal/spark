@@ -35,3 +35,12 @@ is a board's hardware revision (`replies.py:34`, `physics_check.py:404`). "Chang
 
 Git's two words for a file differ (P1150). "Held" is `ProjectCommit.held_as_is`: in HEAD and the same on disk. "Tracked" is git's
 word for a file in the index (`tracks`, `tracked_files`, `IgnoreList.already_tracked`), committed or not.
+
+Words for finding a tool ([P1264](https://github.com/xmejkal/spark/issues/1823)).
+
+| Word | Means | Where |
+|---|---|---|
+| the running Python | the Python that runs spark. A Python tool whose module it holds is run with it | `sys.executable`, `tool_finder.locate` |
+| the PATH | the PATH that spark runs with, which is the person's shell's | `shutil.which` |
+| the tool's Python | the Python that holds a Python tool's module. It is the running Python first, else the one that the entry's `exe` on the PATH runs | `tool_python.ToolPython.python` |
+| `exe` | the executable that spark looks for on the PATH. Required for a `path` or `npm` entry, optional for a `python` one. An empty `exe` means no PATH lookup | `data/tools.json`, `KIND_NEEDS` |
