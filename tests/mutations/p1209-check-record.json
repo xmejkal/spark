@@ -122,7 +122,7 @@
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "P1209: the guide counts firmware that is not written (test_flow.TheGuideTest.test_a_board_wokwi_has_no_model_of_passes_the_build_and_the_firmware_and_the_wiring_are_now)",
-  "find": "bool(firmware) and firmware.status != flow_codes.NOT_STARTED",
+  "find": "firmware is not None and firmware.status != flow_codes.NOT_STARTED",
   "replace": "True"
  }
 ]
