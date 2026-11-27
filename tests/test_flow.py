@@ -690,6 +690,16 @@ class TheDesignChecksLineTest(FlowTest):
         row = next(row for row in lines_of(project) if " build: " in row)
         self.assertTrue(row.endswith(self.NOT_RUN + " (claude)"), row)
 
+    def test_a_stale_build_and_a_build_wokwi_has_no_model_of_say_the_line_once(self):
+        """P1255 fix C: every branch says the line, and once: the stale one and the no-model one too."""
+        stale = a_built_project()
+        (stale / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": []}))
+        for name, project, status in (("stale", stale, "stale"), ("no model", a_project_built_with_no_simulation_now(), None)):
+            with self.subTest(build=name):
+                said, _ = show(project)
+                self.assertEqual(statuses(said)["build"], status)
+                self.assertEqual(says(said, "build").count(self.NOT_RUN), 1, says(said, "build"))
+
     def test_a_board_only_build_says_the_line_only_with_a_record(self):
         self.assertEqual(says(show(a_board_only_project())[0], "build"), ["board only: nothing to wire, no board was built"])
         said, _ = show(self.kept(a_board_only_project(), "ok", ["2 check(s) found nothing"]))

@@ -136,5 +136,11 @@
   "name": "P1255 fix F: board_only reads the simulation stage (test_flow.TheDesignChecksLineTest.test_a_board_only_build_says_the_line_only_with_a_record)",
   "find": "    return BUILD.name in skipped_stages(record)\n",
   "replace": "    return SIMULATION.name in skipped_stages(record)\n"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "P1255 fix C: a build whose simulation alone was skipped loses the line (test_flow.ThePhasesTest.test_a_build_whose_simulation_alone_was_skipped_gets_no_tick_and_says_why)",
+  "find": "        built = record is not None and not board_only(record)\n",
+  "replace": "        built = record is not None and not board_only(record) and skipped_stages(record) != [SIMULATION.name]\n"
  }
 ]
