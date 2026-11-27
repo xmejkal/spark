@@ -62,7 +62,7 @@
  {
   "file": "scripts/spark/flow/page_sections.py",
   "name": "P1135: the board-file line leaves the pick's row (test_flow_page.TheLessTextTest.test_a_pick_s_row_reads_its_part_and_what_you_have_and_keeps_its_board_file_line)",
-  "find": "line = '<p class=\"muted\" id=\"note-%s\">%s</p>' % (key, _text(\" \".join(offer[\"notes\"]))) if offer[\"notes\"] else \"\"",
+  "find": "line = _note_line(offer) if offer[\"notes\"] else \"\"",
   "replace": "line = \"\""
  },
  {

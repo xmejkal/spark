@@ -62,6 +62,12 @@ def sendable_now(page):
     return offers[0] if offers else None
 
 
+def _note_line(offer):
+    """A pick's notes (P1180) as one muted line whose id (`note-<key>`) the script's radio names: under the pick's row in
+    the parts fold, or under NEXT when the pick is the NOW line's offer, which the fold leaves out."""
+    return '<p class="muted" id="note-%s">%s</p>' % (_text(offer["key"]), _text(" ".join(offer["notes"])))
+
+
 def _mark(shown):
     return '<span aria-hidden="true">%s</span>' % _text(shown.mark)
 
@@ -316,9 +322,9 @@ class GuideHtmlSection:
 
     def _now(self, page):
         """The NOW box (P1062): its phase and who acts, ON THE BOARD (`page.deployed`, only after a deploy), NEXT, the guide's
-        sentence, with the step link and the hooks of the sendable offer the now names (`sendable_now`), and the chat offer's
-        block (`_ask`). Gate A's row stands after ON THE BOARD (`_tested`, P1220). With no now, the line that says nothing is
-        open (P1043, read with `.get`) and the row, or nothing."""
+        sentence, with the step link and the hooks of the sendable offer the now names (`sendable_now`), that offer's notes
+        (P1180, `_note_line`), and the chat offer's block (`_ask`). Gate A's row stands after ON THE BOARD (`_tested`,
+        P1220). With no now, the line that says nothing is open (P1043, read with `.get`) and the row, or nothing."""
         now = page.guide["now"]
         if not now:
             said = page.guide.get("no_open_phase")
@@ -332,6 +338,7 @@ class GuideHtmlSection:
         hooks = ' data-key="%s"%s' % (_text(offer["key"]), _makes_stale(offer)) if offer else ""
         lines.append('<p class="next"%s><strong>%s</strong> %s%s</p>' % (
             hooks, _text(flow_codes.NEXT_ACT_LABEL), _text(now["says"]), self._step_link(page)))
+        lines += [_note_line(offer)] if offer and offer.get("notes") else []
         return "\n".join(['<div class="now">'] + lines + self._ask(now) + ["</div>"])
 
     @staticmethod
@@ -424,9 +431,8 @@ class PartsHtmlFold:
         (P1180), muted, in one line whose id (`note-<key>`) the script's radio names."""
         if pick_need(offer["key"]) is None:
             return '<li data-key="%s"%s>%s</li>' % (_text(offer["key"]), _makes_stale(offer), _text(offer["label"]))
-        key = _text(offer["key"])
-        line = '<p class="muted" id="note-%s">%s</p>' % (key, _text(" ".join(offer["notes"]))) if offer["notes"] else ""
-        return '<li data-key="%s"%s>%s%s</li>' % (key, _makes_stale(offer), _text(flow_codes.PICK_ROW % (offer["part"], offer["have"])), line)
+        line = _note_line(offer) if offer["notes"] else ""
+        return '<li data-key="%s"%s>%s%s</li>' % (_text(offer["key"]), _makes_stale(offer), _text(flow_codes.PICK_ROW % (offer["part"], offer["have"])), line)
 
 
 class WiringHtmlFold:

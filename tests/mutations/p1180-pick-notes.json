@@ -82,5 +82,29 @@
   "name": "P1180 refuter: a note two chosen picks share moves into the shared lines (page_script.test.js, via test_flow_script)",
   "find": "offer.says.filter((said) => !noted(offer, said)).forEach(",
   "replace": "offer.says.forEach("
+ },
+ {
+  "file": "scripts/spark/flow/pick_notes.py",
+  "name": "P1180 review: the owed note never fires (test_flow.ThePickNotesTest.test_a_record_that_owes_a_stop_fact_needs_more_facts)",
+  "find": "(flow_codes.OWED_NOTE, need_requirements.blocking_facts(owed)),",
+  "replace": "(flow_codes.OWED_NOTE, []),"
+ },
+ {
+  "file": "scripts/spark/flow/pick_notes.py",
+  "name": "P1180 review: the simulation note never fires (test_flow.ThePickNotesTest.test_a_record_that_owes_only_its_simulation_cannot_be_simulated)",
+  "find": "(flow_codes.NO_STANCE_NOTE % flow_codes.THIS_PART, unsimulated),",
+  "replace": "(flow_codes.NO_STANCE_NOTE % flow_codes.THIS_PART, False),"
+ },
+ {
+  "file": "scripts/spark/flow/page_sections.py",
+  "name": "P1180 review: the developer fold drops a pick's notes (test_flow_page.TheLessTextTest.test_the_developer_fold_keeps_every_key_label_and_effect_and_a_pick_s_have)",
+  "find": "_text(\" \".join([offer[\"effect\"]] + list(offer.get(\"notes\") or ())))",
+  "replace": "_text(offer[\"effect\"])"
+ },
+ {
+  "file": "scripts/spark/flow/page_sections.py",
+  "name": "P1180 review: a pick on the NOW line says no notes (test_flow_page.ThePickNotesOnThePageTest.test_a_pick_on_the_now_line_says_its_notes_under_it_and_its_row_leaves_the_fold)",
+  "find": "        lines += [_note_line(offer)] if offer and offer.get(\"notes\") else []",
+  "replace": "        lines += []"
  }
 ]

@@ -2276,6 +2276,17 @@ class ThePickNotesOnThePageTest(unittest.TestCase):
         self.assertEqual(offers["pick:board:beetle"]["notes"], [NO_BOARD_FILE])
         self.assertNotIn("notes", offers["pick:board:c6"])
 
+    def test_a_pick_on_the_now_line_says_its_notes_under_it_and_its_row_leaves_the_fold(self):
+        """The PR refuter's finding 1: the parts fold leaves out the NOW line's offer, so its notes stand under NEXT."""
+        now = {"phase": "parts", "by": ["you"], "says": "Pick a part for light.", "offer": "pick:light:x-a", "needs": ["light"],
+               "steps": None}
+        text = order_page(guide=a_guide(now=now), phases=[self.phase().to_dict()])
+        box = text.split('<div class="now">')[1].split("</div>")[0]
+        self.assertIn('<p class="muted" id="note-pick:light:x-a">%s</p>' % " ".join(self.NOTES), box)
+        self.assertEqual(text.count('id="note-pick:light:x-a"'), 1, "the note stands once, under NEXT, not in the fold")
+        none = order_page(guide=a_guide(now=dict(now, offer="pick:light:x-b")), phases=[self.phase().to_dict()])
+        self.assertNotIn('id="note-pick:light:x-b"', none)
+
     def test_the_fingerprint_reads_a_pick_s_notes_and_an_offer_with_none_as_before(self):
         project = Path(tempfile.mkdtemp())
         self.assertNotEqual(fingerprint_of(project, [self.phase()]), fingerprint_of(project, [self.phase(notes=())]))
