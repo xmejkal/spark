@@ -66,7 +66,8 @@ same way: its simulation stage is `skipped` with the code `board_not_in_wokwi`, 
 meaning, and the run exits 0 (P1207). Test that firmware on the board itself. A design that wires a pad whose GPIO the
 board's kept Wokwi definition lacks, such as the FireBeetle 2 ESP32-C6's D3 (GPIO14) on its stand-in, builds the same way:
 its simulation stage is `skipped` with the code `pin_not_in_wokwi_part`, before the converter runs, its detail names each
-such signal, pad, GPIO and Wokwi part, and the closing line adds that code's meaning, which starts `not simulated` (P999).
+such signal, pad, GPIO and Wokwi part, and the closing line opens with that code's meaning, `not simulated: …`, and ends
+`the chain runs end to end up to the simulation` (P999).
 Move the signal to a pad the Wokwi part has with a `"signals"` entry, as the code's fix says, and build again; the
 assigner may then put the next signal on that pad, so pin each signal the build names.
 

@@ -70,5 +70,11 @@
   "name": "P999: the flow's rule says every_part_skipped's meaning, not the every-part line (test_flow.ThePhasesTest every-part-and-unknown-code test)",
   "find": " or code == build_codes.EVERY_PART_SKIPPED or ",
   "replace": " or "
+ },
+ {
+  "file": "scripts/spark/build/build_board.py",
+  "name": "P999: the closing line of a pin the Wokwi part lacks opens with the pass phrase again (test_check_spine.AnAllSkippedSimulationKeepsTheBuildTest not-simulated-first test)",
+  "find": "MEANING_FIRST = (build_codes.PIN_NOT_IN_WOKWI_PART,)",
+  "replace": "MEANING_FIRST = ()"
  }
 ]
