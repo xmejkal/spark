@@ -116,6 +116,6 @@ Each time below that says "republish":
   `flow.py run-request`.
 - Never share or unshare the Artifact. The person decides who sees it.
 - The page sends only its buttons. Anything else the person wants, they say in the chat. "Ask Claude" sends nothing: its Copy puts a sentence on the clipboard, which the person pastes in the chat.
-- Call a step the page can ask for a `flow_codes.BUTTON_WORD` by its label, never by the code word `offer`
+- Call a step the page can ask for a button (`flow_codes.BUTTON_WORD`) by its label, never by the code word `offer`
   ([the rule](../docs/guide/agents/flow.md#the-page-script)).
 - When an Artifact tool is not there, or refuses, say so and stop. Do not retry in a loop.

@@ -284,12 +284,9 @@ the page's words, after "Your last request, <its time in the browser's zone>: <i
 its code's own words only when `line` is exactly that code's meaning, in grey; any other `line` with `ran: false` shows
 as could not run. Picks that ran ok say "Saved as the picks.", picks that ran with problems say first "No pick was saved.", and a `request_not_offered` refusal of picks says that spark cannot save one of them now. Never "done" alone.
 
-To a person, an offer the page sends is a button (`flow_codes.BUTTON_WORD`), or a choice in a need's row for a pick. Name a
-button by its label, such as click **Build the board**, and say "button" alone only where no label exists. `offer` is
-spark's code and data word: never say it to the person.
+To a person, an offer the page sends is a button (`flow_codes.BUTTON_WORD`), or a choice in a need's row for a pick. Name a button by its label, such as click **Build the board**, and say "button" alone only where no label exists. `offer` is spark's code and data word: never say it to the person.
 
-Never take an offer only because `flow.py` lists it. A pick, a drop and a build change files, so say what the effect
-line says and ask the person first.
+Never take an offer only because `flow.py` lists it. A pick, a drop and a build change files, so say what the effect line says and ask the person first.
 
 ## The next step
 

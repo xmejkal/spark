@@ -32,7 +32,7 @@
  {
   "file": "commands/page.md",
   "name": "P1138: the page command's bullet loses the word's constant (test_routes.ThePageCommandTest)",
-  "find": "a `flow_codes.BUTTON_WORD` by its label",
+  "find": "a button (`flow_codes.BUTTON_WORD`) by its label",
   "replace": "a button by its label"
  },
  {
