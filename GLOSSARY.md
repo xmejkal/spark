@@ -549,11 +549,12 @@ of your 3 …", with no file of the project changed. So the offers count too.
 
 ### Page request
 
-One click on the project's page, written down for spark: `{id, key, seen, at}`, the page's own id for it (a UUID), the
-offer's key, the first 12 hex digits of the fingerprint the page was read at, and when it was sent (`PageRequest` in
-`scripts/spark/flow/run_request.py`, P829). `/spark:page` writes it as `.spark/page-request.json`, and
-`flow.py run-request` reads it, deletes it and runs the step only when spark offers that key now and `seen` is the
-fingerprint now. The values of the step come from spark's offer, never from the request. **The failure behind it:** a
+One click on the project's page, or one Send of several picks, one per need
+([P1067](https://github.com/xmejkal/spark/issues/1565)), written down for spark (`PageRequest` in
+`scripts/spark/flow/run_request.py`, P829); `flow.py run-request --help` says its shape. `/spark:page` writes it as
+`.spark/page-request.json`, and `flow.py run-request` reads it, deletes it and runs the step only when spark offers each
+key now and the page was read at the fingerprint now. Several picks run as one pick: all of them are saved, or none.
+The values of the step come from spark's offers, never from the request. **The failure behind it:** a
 page stays open while the project changes. A second Build from the same page, or a pick the drawer no longer allows,
 would run on a project the person no longer sees. So a request that is out of date runs nothing and says so.
 
@@ -566,7 +567,8 @@ shows the `score` and the `why` of each candidate.
 ### Chooser
 
 Whoever picks one offer from the ranked list: Claude in the conversation, or the person. The matcher only ranks. No
-code lives here. `commands/idea.md` tells Claude how to choose, and the choice is a [pick](#pick-and-reserve).
+code lives here. `commands/idea.md` tells Claude how to choose, and the choice is a [pick](#pick-and-reserve). On the
+page, a part chosen for a need stays a choice until Send, and spark saves it as a pick (P1067).
 
 ### `about`
 

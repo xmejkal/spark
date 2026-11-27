@@ -28,7 +28,7 @@ With `--json` it prints the envelope, as `parts.py` does, with `tool` `flow` and
   firmware), else `null`; `with_wiring` is true when the job now holds the wiring (those two jobs, or the deploy beside a current sheet, P1062). `offer` is the key of the now offer: the now phase's one offer of a kind the page sends (a
   pick, the parts list or the build), else `null`. With one pick offer for the parts, `offer` is that pick. A
   breadboard now names no offer, because the build's offer is in the build phase. `chat_offer` ([P1122](https://github.com/xmejkal/spark/issues/1652)) is the key of the *chat offer* whose job the sentence asks Claude for, else `null`. The keys are `write-firmware`, `run-simulation` and `look-at-board`. A chat offer is a job only Claude does, with one sentence that names it, its tell (`docs/guide/design-basis.md` lists each). It is no `offer` and has no step, and the page never sends it. `wired` ([P1044](https://github.com/xmejkal/spark/issues/1534)) is `{sheet_at, deploy_at}`, the witnesses of a board that can be wired, each a time with its zone or `null`: the last change of the kept sheet `breadboard.md` (current or stale), and `data.deploy.at`. Read `guide.wired`, not an effect. `null` means that spark saw no witness, never that the board is not wired. A board log that cannot be read is no witness (the deploy phase is `could-not-run`). A build that does not finish, or whose `dist/` copy fails, leaves the old sheet as an earlier build's, so the witness stays (P1093). A board-only build removes it.
-- `deploy` ([P1043](https://github.com/xmejkal/spark/issues/1533)): the newest board log in `sim/runs/board/`, or `null` with none or with one that cannot be read (the deploy phase says why). `at` is its time as written, with its zone; `image` the whole sha256 of the image it wrote; `verdict` `ready seen`, `ready not seen`, `ready unknown` (also after a crash or a Ctrl-C in the verify, P1110: `read_back` null) or `flash not finished` (a flash that did not finish after the yes: a failed command, a crash or a Ctrl-C, P1092, P1096: the board may be erased, `read_back` false); `cause` the code of the cause, from the log's reason line or its sentence's fixed start; `fact` `current`, `image-differs`, `firmware-newer` or `no-image` (what the image the project holds now says of it); `read_back` whether spark read the board's files back after the write (`null`: the log cannot tell). A `null` `cause` means ready seen, or a cause not recorded: never fill it in. To answer "is the new firmware on the board", read `fact`, `read_back` and `verdict` together: `fact` `current` says only that the log's image is the image the project holds now.
+- `deploy` ([P1043](https://github.com/xmejkal/spark/issues/1533)): the newest board log in `sim/runs/board/`, or `null` with none or with one that cannot be read (the deploy phase says why). `at` is its time as written, with its zone; `image` the whole sha256 of the image it wrote; `verdict` `ready seen`, `ready not seen`, `ready unknown` (also after a crash or a Ctrl-C in the verify, P1110: `read_back` null) or `flash not finished` (a flash that did not finish after the yes: a failed command, a crash or a Ctrl-C, P1092, P1096: the board may be erased, `read_back` false); `cause` the code of the cause, from the log's reason line or its sentence's fixed start; `fact` `current`, `image-differs`, `firmware-newer` or `no-image` (what the image the project holds now says of it); `read_back` whether spark read the board's files back after the write (`null`: the log cannot tell). A `null` `cause` means ready seen, or a cause not recorded: never fill it in. To answer "is the new firmware on the board", read `fact`, `read_back` and `verdict` together: `fact` `current` says only that the log's image is the image the project holds now. `gate_a` ([P1220](https://github.com/xmejkal/spark/issues/1769)) is gate A's one free condition, a row `{shut_by, fact, says}` from the On the board station on, else `null`: `shut_by` is `["run-failed"]` while a run failed on the current image. Relay `says`. An empty `shut_by` never means that gate A is open. [Gate A](gate-a.md) has each `fact` and what Claude does.
 
   While no need is written, `now` is the idea, or the needs once the brief holds a goal ([P1142](https://github.com/xmejkal/spark/issues/1677)). `now` is `null` when the deploy is `ok`, and then `no_open_phase` holds one sentence that says nothing waits (else it is `null`), or with a phase list a
   test swaps in. `done` names the phases before `now` that were done. With no picks behind the parts list (a
@@ -59,9 +59,9 @@ The words of a phase:
 | `mark` | the glyph a page shows for the status |
 | `by` | who does the phase: `you`, `claude` or `your terminal` |
 | `says` | sentences for a person. A value nobody recorded reads `unknown` |
-| `offers` | `{key, label, effect, makes_stale}`: a next step, with the four keys under this table. `flow.py` runs none |
+| `offers` | `{key, label, effect, makes_stale, part}`: a next step, with the five keys under this table. `flow.py` runs none |
 
-An offer has four keys ([P829](https://github.com/xmejkal/spark/issues/1187)):
+An offer has five keys ([P829](https://github.com/xmejkal/spark/issues/1187)):
 
 - `key`: the step, such as `pick:light:led-red-5mm`, `requirements` or `build`.
 - `label`: the words of its button, such as `Build the board`.
@@ -72,6 +72,7 @@ An offer has four keys ([P829](https://github.com/xmejkal/spark/issues/1187)):
 - `makes_stale`: the phases the step can make out of date. It lists only the phases that hold something now. With
   requirements.json there, a pick names `requirements`. Write the parts list names `build` when `.spark/build.json` is
   there and `breadboard` when breadboard.md is there. A build names none.
+- `part`: a pick's part, by the name its label quotes, else `null`. The page labels the pick's radio with it ([P1067](https://github.com/xmejkal/spark/issues/1565)).
 
 A `null` status means spark does not judge the phase, and `says` tells where it stands. The idea is `ok` and says the goal (`your goal is “…”`) when the brief (`.spark/project.json`) holds a goal that is not blank, whatever the rest of the brief holds ([P1142](https://github.com/xmejkal/spark/issues/1677)). It has `null` and says the brief holds no goal when there is none, and `null` and `the brief cannot be read (<why>)` when the file cannot be read. The goal is shown as the brief writes it, and `Privacy` masks paths and secret values only. A
 hand-written project (requirements.json and no needs file) has `null` for its needs and parts, and says so. A project
@@ -162,7 +163,7 @@ what the page is and that every change goes through Claude in the chat ([P1062](
 Under it stands the station line ([P1119](https://github.com/xmejkal/spark/issues/1648)), an `<ol class="stations" aria-label="Where the project stands">` that draws `guide.stations` as given. Each station is an `<li data-phase data-place>` with the phase's mark and its plain name: Idea, Needs, Parts, Parts list, Board files, Wiring, Firmware, Simulation, On the board (`flow_codes.PHASE_NAMES`, else the phase word). Each `now` station has `aria-current="step"` and an ink ring. The segment up to a station is solid up to now and dashed after it. After the nine come Perfboard, PCB and Case (`flow_codes.UNBUILT_STEPS`), each an `<li class="unbuilt" data-unbuilt>`, greyed with a dotted ring and no status mark; its "not built" is for a screen reader only. A station whose note is in a list shows the note's words, small and muted, under its name (`no needs or picks behind it`, `spark cannot see it`, ...); `not-done` and `no-sheet` show none. On a phone the names and the notes are clipped, and the caption `<p class="stations-now">` under the line names the now stations. A guide with no `stations` draws no line. The page draws no DONE or LATER line above its folds, because the line shows them. The developer fold keeps them, and `flow.py show` keeps them in the terminal.
 
 Under the line stands the guide
-([P977](https://github.com/xmejkal/spark/issues/1407)), the section `id="guide"`: the NOW box (`class="now"`) with the now phase and who acts, ON THE BOARD (the last deploy's time in the machine's zone, verdict and cause from `data.deploy`, after a deploy only) and NEXT, the guide's sentence, then,
+([P977](https://github.com/xmejkal/spark/issues/1407)), the section `id="guide"`: the NOW box (`class="now"`) with the now phase and who acts, ON THE BOARD (the last deploy's time in the machine's zone, verdict and cause from `data.deploy`, after a deploy only), TESTED BEFORE THE BOARD (`guide.gate_a.says`, from the On the board station on, and under the line that says nothing is open when `now` is `null`) and NEXT, the guide's sentence, then,
 muted, SET ASIDE, and a list with no item draws no line. A line the parts phase says twice stands once. On a board that can be wired, the parts fold's first line is the wired line, and a pick's or a build's confirm opens with its fixed sentence ([P1044](https://github.com/xmejkal/spark/issues/1534)).
 
 When `now.steps` is set and the page holds wiring
@@ -264,11 +265,11 @@ holds no `<button`, `<input`, `onclick` or `<iframe`.
 From disk, or wherever `claude.use("db")` gives no database, the script does nothing. Nor does it for a viewer who is not
 the artifact's owner (`(await claude.use("user")).isOwner()`), so the published page declares `db` and `user`. For the
 owner it puts the published intro in place of the line under the title, and adds a button to each offer whose kind the
-page sends: a pick, the parts list and the build. A need's drop has none; it is asked in the chat. A chat offer's `.ask` block gets one Copy, which writes the tell to the clipboard, then says "Copied: paste it in Claude Code." It never sends, and a waiting request leaves it as it is. A sendable offer's
+page sends: a pick, the parts list and the build, but a pick in a need's row gets a radio (below). A need's drop has none; it is asked in the chat. A chat offer's `.ask` block gets one Copy, which writes the tell to the clipboard, then says "Copied: paste it in Claude Code." It never sends, and a waiting request leaves it as it is. A sendable offer's
 `<li>` carries `data-makes-stale`, the phases it can make out of date, space apart. When `guide.now.offer` names such
 an offer, NEXT carries its `data-key` and `data-makes-stale` in place of the parts fold's row, and gets the button. A click
 shows the offer's label, its effect and "These steps may be marked out of date: …" when there are any, with Send and
-Cancel. The offer's own button and Send are teal, as spark runs that step, and Cancel, Copy and Withdraw are outlines (P1120). Send writes the row `requests/<id>`: `{id, key, seen, at}`, a new UUID, the offer's key, the page's
+Cancel. The offer's own button and Send are teal, as spark runs that step, and Cancel, Copy and Withdraw are outlines (P1120). Send writes the row `requests/<id>` (`flow.py run-request --help` says its shape): a new UUID, the offer's key, the page's
 `data-fingerprint` and the time. One request waits at a time: until its answer, the other buttons are grey, and Copy (it
 copies `/spark:page`, the command that carries the request to spark) and Withdraw stand in the panel, last in the guide under the NOW box. A
 write the database refuses puts the page back and says "Could not send. Nothing ran.". Withdraw deletes the row, and
@@ -276,10 +277,13 @@ only once the delete is done says "Withdrawn. If Claude had already started it, 
 watching that request's answer. The script watches the latest request by `at`, and ignores a snapshot older than the
 page's own request, then the row `answers/<id>`.
 
+Several picks go in one row ([P1067](https://github.com/xmejkal/spark/issues/1565)). Each need's row in the parts fold, `<li class="need" data-need="…">`, is a radiogroup named by the need: "not now" first and checked, then a native radio per pick, labelled by its `part`. The browser keeps one choice per need, and a choice sends nothing. After the need rows one teal Send names the chosen picks, "Send 2 picks (display, button)", grey with "Choose a part first." under it while none is chosen.
+Its box says each pick, a line two picks share once, and "Spark checks the picks together. If one fails, spark saves none." Its Send writes the row with `keys`, the chosen keys in the page's order, in place of `key`. While it waits the radios are grey and keep their choice, back after "Could not send" or Withdraw. The NOW line's pick keeps its one-click button.
+
 The answer row holds `flow.py run-request`'s `data` unchanged ([a page request](#a-page-request)). The script says it in
-the page's words, after "Your last request, <its time in the browser's zone>: <its offer's label, else its kind's words (`request_kinds`), else `request_other`>." (the request lives in the page's database, not in `show`): what ran ok by its kind, the step's first problem (`line`), spark's line for a step that ran and could not run, or why it could not run. A refusal shows as
+the page's words, after "Your last request, <its time in the browser's zone>: <its offer's label, else its kind's words (`request_kinds`), else `request_other`; for picks their count and needs, else "your picks">." (the request lives in the page's database, not in `show`): what ran ok by its kind, the step's first problem (`line`), spark's line for a step that ran and could not run, or why it could not run. A refusal shows as
 its code's own words only when `line` is exactly that code's meaning, in grey; any other `line` with `ran: false` shows
-as could not run. Never "done" alone.
+as could not run. Picks that ran ok say "Saved as the picks.", picks that ran with problems say first "No pick was saved.", and a not-offered refusal of picks says that spark no longer offers one of them. Never "done" alone.
 
 Never take an offer only because `flow.py` lists it. A pick, a drop and a build change files, so say what the effect
 line says and ask the person first.
@@ -324,10 +328,8 @@ with `, needs you` after the command for a step with `needs_person` or `needs_ye
 ## A page request
 
 `flow.py run-request` runs the step that the person asked for on the page ([P829](https://github.com/xmejkal/spark/issues/1187)).
-The request is one file, `.spark/page-request.json` in the project: `{id, key, seen, at}`, the page's id for the click
-(a UUID), the offer's key, the first 12 hex digits of the fingerprint the page was read at, and when it was sent. Spark
-does not read `at`. Claude writes the file from the page's request, as the page sent it. Never write a key or a `seen`
-of your own into it.
+The request is one file, `.spark/page-request.json`: one offer, or several picks, one per need ([P1067](https://github.com/xmejkal/spark/issues/1565)).
+`flow.py run-request --help` says its shape and its refusals. Write it as the page sent it: never a key or a `seen` of your own, and never join or split its picks.
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" run-request --project . --json
@@ -335,22 +337,20 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/flow.py" run-request --project . --json
 
 It reads the file and deletes it at once, so one request runs once at most. A file it cannot delete, and anything that
 is no regular file (a folder), runs nothing and is left. Then it reads the flow, as `show` does. It runs the step only
-when `seen` is the fingerprint now, the key is one of the offers now, its kind is `pick`, `requirements` or `build`,
-and its step's op is `pick`, `requirements` or `build-board`. The fingerprint comes first, so a second click on a pick,
-which is no offer once it ran, is stale. It runs the offer's step, its argv parsed by the Operation of its op. A step
-whose argv does not parse runs nothing. The values come from spark's offer, never from the request: a pick of that one part for that need, the parts list with no
-`--dry-run` and no `--replies`, so it removes nothing, and the build of the project's `requirements.json` with `--keep`
-the project. The step writes what the offer's effect says. A deploy, a simulation, a look or a grant is never an offer
-here, so a request for one runs nothing.
-
-After any run, run `flow.py page`, so the page carries the new fingerprint (only the build writes the page by itself),
-and `flow.py show` for the next step.
+when `seen` is the fingerprint now, each key is one of the offers now, its kind is `pick`, `requirements` or `build`,
+and its step's op is `pick`, `requirements` or `build-board`. Several picks run as one pick of all their needs, from the
+offers' own steps: any problem saves none. The fingerprint comes first, so a second click on a pick, which is no offer
+once it ran, is stale. It runs the offer's step, its argv parsed by the Operation of its op. A step whose argv does not
+parse runs nothing. The values come from spark's offers, never from the request: a pick of each part for its need, the
+parts list with no `--dry-run` and no `--replies`, so it removes nothing, and the build of the project's `requirements.json`
+with `--keep` the project. The step writes what the offer's effect says. A deploy, a simulation, a look or a grant is never an offer here, so a request for one runs nothing. After any run, run `flow.py page`, so the page
+carries the new fingerprint (only the build writes the page by itself), and `flow.py show` for the next step.
 
 The envelope has `op` `run-request`. Its `data` holds:
 
 - `for`: the request's id, so the page matches the answer to its click, or `null` when the id is no UUID.
-- `key` and `label`: the offer's key and the words of its button, or `null` when the key is no offer now. A key that is
-  no offer never reaches the answer.
+- `key`, `keys` and `label`: the offer's key, the keys that ran in the request's order, and the words of its button. For
+  several picks `key` is `null` and `label` joins their labels with `; `. Only an offer spark holds now is named (else `null` and `[]`), so a key that is no offer never reaches the answer.
 - `ran`: `true` when the step ran, `false` when nothing ran.
 - `status` and `mark`: how the step ended, as a phase's (`ok`, `problems` or `could-not-run`). A refusal is
   `could-not-run`.
@@ -368,10 +368,10 @@ envelope's. A refusal is one `unchecked` item, and its fix tells you what to do:
 
 | code | meaning | what to do |
 | --- | --- | --- |
-| `request_malformed` | the file is missing, is no regular file or no JSON object, holds an id, key or seen that cannot be read, or could not be deleted | write the page's request to the file as the page sent it; if it was written that way, ask the person to click again |
+| `request_malformed` | the request file is missing, is no regular file or no JSON object, holds an id, key or seen that cannot be read, or could not be deleted, so nothing ran | write the page's request to the file as the page sent it; if it was written that way, ask the person to click again |
 | `request_in_chat` | the key is a need's drop or a chat offer, which are asked in the chat | tell Claude in the chat, for example: drop the light need |
 | `request_stale` | the project changed after the page was read: `seen` is not the fingerprint now | write the page again with `flow.py page`, then click again |
-| `request_not_offered` | spark does not offer the key now, the page never runs its kind or its step's op, or the step's argv does not parse | write the page again with `flow.py page`, then click again |
+| `request_not_offered` | spark does not offer a key now, the page never runs its kind or its step's op, the step's argv does not parse, or a request of picks names a key that is no pick or two picks of one need | write the page again with `flow.py page`, then click again |
 | `request_secrets_unreadable` | a secrets file in `firmware/` cannot be read or parsed, so spark cannot mask its values; the item's subject names it | repair or remove that file, then click again |
 
 A stale refusal is normal: a second Build from the same page is stale once the first one ran. The exit is 0 when the step

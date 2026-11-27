@@ -77,9 +77,9 @@ SYSTEM_FONTS = 'system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif'
 
 def without_script(text):
     """`text` without the script block and the script's hooks (data-makes-stale on a sendable offer, data-key with it on the
-    NOW box's NEXT line, P1062): the page as it was before the script."""
+    NOW box's NEXT line, P1062, and data-need on a need's row, P1067): the page as it was before the script."""
     text = re.sub(r'<p class="next" data-key="[^"]*" data-makes-stale="[^"]*">', '<p class="next">', SCRIPT_BLOCK.sub("", text, count=1))
-    return re.sub(r' data-makes-stale="[^"]*"', "", text)
+    return re.sub(r' data-(makes-stale|need)="[^"]*"', "", text)
 
 
 def scripts_of(text):
@@ -2110,6 +2110,42 @@ class TheSliceOneOrderTest(unittest.TestCase):
         self.assertIn('<p class="next" data-key="build"', order_page(guide=a_guide(now=build)))
         self.assertIn('<li data-key="build" data-makes-stale="">Build the board: Builds it.</li>', order_page())
 
+    def test_each_need_row_carries_its_need_for_the_script_and_the_developer_fold_none(self):
+        """P1067: the script groups a need's picks by the row's `data-need`, so a choice per need needs no rule of its own."""
+        text = order_page()
+        for need in ("light", "button"):
+            self.assertEqual(text.count('<li class="need" data-need="%s"><strong>%s</strong><ul>' % (need, need)), 1, need)
+        self.assertNotIn("data-need", developer(text))
+
+    def test_a_pick_offer_s_words_hold_its_need_and_its_part_and_the_other_offers_neither(self):
+        """P1067: the radio of a pick is labelled by its part, and the Send of picks names their needs."""
+        phase = a_need_phase()
+        phase["offers"][0]["part"] = "Red LED"
+        offers = page_words([phase, dict(a_phase("build").to_dict(), offers=[{"key": "build", "label": "Build the board",
+                                                                              "effect": "Builds it.", "makes_stale": []}])])["offers"]
+        self.assertEqual(offers["pick:light:led-red"], {"label": "Pick led-red for light", "says": [
+            "Saves led-red.", "These steps may be marked out of date: requirements."], "need": "light", "part": "Red LED"})
+        self.assertEqual((offers["pick:button:tact-6mm"]["need"], offers["pick:button:tact-6mm"]["part"]), ("button", None))
+        self.assertEqual(offers["build"], {"label": "Build the board", "says": ["Builds it."]})
+
+    def test_the_words_of_several_picks_are_python_s(self):
+        """P1067: the words of the radios, the Send of picks, its box, its wait and its answers, written by Python."""
+        words = page_words([])
+        self.assertEqual({name: words[name] for name in ("not_now", "picks_said", "send_picks", "choose_first", "picks_together",
+                                                          "waiting_picks", "ok_picks", "last_request_picks", "needs_join", "label_join",
+                                                          "no_pick_saved")},
+                         {"not_now": "not now", "picks_said": ["%d pick (%s)", "%d picks (%s)"], "send_picks": "Send %s",
+                          "choose_first": "Choose a part first.",
+                          "picks_together": "Spark checks the picks together. If one fails, spark saves none.",
+                          "waiting_picks": "Sent at %s: %s. Nothing has run yet. To run it, type /spark:page in Claude Code.",
+                          "ok_picks": "Saved as the picks. Nothing is built yet. Reload to see the new state.",
+                          "last_request_picks": "your picks", "needs_join": ", ", "label_join": ": ",
+                          "no_pick_saved": "No pick was saved."})
+        not_offered = "the request names a step that spark does not offer now, so nothing ran"
+        self.assertEqual(words["refused_picks"], dict(words["refused"], **{
+            not_offered: "Nothing ran. Spark no longer offers one of these picks. Reload this page."}))
+        self.assertEqual(words["refused"][not_offered], "Nothing ran. This button is no longer offered. Reload the page.")
+
     def test_the_need_of_a_pick_offer_s_key(self):
         from spark.flow.phase_readers import pick_need
         self.assertEqual(pick_need("pick:light:led-red-5mm"), "light")
@@ -2299,6 +2335,48 @@ class ThePublishedPageTest(unittest.TestCase):
         self.page(project, "--artifact", "9667a2de-3d30-4c7f-a7fc-9ded96a0e967")
         self.assertEqual(json.loads((project / ".spark" / "page.json").read_text(encoding="utf-8")),
                          {"artifact": "9667a2de-3d30-4c7f-a7fc-9ded96a0e967"})
+
+
+FAILED_ROW = "A run failed on this image (one.log)."
+TESTED_ROW = '<p class="tested"><strong>TESTED BEFORE THE BOARD</strong> %s</p>'
+
+
+class TheTestedBeforeTheBoardRowTest(unittest.TestCase):
+    """P1220: the NOW box prints gate A's row from `guide.gate_a`'s `says`, the same words as `flow.py show`, and decides nothing."""
+
+    def box(self, **changes):
+        return order_page(**changes).split('<div class="now">')[1].split("</div>")[0]
+
+    def test_the_now_box_holds_the_row_after_on_the_board_and_before_next(self):
+        now = dict(a_guide()["now"], by=["claude"])
+        gate_a = {"shut_by": ["run-failed"], "fact": "run-failed", "says": FAILED_ROW}
+        box = self.box(guide=a_guide(now=now, gate_a=gate_a), deployed="Last deploy 23 Nov 2026, 14:09. Written by the flasher.")
+        self.assertIn(TESTED_ROW % FAILED_ROW, box)
+        marks = [box.index(mark) for mark in ('<strong>ON THE BOARD</strong>', "<strong>TESTED BEFORE THE BOARD</strong>", '<strong>NEXT</strong>')]
+        self.assertEqual(marks, sorted(marks))
+
+    def test_with_no_now_the_row_stands_after_the_line_that_says_nothing_is_open(self):
+        gate_a = {"shut_by": [], "fact": "image-tested", "says": "A run passed on this image."}
+        box = self.box(guide=a_guide(now=None, no_open_phase="Nothing is waiting on you.", gate_a=gate_a))
+        self.assertEqual(box.split("\n")[1:3], ["<p>Nothing is waiting on you.</p>", TESTED_ROW % "A run passed on this image."])
+
+    def test_a_null_gate_a_and_a_guide_with_no_gate_a_draw_no_row(self):
+        for guide in (a_guide(gate_a=None), a_guide(), a_guide(now=None, no_open_phase="Nothing waits.", gate_a=None)):
+            with self.subTest(guide=guide["now"]):
+                self.assertNotIn("TESTED BEFORE THE BOARD", order_page(guide=guide))
+
+    def test_a_null_shut_by_is_a_row_and_is_printed(self):
+        """A null `shut_by` is not a null `gate_a`: spark cannot tell, and the page says so."""
+        gate_a = {"shut_by": None, "fact": None, "says": "Spark cannot tell. The simulation phase says why."}
+        self.assertIn(TESTED_ROW % "Spark cannot tell. The simulation phase says why.", self.box(guide=a_guide(gate_a=gate_a)))
+
+    def test_the_page_and_show_print_the_same_row(self):
+        from test_flow import a_project_at_the_board, lines_of
+        project = a_project_at_the_board()
+        run_flow("page", "--project", str(project), "--json")
+        text = (project / "page.html").read_text(encoding="utf-8")
+        self.assertIn(TESTED_ROW % FAILED_ROW, text)
+        self.assertIn("  TESTED BEFORE THE BOARD: " + FAILED_ROW, lines_of(project))
 
 
 if __name__ == "__main__":

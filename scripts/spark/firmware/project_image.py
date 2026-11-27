@@ -9,6 +9,7 @@ import functools
 import hashlib
 
 from spark.core import outcomes
+from spark.records import folder_walk
 from spark.firmware import firmware_codes, image_builder, scenario_steps, sim_project
 
 
@@ -121,8 +122,8 @@ class ProjectImage:
     def find_newer_files(self):
         """The files under firmware/ changed after the image was made, as project paths. The board gets the image, not them."""
         made = self.path.stat().st_mtime
-        return sorted(str(path.relative_to(self.project)) for path in (self.project / "firmware").rglob("*")
-                      if path.is_file() and "__pycache__" not in path.parts and path.stat().st_mtime > made)
+        return sorted(str(path.relative_to(self.project)) for path in folder_walk.files_under(self.project / "firmware")
+                      if path.stat().st_mtime > made)
 
     def why_other_runs(self):
         """A sentence naming each log in the runs folder that does not name this image's sha256, or None when every log does."""

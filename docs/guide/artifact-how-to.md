@@ -12,7 +12,7 @@ of `.spark/needs.json`, `requirements.json` and `.spark/build.json`. Published, 
 it until the owner shares it.
 
 Its order ([P1062](https://github.com/xmejkal/spark/issues/1560)): the title, the freshness line, the NOW box (the phase
-and who acts, ON THE BOARD after a deploy, and NEXT, what to do), the done and later lines, then the Parts, Wiring and
+and who acts, ON THE BOARD after a deploy, TESTED BEFORE THE BOARD from the On the board station on, which says whether a run failed on the board's image, and NEXT, what to do), the done and later lines, then the Parts, Wiring and
 Pictures folds, each open only while its job is NOW, the bench note, and last the developer fold, always closed: the
 phases, each offer's key and effect, the marks and the record ids. The freshness line and ON THE BOARD read their times
 in the machine's zone; the last request's time is the browser's.
@@ -53,9 +53,10 @@ the viewer is the owner, so the buttons show only to the owner.
   frame, no other web address, no script but spark's own.
 - It holds no path of your machine: the project's path, the store's and the home folder's are masked, and so is
   each value of the project's secrets files ([section 10](#10-secrets)).
-- It decides nothing. A button writes one request row. Nothing runs until the person types `/spark:page`, and then
-  `flow.py run-request` runs a step only when spark offers it now and the project has not changed since the page was
-  read.
+- It decides nothing. A button writes one request row, and so does one Send of the picks chosen for several needs
+  ([P1067](https://github.com/xmejkal/spark/issues/1565)); `flow.py run-request --help` says the row's shape. Nothing
+  runs until the person types `/spark:page`, and then `flow.py run-request` runs a step only when spark offers it now
+  and the project has not changed since the page was read.
 
 ## 6. The route of a republish
 

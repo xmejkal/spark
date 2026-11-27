@@ -247,8 +247,8 @@ How to read this page:
   - Effects: writes. Data keys: file, did, stands_at, phases, fingerprint, guide, artifact.
   - Summary: Write page.html in the project: each phase of the flow with a status word and a mark, and the project's pictures (P827).
 - `op:run-request`
-  - Effects: writes. Data keys: for, key, label, ran, status, mark, line, note, fingerprint.
-  - Summary: Run the step the page asked for in .spark/page-request.json, a pick, the parts list or the build, only when spark offers it now and the project has not changed since the page was read (P829).
+  - Effects: writes. Data keys: for, key, keys, label, ran, status, mark, line, note, fingerprint.
+  - Summary: Run the step the page asked for in .spark/page-request.json, a pick or several picks, the parts list or the build, only when spark offers it now and the project has not changed since the page was read (P829, P1067).
 
 ## Unbuilt steps
 

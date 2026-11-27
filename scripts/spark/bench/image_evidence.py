@@ -26,7 +26,7 @@ from spark.core import outcomes
 from spark.core import text_guards
 from spark.core.outside import ProgramRunner
 from spark.records import tool_finder
-from spark.firmware.scenario_steps import (NO_MAIN, ONE_RUN_MESSAGE, PASSED, READY, SET_CONTROL, WHY_LOG_UNREADABLE, ScenarioSteps,
+from spark.firmware.scenario_steps import (NO_MAIN, ONE_RUN_MESSAGE, READY, SET_CONTROL, WHY_LOG_UNREADABLE, ScenarioSteps,
                                             file_hashes)
 from spark.firmware.sim_project import SimulationLimits
 
@@ -429,10 +429,9 @@ class NoSimulationEvidence(ImageEvidence):
 
     def _why_run_failed(self, image):
         """A run that did not pass on this image refuses here too: a passed run is not needed, a failed one still counts."""
-        for log, verdict, sha256 in image.read_run_logs():
-            if sha256 == image.sha256 and verdict != PASSED:
-                return ("%s did not pass on this image (verdict: %s): deploy.py flashes no image that a run failed"
-                        % (log.name, verdict))
+        for log, verdict in image.failed_runs():  # P1220: the one reader, which the flow's guide and gate A read too
+            return ("%s did not pass on this image (verdict: %s): deploy.py flashes no image that a run failed"
+                    % (log.name, verdict))
         return None
 
     # --- MVP --- P436: a board record that cannot be read is a sentence (evidence_refuses), not a missing tool

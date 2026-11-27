@@ -149,7 +149,8 @@ class EachKindRunsItsStepTest(RunRequestTest):
         self.assertEqual(self.ran(), {"pick": [{"project_and_picks": [str(self.project), "light=led-red-5mm"],
                                                 "passed_over": (), "dry_run": False}]})
         self.assertIs(self.steps["pick"].ran[0]["passed_over"], NO_PASSED_OVER)  # the flag left out, never a payload
-        self.assertEqual(envelope["data"], {"for": ID, "key": "pick:light:led-red-5mm", "label": "label of pick:light:led-red-5mm", "ran": True,
+        self.assertEqual(envelope["data"], {"for": ID, "key": "pick:light:led-red-5mm", "keys": ["pick:light:led-red-5mm"],
+                                            "label": "label of pick:light:led-red-5mm", "ran": True,
                                             "status": "ok", "mark": "✓", "line": "ran label of pick:light:led-red-5mm: ok",
                                             "note": None, "fingerprint": self.fingerprint()})
 
@@ -354,9 +355,9 @@ class OnlyWhatSparkOffersRunsTest(RunRequestTest):
                 with self.subTest(key=key, offered=len(keys)):
                     self.refused(key, "request_in_chat")
 
-    def test_no_channel_carries_text_a_request_is_its_id_its_key_and_its_seen(self):
-        # P1122's done-when: a text or an argv beside the three fields is never read
-        self.assertEqual(PageRequest._fields, ("id", "key", "seen"))
+    def test_no_channel_carries_text_a_request_is_its_id_its_key_or_keys_and_its_seen(self):
+        # P1122's done-when: a text or an argv beside the fields is never read; P1067: "The row gets `keys`"
+        self.assertEqual(PageRequest._fields, ("id", "key", "seen", "keys"))
         self.ask("build", text="Write the firmware for this project's board.", argv=["--deploy"])
         self.assertEqual(read_request(self.project), PageRequest(ID, "build", self.seen()))
 
@@ -393,7 +394,7 @@ class OnlyWhatSparkOffersRunsTest(RunRequestTest):
 
     def test_a_refusal_answers_whom_it_is_for_and_says_nothing_ran(self):
         envelope = self.refused("deploy", "request_not_offered")
-        self.assertEqual(envelope["data"], {"for": ID, "key": None, "label": None, "ran": False, "status": "could-not-run", "mark": "?",
+        self.assertEqual(envelope["data"], {"for": ID, "key": None, "keys": [], "label": None, "ran": False, "status": "could-not-run", "mark": "?",
                                             "line": "the request names a step that spark does not offer now, so nothing ran",
                                             "note": None, "fingerprint": self.fingerprint()})
 
@@ -506,6 +507,147 @@ class OnlyAStepThePageRunsRunsTest(RunRequestTest):
         envelope, code = self.run_request()
         self.assertEqual((code, self.ran()), (0, {"build-board": [{"requirements": str(self.project / "requirements.json"), "keep": None,
                                                                    "sim_dir": None, "firmware": None}]}))
+
+
+#: P1067: four picks of four needs, offered beside OFFERED, in an order that is not the offers'.
+PICKS = ("pick:screen:oled-128", "pick:light:led-red-5mm", "pick:buzzer:piezo-12mm", "pick:button:tactile-6mm")
+
+
+class SeveralPicksTest(RunRequestTest):
+    """P1067 (#1565): a row's `keys` names one pick per need, and one PickParts run picks them all from the offers' own
+    steps, or nothing runs."""
+
+    def setUp(self):
+        super().setUp()
+        self.readers = [FakeReader(OFFERED + ("pick:light:led-green-5mm",) + PICKS[:1] + PICKS[2:])]
+
+    def ask_picks(self, keys, seen=None, **more):
+        """Write a request file of `keys`, with no `key`, as the page's Send of picks would."""
+        (self.project / ".spark").mkdir(exist_ok=True)
+        request = dict({"id": ID, "keys": keys, "seen": self.seen() if seen is None else seen, "at": "2026-11-27T00:40:00+01:00"}, **more)
+        (self.project / ".spark" / "page-request.json").write_text(json.dumps(request), encoding="utf-8")
+
+    def refused_picks(self, keys, code, **asked):
+        """Ask for `keys`, run, and check that nothing ran and the answer refused with `code`; the envelope."""
+        self.ask_picks(keys, **asked)
+        envelope, exit_code = self.run_request()
+        self.assertEqual((exit_code, envelope["status"], [item["code"] for item in envelope["unchecked"]], self.ran()),
+                         (2, "could-not-run", [code], {}), keys)
+        return envelope
+
+    def test_four_picks_of_four_needs_run_one_pick_with_the_four_pairs_in_the_row_s_order(self):
+        self.ask_picks(list(PICKS))
+        envelope, code = self.run_request()
+        self.assertEqual((code, self.ran()), (0, {"pick": [{"project_and_picks": [str(self.project), "screen=oled-128", "light=led-red-5mm",
+                                                                                 "buzzer=piezo-12mm", "button=tactile-6mm"],
+                                                            "passed_over": (), "dry_run": False}]}))
+
+    def test_the_answer_of_four_picks_names_their_keys_and_labels_and_no_key(self):
+        self.ask_picks(list(PICKS))
+        envelope, _ = self.run_request()
+        labels = "; ".join("label of " + key for key in PICKS)
+        self.assertEqual(envelope["data"], {"for": ID, "key": None, "keys": list(PICKS), "label": labels, "ran": True, "status": "ok",
+                                            "mark": "✓", "line": "ran %s: ok" % labels, "note": None, "fingerprint": self.fingerprint()})
+
+    def test_one_pick_in_keys_runs_as_the_row_of_its_key(self):
+        self.ask("pick:light:led-red-5mm")
+        self.run_request()
+        self.ask_picks(["pick:light:led-red-5mm"])
+        envelope, code = self.run_request()
+        self.assertEqual((code, len(self.steps["pick"].ran)), (0, 2))
+        self.assertEqual(self.steps["pick"].ran[1], self.steps["pick"].ran[0])
+        self.assertEqual((envelope["data"]["key"], envelope["data"]["keys"]), (None, ["pick:light:led-red-5mm"]))
+
+    def test_two_picks_of_one_need_a_key_that_is_no_pick_or_a_key_not_offered_runs_nothing(self):
+        for keys in (["pick:light:led-red-5mm", "pick:light:led-green-5mm"], ["pick:light:led-red-5mm", "pick:light:led-red-5mm"],
+                     ["pick:light:led-red-5mm", "build"], ["requirements"], ["pick:light:led-red-5mm", "pick:fan:none-such"]):
+            with self.subTest(keys=keys):
+                self.refused_picks(keys, "request_not_offered")
+
+    def test_a_row_with_key_and_keys_with_neither_or_with_keys_that_are_no_list_of_text_is_malformed(self):
+        for asked in ({"keys": ["pick:light:led-red-5mm"], "key": "pick:light:led-red-5mm"}, {"keys": None}, {"keys": []},
+                      {"keys": "pick:light:led-red-5mm"}, {"keys": ["pick:light:led-red-5mm", 3]}, {"keys": ["pick:light:led-red-5mm", ""]}):
+            with self.subTest(asked=asked):
+                envelope = self.refused_picks(asked.pop("keys"), "request_malformed", **asked)
+                self.assertEqual(envelope["data"]["for"], ID)
+
+    def test_a_row_with_key_and_keys_is_malformed_and_its_answer_names_no_key(self):
+        """The PR refuter of P1067: the row's `key` is an offer spark holds, but a row with both is no request, so its
+        answer names neither."""
+        envelope = self.refused_picks(["pick:light:led-red-5mm"], "request_malformed", key="build")
+        self.assertEqual({key: envelope["data"][key] for key in ("for", "key", "keys", "label")},
+                         {"for": ID, "key": None, "keys": [], "label": None})
+
+    def test_a_stale_page_and_a_step_asked_in_the_chat_run_nothing(self):
+        self.refused_picks(list(PICKS), "request_stale", seen="0123456789ab")
+        self.refused_picks(["pick:light:led-red-5mm", "needs-drop:light"], "request_in_chat")
+
+    def test_a_refusal_of_picks_names_no_key_no_label_and_no_text_of_the_row(self):
+        envelope = self.refused_picks(["pick:light:led-red-5mm", "pick:fan:" + "x" * 120], "request_not_offered")
+        self.assertEqual({key: envelope["data"][key] for key in ("for", "key", "keys", "label", "ran")},
+                         {"for": ID, "key": None, "keys": [], "label": None, "ran": False})
+        self.assertNotIn("x" * 120, json.dumps(envelope))
+
+    def test_picks_whose_run_has_problems_answer_its_first_problem_and_exit_1(self):
+        self.steps["pick"] = FakeStep("pick", OperationResult({}, [Finding("problems", "button", "a_code", "the button has no piece left", "get one"),
+                                                               Finding("problems", "light", "b_code", "the light has none", "get one")]))
+        self.ask_picks(list(PICKS[:2]))
+        envelope, code = self.run_request()
+        self.assertEqual((code, envelope["status"], [item["code"] for item in envelope["problems"]]), (1, "problems", ["a_code", "b_code"]))
+        self.assertEqual({key: envelope["data"][key] for key in ("ran", "status", "mark", "line")},
+                         {"ran": True, "status": "problems", "mark": "✗", "line": "the button has no piece left"})
+
+    def test_the_text_of_picks_that_ran_names_each_label(self):
+        self.ask_picks(list(PICKS[:2]))
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            code = run_cli(HelpText("flow.py", tool="flow"), RunRequest(readers=self.readers, operations=self.steps),
+                           ["--project", str(self.project)], outside_builder=build_bare_outside_world, outside=FakeOutsideWorld())
+        self.assertEqual((code, out.getvalue().splitlines()[0]), (0, "ran label of pick:screen:oled-128; label of pick:light:led-red-5mm: ok"))
+
+    def test_the_data_keys_are_a_real_answer_s_keys(self):
+        for ask in (lambda: self.ask_picks(list(PICKS)), lambda: self.ask("build"), lambda: self.ask("deploy")):
+            ask()
+            self.assertEqual(sorted(self.run_request()[0]["data"]), sorted(RunRequest.data_keys))
+
+
+class TheRealPicksTest(unittest.TestCase):
+    """P1067: flow.py run-request with the real readers and the real PickParts, on a store of two parts that serve two
+    needs: two picks in one row are both saved, and two needs on one owned piece save nothing (`needs.plan_holds`)."""
+
+    def setUp(self):
+        self.home, self.project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "plant-alarm"
+        for part in ("x-probe", "x-fork"):
+            for kind, held in (("catalog", {"id": part, "name": "A soil probe " + part, "kind": "sensor",
+                                            "function": [{"does": "sense", "what": "soil-moisture"}]}),
+                               ("drawer", {"label": part, "is": {"part": part}, "count": 1})):
+                (self.home / kind).mkdir(exist_ok=True)
+                (self.home / kind / (part + ".json")).write_text(json.dumps(dict({"schema": 1}, **held)))
+        (self.project / ".spark").mkdir(parents=True)
+        self.needs = json.dumps({"schema": 1, "needs": [{"id": "soil", "does": "sense", "what": "soil-moisture"},
+                                                        {"id": "wet", "does": "sense", "what": "soil-moisture"}]})
+        (self.project / ".spark" / "needs.json").write_text(self.needs)
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def run_picks(self, keys):
+        """`flow.py run-request --project <project> --json` on a request of `keys`: (the envelope, the exit code)."""
+        seen = fingerprint_of(self.project, read_flow(self.project)[0])[:12]
+        (self.project / ".spark" / "page-request.json").write_text(json.dumps({"id": ID, "keys": keys, "seen": seen, "at": "2026-11-27T00:40:00+01:00"}))
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            code = flow.main(["run-request", "--project", str(self.project), "--json"])
+        return json.loads(out.getvalue()), code
+
+    def test_two_picks_in_one_row_are_both_saved(self):
+        envelope, code = self.run_picks(["pick:soil:x-probe", "pick:wet:x-fork"])
+        self.assertEqual((code, envelope["data"]["ran"], envelope["data"]["status"]), (0, True, "ok"), envelope)
+        needs = json.loads((self.project / ".spark" / "needs.json").read_text())["needs"]
+        self.assertEqual({need["id"]: need.get("pick") for need in needs}, {"soil": [{"part": "x-probe"}], "wet": [{"part": "x-fork"}]})
+
+    def test_two_needs_on_one_owned_piece_save_nothing(self):
+        envelope, code = self.run_picks(["pick:soil:x-probe", "pick:wet:x-probe"])
+        self.assertEqual((code, envelope["data"]["ran"], envelope["data"]["status"]), (1, True, "problems"), envelope)
+        self.assertEqual((self.project / ".spark" / "needs.json").read_text(), self.needs)
 
 
 class TheVerbTest(unittest.TestCase):
