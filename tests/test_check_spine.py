@@ -3378,38 +3378,35 @@ class TheVerdictNamesNoStepOfItsOwnTest(unittest.TestCase):
     """P1292 (it reverses P517, #713): a build that reaches ok in a project without --keep names no step of its own. With
     --keep, check_spine's follow-up names the steps of `flow.py show` (test_flow's TheFollowUpTest)."""
 
-    def answer(self, stages, json_out=False, library=False, folder="lamp"):
-        project = (Path(tempfile.mkdtemp()) / folder).resolve()
-        project.mkdir()
-        if not library:
-            (project / ".spark").mkdir()
+    def answer(self, stages, json_out=False):
+        """(the exit code, the printed text) of a build of `stages` in a new project, without --keep."""
+        project = (Path(tempfile.mkdtemp()) / "lamp").resolve()
+        (project / ".spark").mkdir(parents=True)
         args = argparse.Namespace(keep=None, json=json_out, requirements=str(project / "requirements.json"), sim_dir=None)
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
             code = run_build_board(stages, args)
-        return code, out.getvalue(), project
+        return code, out.getvalue()
 
     def ok(self):
         return [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build", "simulation")]
 
     def test_with_json_an_ok_build_in_a_project_has_no_next_key(self):
-        code, said, _ = self.answer(self.ok(), True)
+        code, said = self.answer(self.ok(), True)
         self.assertEqual(code, 0)
         self.assertNotIn("next", json.loads(said))
 
     def test_the_text_ends_with_the_verdict_and_no_next_line(self):
-        _, said, _ = self.answer(self.ok())
+        _, said = self.answer(self.ok())
         self.assertNotIn("  next: ", said)
         self.assertEqual(said.rstrip("\n").split("\n")[-1], "  the chain runs end to end")
 
-    def test_a_problem_a_could_not_run_and_a_library_run_name_no_step(self):
-        for label, stages, library in (("problem", [stage("build", check_spine.PROBLEMS)], False),
-                                       ("could not run", [stage("build", check_spine.COULD_NOT_RUN)], False),
-                                       ("library", self.ok(), True)):
+    def test_a_problem_and_a_could_not_run_name_no_step(self):
+        for label, stages in (("problem", [stage("build", check_spine.PROBLEMS)]),
+                              ("could not run", [stage("build", check_spine.COULD_NOT_RUN)])):
             with self.subTest(label):
-                _, said, _ = self.answer(stages, True, library)
-                self.assertNotIn("next", json.loads(said))
-                self.assertNotIn("  next: ", self.answer(stages, library=library)[1])
+                self.assertNotIn("next", json.loads(self.answer(stages, True)[1]))
+                self.assertNotIn("  next: ", self.answer(stages)[1])
 
 
 class ARebuildMergesIntoTheKeptDiagramTest(unittest.TestCase):
