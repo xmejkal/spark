@@ -5,7 +5,7 @@ Step 7 of 8 in [the journey](../journey.md). Next: [Bench](bench.md).
 **Works.** The build's simulation stage generates the Wokwi diagram and stages the chips: hand-written models of
 modules Wokwi has no part for, kept beside a part's record and compiled with `wokwi-cli` only when the binary is
 missing or older than its source. `--keep .` keeps them in `sim/`
-([P116](https://github.com/xmejkal/spark/issues/50)).
+([P116](https://github.com/xmejkal/spark/issues/50)). The page's Simulation line (P1209) says what can run. It names the free checks' result, from the check record that `check_firmware.py` keeps, and, when Wokwi has no model of the board, that there is no simulation and you test on the real board. That line is grey only when nothing more runs: no Wokwi model, and the free checks current and ok. A failed, older or unread check is never grey. On a board Wokwi covers, the NOW line names the paid scenario run.
 
 A run is a separate step:
 

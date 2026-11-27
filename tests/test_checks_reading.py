@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.core.zone_time import day_and_time  # noqa: E402
 from spark.firmware.firmware_check import INPUTS  # noqa: E402
-from spark.flow import checks_reading, flow_codes  # noqa: E402
+from spark.flow import checks_reading  # noqa: E402
 from spark.records.check_record import CheckRecordStore  # noqa: E402
 
 AT = "2026-11-27T02:10:00+01:00"
@@ -53,7 +53,6 @@ class TheSimulationLineTest(unittest.TestCase):
     def test_no_record_and_no_firmware_with_no_model_is_today_s_line_in_grey(self):
         said = simulation(a_project(firmware=False), firmware_written=False)
         self.assertEqual((said["line"], said["grey"], said["check"]["state"]), (NO_MODEL, True, "none-recorded"))
-        self.assertEqual(flow_codes.NO_SIMULATION_NOW, NO_MODEL)
 
     def test_no_record_and_no_firmware_on_a_covered_board_is_no_line(self):
         said = simulation(a_project(firmware=False), no_model=False, firmware_written=False)

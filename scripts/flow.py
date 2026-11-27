@@ -36,6 +36,11 @@ next holds the step of that offer, raw (P1030), or the step of the simulate or t
 means: read data.guide.now. When Wokwi has no model of the board, the build ends its simulation stage skipped with the
 code board_not_in_wokwi and exits 0 (P1207). The guide counts that build as done and says there is no simulation. An
 older record of such a build, with the stage could-not-run, is counted as done too and keeps exit 2 until the next build.
+After LATER stands the simulation line, data.guide.simulation.line (P1209): the free checks' state, read from the check
+record .spark/check-firmware.json that check_firmware.py keeps (not run yet, current with its time and its two result
+lines, older when a file under firmware/ or tests/ changed since, or not read and why), then why there is no simulation.
+flow.py show never runs the checks. The page draws the same line, grey only when Wokwi has no model of the board and the
+free checks are current and ok (data.guide.simulation.grey).
 
 The deploy phase reads the newest board log in sim/runs/board/: its time, image, verdict and cause, never its port or
 console text (P1043). Only ready seen on the image the project holds now is ok. Ready unknown is partial, and ready not
@@ -81,8 +86,9 @@ the picks give and is not as spark last wrote it, the phase and NOW say it was c
 spark cannot read, they name no cause. A need dropped after the
 must lines were last gone through makes the idea phase out of date, and its next step is init_project.py --answers, on the
 person's yes. After an ok run that writes to a project, the command ends its next with the step flow.py show names now (P1035):
-parts.py --pick and check_spine.py --keep. At any status but a crash, they and deploy.py (not --dry-run, P1069) also write
-page.html again when the project has one (the build with --keep writes its own), and never publish it.
+parts.py --pick and check_spine.py --keep. At any status but a crash, they, deploy.py (not --dry-run, P1069) and
+check_firmware.py (P1209) also write page.html again when the project has one (the build with --keep writes its own), and
+never publish it.
 
 With --json it prints one envelope: data.phases, data.stands_at, data.fingerprint, data.guide, data.deploy, then
 data.name (the project folder's), data.title (the page's), data.stamp (newest: the page's data-written) and

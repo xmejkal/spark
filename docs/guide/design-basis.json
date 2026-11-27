@@ -736,12 +736,15 @@
    "op": "check-firmware",
    "area": "firmware",
    "summary": "Check the firmware for free: its imports and the project's own tests, with no sim/ and no board.",
-   "effects": [],
+   "effects": [
+    "writes"
+   ],
    "data_keys": [
     "project",
     "imports",
     "modules",
-    "tests"
+    "tests",
+    "written"
    ],
    "network": false
   },

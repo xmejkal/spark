@@ -199,7 +199,7 @@ How to read this page:
 ### firmware
 
 - `op:check-firmware`
-  - Effects: none, it only reads. Data keys: project, imports, modules, tests.
+  - Effects: writes. Data keys: project, imports, modules, tests, written.
   - Summary: Check the firmware for free: its imports and the project's own tests, with no sim/ and no board.
 
 ### bench

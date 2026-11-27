@@ -27,7 +27,7 @@ about these parts nobody has verified, each with what depends on it. `firmware/p
 integers. The firmware does `import pins`; it never types a GPIO number.
 
 The firmware imports on a Mac before any hardware ([P59](https://github.com/xmejkal/spark/issues/7)).
-`check_firmware.py` imports each file and each package in `firmware/`, except the boot files `main.py` and `boot.py`, and runs the tests in your `tests/` with `unittest` (P1208). It needs no `sim/` and no board.
+`check_firmware.py` imports each file and each package in `firmware/`, except the boot files `main.py` and `boot.py`, and runs the tests in your `tests/` with `unittest` (P1208). It needs no `sim/` and no board. It keeps its answer in `.spark/check-firmware.json`, the check record (P1209), and writes `page.html` again when the project has one. The page and `flow.py show` then say the free checks' result in one line, with its time. When a file under `firmware/` or `tests/` changes, the line says the record is older and asks for a new run; it never shows old counts as current.
 Each import is a process of its own. Every import uses spark's stand-ins for MicroPython's modules, unless the firmware ships its own `framebuf` or `micropython`. They live in `scripts/spark/firmware/stand_in/`. `machine` has a
 `Pin` that remembers its level, and a `PWM` that keeps its last frequency and duty but makes no signal
 ([P352](https://github.com/xmejkal/spark/issues/450)). It has an `ADC`, an `SPI` and `SoftSPI`, an `I2C` and `SoftI2C`,
