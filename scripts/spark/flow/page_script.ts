@@ -22,6 +22,7 @@ interface Offer {
   label: string;
   says: string[];
   need?: string;
+  notes?: string[];
 }
 
 interface Words {
@@ -432,9 +433,11 @@ class PageView {
       if (need) {
         if (!needs.includes(need)) needs.push(this.drawNeed(need));
         // P1135: the row's text (its part and what you have) becomes its radio's label, which leads the row as the design
-        // draws it (P1067's look in Chrome, 27 Nov); a line after it, that spark cannot build from the pick, stays.
+        // draws it (P1067's look in Chrome, 27 Nov). P1180: the row's own note line, when it has one, describes the radio.
         const text = item.firstChild!;
         const label = this.radio(need, key, text.textContent!.trim());
+        const note = item.querySelector("p");
+        if (note) (label.firstChild as Element).setAttribute("aria-describedby", note.id);
         text.remove();
         item.insertBefore(label, item.firstChild);
         return;
@@ -510,15 +513,19 @@ class PageView {
     last.parentNode!.insertBefore(row, last.nextSibling);
   }
 
-  /** P1067: the Send box of the chosen picks: a line per pick, a line two picks share once, then that spark checks them together. */
+  /**
+   * P1067: the Send box of the chosen picks: a line per pick, a line two picks share once, then that spark checks them
+   * together. P1180: a pick's notes stay on its own line, even when two picks share one, because a note says "it".
+   */
   confirmPicks(row: Element) {
     const keys = this.chosen();
     if (!keys.length) return;
     const offers = keys.map((key) => own(this.words.offers, key)!);
+    const noted = (offer: Offer, said: string) => (offer.notes || []).includes(said);
     const counts = new Map<string, number>();
-    offers.forEach((offer) => offer.says.forEach((said) => counts.set(said, (counts.get(said) || 0) + 1)));
+    offers.forEach((offer) => offer.says.filter((said) => !noted(offer, said)).forEach((said) => counts.set(said, (counts.get(said) || 0) + 1)));
     const lines = offers.map((offer) => {
-      const alone = offer.says.filter((said) => counts.get(said) === 1);
+      const alone = offer.says.filter((said) => noted(offer, said) || counts.get(said) === 1);
       return alone.length ? offer.label + this.words.label_join + alone.join(" ") : offer.label;
     });
     const shared = [...counts.keys()].filter((said) => counts.get(said)! > 1);
