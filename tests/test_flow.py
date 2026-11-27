@@ -33,7 +33,6 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import flow  # noqa: E402
 from fakes import FakeClock, FakeOutsideWorld, FakeTextFileWriter  # noqa: E402
-from spark.build import build_codes  # noqa: E402
 from spark.build.build_record import BUILD_RECORD_FILE, EARLIER_DIST, BuildRecordStore, sha256_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
 from spark.flow.phase_readers import Offer, PartsNeed, Phase, SimulateReader  # noqa: E402
@@ -421,8 +420,8 @@ class ThePhasesTest(FlowTest):
         # P999: the build phase says why, in the code's own words, and has no status, as any skipped simulation alone
         said, code = show(a_project_built_with_no_simulation_now("pin_not_in_wokwi_part"))
         self.assertEqual((code, statuses(said)["build"]), (0, None))
-        self.assertEqual(says(said, "build")[-1], build_codes.CODES["pin_not_in_wokwi_part"])
-        self.assertTrue(says(said, "build")[-1].startswith("not simulated: "))
+        self.assertEqual(says(said, "build")[-1], "not simulated: the design wires a board pin that the board's Wokwi part has "
+                                                  "no pin for, so no diagram is written; the board built")
 
     def test_every_part_skipped_and_a_code_the_build_does_not_know_keep_the_every_part_line(self):
         for skipped in ("every_part_skipped", "no_such_code"):

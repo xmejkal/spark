@@ -357,8 +357,7 @@ The envelope has `op` `run-request`. Its `data` holds:
 - `line`: one sentence. For a step, its first problem or reason, or `ran <label>: ok` when it ended ok. For a refusal,
   the code's meaning below.
 - `note`: `null`, or one sentence beside an ok answer. A build that skipped only its simulation, for
-  `board_not_in_wokwi`, built the board, sheet and pin map, and the guide counts it done ([P1008](https://github.com/xmejkal/spark/issues/1467)).
-  A build skipped for `pin_not_in_wokwi_part` (P999) is `ok` with no `note` today; read its stage's `detail` for the pin.
+  `board_not_in_wokwi`, built the board, sheet and pin map, and the guide counts it done ([P1008](https://github.com/xmejkal/spark/issues/1467)). A build skipped for `pin_not_in_wokwi_part` (P999) is `ok` with no `note` today; read its stage's `detail` for the pin.
   Its `status` is `ok`, `line` is `ran <label>: ok` and `note` is that code's meaning. Since [P1207](https://github.com/xmejkal/spark/issues/1756) the build itself is `ok`,
   so the envelope has no `unchecked` item for it and the run exits 0, not 2. A parts-list write's `note` is its notes joined by `; `, only when ok, such as the
   entries it kept that no pick explains ([P1139](https://github.com/xmejkal/spark/issues/1674)). A pick's notes never reach it.

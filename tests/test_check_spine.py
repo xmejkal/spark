@@ -3623,9 +3623,8 @@ class AnAllSkippedSimulationKeepsTheBuildTest(unittest.TestCase):
     def test_a_skipped_simulation_says_its_codes_meaning_and_not_simulated_first(self):
         # P999: a pin the Wokwi part lacks says its own words, never "every part is skipped"
         said = self.closing_line("pin_not_in_wokwi_part")
-        self.assertEqual(said, "  the chain runs end to end; " + build_codes.CODES[build_codes.PIN_NOT_IN_WOKWI_PART])
-        self.assertTrue(said.startswith("  the chain runs end to end; not simulated: "), said)
-        self.assertNotIn("every part is skipped", said)
+        self.assertEqual(said, "  the chain runs end to end; not simulated: the design wires a board pin that the board's Wokwi "
+                               "part has no pin for, so no diagram is written; the board built")
 
     def test_every_part_skipped_and_the_board_with_no_wokwi_part_keep_their_words(self):
         self.assertEqual(self.closing_line("every_part_skipped"),
