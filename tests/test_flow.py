@@ -584,17 +584,15 @@ class TheCommandTest(FlowTest):
         self.assertIn("NOW (idea)", out.getvalue())  # P1030: the guide's lines, in place of the stands-at line
 
     def test_the_lines_leave_ok_to_the_mark_and_show_five_offer_keys_and_how_many_more(self):
-        project = with_needs(a_built_project(), [
-            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-many"}]},
-            {"id": "wet", "does": "sense", "what": "soil-moisture"}, {"id": "damp", "does": "sense", "what": "soil-moisture"},
-            {"id": "dry", "does": "sense", "what": "soil-moisture"}])
+        ids = ["soil", "wet", "damp", "dry", "moist", "boggy"]
+        project = with_needs(a_built_project(), [dict({"id": need, "does": "sense", "what": "soil-moisture"},
+                                                      **({"pick": [{"part": "x-many"}]} if need == "soil" else {})) for need in ids])
         with contextlib.redirect_stdout(io.StringIO()) as out:
             flow.main(["show", "--project", str(project)])
         lines = out.getvalue().splitlines()
-        self.assertIn("  ✓ needs: 4 need(s): soil, wet, damp, dry (claude)", lines)
-        # P976: no refused pick (x-held) and not the current one (x-many for soil), so four needs make seven offers
-        self.assertIn("      offers: pick:soil:x-unknown, pick:wet:x-many, pick:wet:x-unknown, pick:damp:x-many, pick:damp:x-unknown, "
-                      "+2 more", lines)
+        self.assertIn("  ✓ needs: 6 need(s): soil, wet, damp, dry, moist, boggy (claude)", lines)
+        # P1135: a pick's key stands on its need's line, so the six drops are the phase's offers that are no pick
+        self.assertIn("      offers: needs-drop:soil, needs-drop:wet, needs-drop:damp, needs-drop:dry, needs-drop:moist, +1 more", lines)
 
     def test_the_data_keys_are_a_real_answer_s_keys(self):
         project = Path(tempfile.mkdtemp()) / "plant-alarm"
@@ -1443,6 +1441,44 @@ class ThePartsNeedsTest(FlowTest):
 
     def test_the_picked_sentence_names_each_pick_in_quotes(self):
         self.assertEqual(picked_sentence(["A", "B"]), "picked “A”, “B”.")
+
+
+class TheNeedLinesTest(FlowTest):
+    """P1135 (council P1251: "show's parts line shrinks from the same data"): `flow.py show` says the parts phase's count
+    on its line, then one line per need that has something to say: its pick first, its lines, then its pick keys, each
+    with what you have of its part. The parts phase prints no offers line of picks."""
+
+    PARTS_LINE = "  ◐ parts: partly done, 1 of 2 needs picked (you)"
+
+    def lines(self):
+        return lines_of(with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"part": "x-many"}]},
+            {"id": "odd", "does": "keep-time", "what": "quuxwobble", "aside": True, "pick": [{"part": "x-many"}]},
+            {"id": "wet", "does": "sense", "what": "soil-moisture"}]))
+
+    def test_the_parts_line_ends_at_the_count_and_each_need_s_line_follows_it(self):
+        lines = self.lines()
+        at = lines.index(self.PARTS_LINE.replace("1 of 2", "2 of 3").replace(" (you)", ", set aside: odd (you)"))
+        self.assertEqual(lines[at + 1:at + 4], [
+            "      soil: ✓ picked “A soil probe”. Not shown for soil, refused: %s.%s offers: pick:soil:x-unknown (in your drawer)"
+            % (HELD, LIST),
+            "      odd: ✓ picked “A soil probe”.",
+            "      wet: Not shown for wet, refused: %s.%s offers: pick:wet:x-many (in your drawer), pick:wet:x-unknown (in your drawer)"
+            % (HELD, LIST)])
+        self.assertTrue(lines[at + 4].startswith("  "), lines[at + 4])
+        self.assertFalse([line for line in lines if line.startswith("      offers: pick:")])
+
+    def test_a_need_with_nothing_to_say_has_no_line(self):
+        lines = lines_of(with_needs(Path(tempfile.mkdtemp()) / "plant-alarm", [
+            {"id": "odd", "does": "keep-time", "what": "quuxwobble"}, {"id": "wet", "does": "sense", "what": "soil-moisture"}]))
+        self.assertFalse([line for line in lines if line.startswith("      odd:")])
+        self.assertTrue([line for line in lines if line.startswith("      wet: ")])
+
+    def test_now_is_one_line_of_two_sentences_at_the_parts_moment(self):
+        now = [line for line in self.lines() if line.startswith("  NOW")]
+        self.assertEqual(len(now), 1)
+        self.assertTrue(now[0].startswith("  NOW (parts): 1 need has no part yet: wet. Pick a part for each, or ask Claude to set "
+                                          "one aside."), now[0])
 
 
 class FingerprintTest(FlowTest):

@@ -15,11 +15,11 @@ from spark.flow.flow_reading import FlowReading
 from spark.flow.guide import guide_of
 from spark.flow.published_page import PublishedPageStore
 from spark.flow.wired_board import read_wired, with_wired
-from spark.flow.phase_readers import MARKS, READERS, DeployReader
+from spark.flow.phase_readers import MARKS, READERS, DeployReader, pick_need, picked_sentence
 from spark.firmware.project_secrets import ProjectSecrets
 from spark.records import store
 from spark.core.operation import COMMON_ARGUMENTS, READS, Operation
-from spark.core.outcomes import COULD_NOT_RUN, PROBLEMS
+from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 from spark.core.privacy import Privacy
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import printable
@@ -34,6 +34,9 @@ NOW_KEY = " [%s]"
 NOW_STEP, NEEDS_YOU = " [next: %s%s]", ", needs you"
 #: How many offer keys a person's line shows; the rest are counted. The JSON holds them all.
 OFFERS_SHOWN = 5
+#: One need of the parts phase (P1135): its id, then its pick with the tick, its lines and its pick keys (NEED_OFFERS), each
+#: with what you have of its part (HAVE_KEY).
+NEED_LINE, NEED_OFFERS, HAVE_KEY = "      %s: %s", "offers: %s", "%s (%s)"
 #: The Finding of a phase that holds problems or could not run: its first sentence, and where to look.
 PHASE_SENTENCE = "%s: %s"
 PHASE_FIX = "read what the phase says in data.phases"
@@ -50,14 +53,32 @@ def privacy_for(project, secrets=None):
     return Privacy.of(project, store.home(), Path.home(), secrets)
 
 
+def said_of(items):
+    """Items as one text (P1044): a space after one that ends in a full stop, else a comma."""
+    return "".join(item + (" " if item.endswith(".") else ", ") for item in items[:-1]) + "".join(items[-1:])
+
+
+def need_lines(phase):
+    """One NEED_LINE per need of the parts phase that has a pick, a line or a pick offer (P1135): its pick with the tick,
+    its lines, then its pick keys, each with its `have`."""
+    lines = []
+    for need in phase.needs or []:
+        picks = [offer for offer in phase.offers if pick_need(offer.key) == need.need]
+        items = ([MARKS[OK][1] + " " + picked_sentence(need.picked)] if need.picked else []) + need.says
+        items += [NEED_OFFERS % ", ".join(HAVE_KEY % (offer.key, offer.have) for offer in picks)] if picks else []
+        lines += [NEED_LINE % (need.need, said_of(items))] if items else []
+    return lines
+
+
 def phase_line(phase):
-    """One phase as a person reads it: `  ✓ needs: 2 need(s): soil, wet (claude)`, where the mark alone says ok, then up
-    to OFFERS_SHOWN offer keys and how many more, indented."""
+    """One phase as a person reads it: `  ✓ needs: 2 need(s): soil, wet (claude)`, where the mark alone says ok, then each
+    need's line (`need_lines`), then up to OFFERS_SHOWN keys of the offers that stand on no need's line and how many more,
+    indented."""
     word = MARKS[phase.status][0]
-    items = ([word] if word else []) + phase.says  # P1044: no comma after a full stop, a space
-    said = "".join(item + (" " if item.endswith(".") else ", ") for item in items[:-1]) + "".join(items[-1:])
-    lines = ["  %s %s: %s (%s)" % (phase.mark, phase.phase, said, phase.by)]
-    keys = [offer.key for offer in phase.offers]
+    lines = ["  %s %s: %s (%s)" % (phase.mark, phase.phase, said_of(([word] if word else []) + phase.says), phase.by)]
+    lines += need_lines(phase)
+    named = {need.need for need in phase.needs or []}
+    keys = [offer.key for offer in phase.offers if pick_need(offer.key) not in named]
     more = ["+%d more" % (len(keys) - OFFERS_SHOWN)] if len(keys) > OFFERS_SHOWN else []
     lines += ["      offers: %s" % ", ".join(keys[:OFFERS_SHOWN] + more)] if keys else []
     return [printable(line) for line in lines]
