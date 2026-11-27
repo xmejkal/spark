@@ -2189,6 +2189,39 @@ class TheFollowUpTest(FlowTest):
         self.assertEqual((code, lines[-1]), (0, FlowFollowUp().line(step)))
         self.assertIn("/parts.py --pick %s 'button=<part>' 'light=<part>'%s — " % (other.absolute(), NEEDS_YOU), lines[-1])
 
+    def test_every_command_a_pick_prints_passes_the_copyable_rule(self):
+        # P1256: the follow-up's line is step_command's, so the printed text holds it whole, and a shell can paste it
+        import parts
+        from spark.core.renderers import step_command
+        from spark.core.shell_line import copyable
+        from spark.flow.show_flow import flow_and_guide, now_steps
+        project = self.open_needs("board", "button", "light")
+        lines, code = run_main(parts.main, ["--pick", str(project), "board=x-many"])
+        steps = now_steps(project, *flow_and_guide(project))
+        self.assertEqual((code, [step.op for step in steps]), (0, ["pick"]))
+        for step in steps:
+            self.assertIn(step_command(step), "\n".join(lines))
+            self.assertTrue(copyable(step_command(step), Path(tempfile.gettempdir()).resolve()), step_command(step))
+
+    def test_each_placeholder_stands_in_single_quotes_and_the_command_passes_the_copyable_rule(self):
+        # P1256 (R3-2): the rule is asked of the command only, never of the whole line, whose why can hold `<part>`
+        from spark.core.renderers import step_command
+        from spark.core.shell_line import copyable
+        from spark.flow import phase_steps
+        from spark.flow.now_follow_up import FlowFollowUp
+        from spark.flow.offer_steps import picks_step
+        home = Path(tempfile.mkdtemp()).resolve() / "a b"
+        project = home / "plant alarm"
+        project.mkdir(parents=True)
+        steps = {"'<answers.json>'": phase_steps.brief_step(project),
+                 "'sim/scenarios/<name>.scenario.yaml'": phase_steps.scenario_steps(project)[0],
+                 "'soil=<part>'": picks_step(project, ["soil=%s" % phase_steps.PART_PLACEHOLDER], "pick a part")}
+        for quoted, step in steps.items():
+            with self.subTest(op=step.op):
+                self.assertIn(" %s" % quoted, FlowFollowUp().line(step))
+                self.assertIn(" '%s'" % project, step_command(step))
+                self.assertTrue(copyable(step_command(step), home), step_command(step))
+
     def test_a_dry_run_pick_names_no_flow_step(self):
         import parts
         project = self.open_needs("soil")

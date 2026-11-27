@@ -507,6 +507,21 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertEqual([type(line) for line in said], [PastedLine, PastedLine])
         self.assertEqual(list(result.lines[-2:]), said)
 
+    def test_every_command_the_build_prints_passes_the_copyable_rule(self):
+        # P1256: a home folder with a space, so the rule has a space to find; the line quotes the whole path
+        from spark.core.renderers import step_command
+        from spark.core.shell_line import copyable
+        home = Path(tempfile.mkdtemp()).resolve() / "a b"
+        home.mkdir()
+        result = self.kept_epaper_result(under=home)
+        self.assertEqual([step.op for step in result.next], ["research", "look"])
+        for step in result.next:
+            with self.subTest(op=step.op):
+                command = step_command(step)
+                self.assertIn(command, "\n".join(result.lines))
+                self.assertIn(" '%s/epaper'" % home, command)
+                self.assertTrue(copyable(command, home), command)
+
     def keep_the_epaper(self, physical=True):
         """`report` with --json on a copy of the e-paper project, kept into itself, its record with or without its
         physical block (P945): the exit code, the JSON said and the project folder."""
