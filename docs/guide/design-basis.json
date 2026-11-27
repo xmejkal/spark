@@ -915,7 +915,7 @@
    "key": "op:run-request",
    "op": "run-request",
    "area": "flow",
-   "summary": "Run the step the page asked for in .spark/page-request.json, a pick or several picks, the parts list or the build, only when spark offers it now and the project has not changed since the page was read (P829, P1067).",
+   "summary": "Run the step the page asked for in .spark/page-request.json, a pick or several picks, the parts list or the build, only when spark can run it now and the project has not changed since the page was read (P829, P1067).",
    "effects": [
     "writes"
    ],

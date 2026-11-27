@@ -580,7 +580,7 @@ class TheRecordsAreaTest(unittest.TestCase):
     MODULES = ["answer_operation", "board_pads", "board_records", "board_rules", "brief", "check_record", "chip_table", "deploy_record_store", "fact_needs", "folder_walk", "launcher",
                "missing_facts", "onboard_parts", "project_commit", "provenance", "record_kind", "records_codes", "registered_project_store",
                "storage", "store", "tool_choices",
-               "tool_finder", "versions"]
+               "tool_finder", "tool_python", "versions"]
     #: Each CLI's own top-level functions: `main` and what only it uses to print (`_validate_all` and `print_status`).
     #: `boards.py --list` runs design's `ListBoards`, imported inside `main` (P707). A library function back in a CLI,
     #: under any name, fails the check.
@@ -742,7 +742,7 @@ class TheFlowAreaTest(unittest.TestCase):
     FLOW = ROOT / "scripts" / "spark" / "flow"
     #: The modules of the area, as the map lists them (`docs/guide/map.md`, the flow's rows).
     MODULES = ["checks_reading", "deploy_reading", "fingerprint", "flow_codes", "flow_operations", "flow_page", "flow_reading", "guide", "no_model", "now_follow_up", "offer_steps", "page_sections", "phase_readers", "phase_steps",
-               "published_page", "request_codes", "run_request", "show_flow", "wired_board", "write_flow_page"]
+               "pick_notes", "published_page", "request_codes", "run_request", "show_flow", "wired_board", "write_flow_page"]
 
     def test_the_area_holds_its_modules_and_scripts_holds_no_copy(self):
         self.assertEqual(sorted(path.stem for path in self.FLOW.glob("*.py") if path.name != "__init__.py"), self.MODULES)

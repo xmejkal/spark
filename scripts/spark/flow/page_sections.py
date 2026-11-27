@@ -14,7 +14,7 @@ from spark.breadboard import before_power, part_pictures, picture_check
 from spark.breadboard.svg_diagram import PAD_MARKS
 from spark.flow import flow_codes
 from spark.flow.guide import note_words
-from spark.flow.flow_codes import board_file_line, picked_sentence
+from spark.flow.flow_codes import picked_sentence
 from spark.flow.phase_readers import MARKS, pick_need
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 from spark.core.zone_time import day_and_time
@@ -60,6 +60,12 @@ def sendable_now(page):
     now = (page.guide or {}).get("now")
     offers = [offer for phase in page.phases for offer in phase["offers"] if now and offer["key"] == now.get("offer") and flow_codes.is_sendable(offer["key"])]
     return offers[0] if offers else None
+
+
+def _note_line(offer):
+    """A pick's notes (P1180) as one muted line whose id (`note-<key>`) the script's radio names: under the pick's row in
+    the parts fold, or under NEXT when the pick is the NOW line's offer, which the fold leaves out."""
+    return '<p class="muted" id="note-%s">%s</p>' % (_text(offer["key"]), _text(" ".join(offer["notes"])))
 
 
 def _mark(shown):
@@ -324,9 +330,10 @@ class GuideHtmlSection:
 
     def _now(self, page):
         """The NOW box (P1062): its phase and who acts, ON THE BOARD (`page.deployed`, only after a deploy), NEXT, the guide's
-        sentence, with the step link and the hooks of the sendable offer the now names (`sendable_now`), the deploy's line to
-        type (`_run`, P1286) and the chat offer's block (`_ask`). Gate A's row stands after ON THE BOARD (`_tested`, P1220). With no now, the line that says nothing is
-        open (P1043, read with `.get`) and the row, or nothing."""
+        sentence, with the step link and the hooks of the sendable offer the now names (`sendable_now`), that offer's notes
+        (P1180, `_note_line`), the deploy's line to type (`_run`, P1286) and the chat offer's block (`_ask`). Gate A's row
+        stands after ON THE BOARD (`_tested`, P1220). With no now, the line that says nothing is open (P1043, read with
+        `.get`) and the row, or nothing."""
         now = page.guide["now"]
         if not now:
             said = page.guide.get("no_open_phase")
@@ -340,6 +347,7 @@ class GuideHtmlSection:
         hooks = ' data-key="%s"%s' % (_text(offer["key"]), _makes_stale(offer)) if offer else ""
         lines.append('<p class="next"%s><strong>%s</strong> %s%s</p>' % (
             hooks, _text(flow_codes.NEXT_ACT_LABEL), _text(now["says"]), self._step_link(page)))
+        lines += [_note_line(offer)] if offer and offer.get("notes") else []
         return "\n".join(['<div class="now">'] + lines + self._run(now) + self._ask(now) + ["</div>"])
 
     @staticmethod
@@ -437,14 +445,12 @@ class PartsHtmlFold:
     @staticmethod
     def _hooked(offer):
         """A sendable offer's row: its key and `data-makes-stale` for the script, then its label alone (P1135): its effect
-        stands in its Send box and in the developer fold. A pick's row says its part and what you have of it, and keeps the
-        sentence that spark cannot build from it, muted (`board_file_line`)."""
+        stands in its Send box and in the developer fold. A pick's row says its part and what you have of it, then its notes
+        (P1180), muted, in one line whose id (`note-<key>`) the script's radio names."""
         if pick_need(offer["key"]) is None:
             return '<li data-key="%s"%s>%s</li>' % (_text(offer["key"]), _makes_stale(offer), _text(offer["label"]))
-        refused = board_file_line(offer["effect"])
-        line = '<p class="muted">%s</p>' % _text(refused) if refused else ""
-        return '<li data-key="%s"%s>%s%s</li>' % (_text(offer["key"]), _makes_stale(offer),
-                                                 _text(flow_codes.PICK_ROW % (offer["part"], offer["have"])), line)
+        line = _note_line(offer) if offer["notes"] else ""
+        return '<li data-key="%s"%s>%s%s</li>' % (_text(offer["key"]), _makes_stale(offer), _text(flow_codes.PICK_ROW % (offer["part"], offer["have"])), line)
 
 
 class WiringHtmlFold:
@@ -538,14 +544,15 @@ class DeveloperHtmlFold:
 
     def _phase(self, phase):
         """A phase's section in the developer fold: its heading in a `<summary>`, its text in a `<div>`, always closed. An offer
-        shows its key in `<code>`, its label, what you have of a pick's part (P1135) and its effect, with no hook: the page's
-        buttons stand on NOW and in the folds."""
+        shows its key in `<code>`, its label, what you have of a pick's part (P1135) and its effect, then a pick's notes
+        (P1180), with no hook: the page's buttons stand on NOW and in the folds."""
         shown = shown_phase(phase)
         lines = ['<section class="phase" %s>' % _data(phase),
                  "<details><summary><h2>%s %s %s</h2></summary>" % (_mark(shown), _text(phase["phase"]), _word(phase["status"], shown.word)),
                  '<div id="phase-%s">' % _text(phase["phase"]), "<p>Done by: %s</p>" % _text(phase["by"])]
         lines += ["<p>%s</p>" % _text(said) for said in phase["says"]]
-        offers = ["<li><code>%s</code> %s%s: %s</li>" % (_text(offer["key"]), _text(offer["label"]), self._have(offer), _text(offer["effect"]))
+        offers = ["<li><code>%s</code> %s%s: %s</li>" % (_text(offer["key"]), _text(offer["label"]), self._have(offer),
+                                                      _text(" ".join([offer["effect"]] + list(offer.get("notes") or ()))))
                   for offer in phase["offers"]]
         return "\n".join(lines + (["<ul>%s</ul>" % "".join(offers)] if offers else []) + ["</div>", "</details>", "</section>"])
 

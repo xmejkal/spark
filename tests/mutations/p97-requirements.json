@@ -2,7 +2,7 @@
  {
   "file": "scripts/spark/design/need_requirements.py",
   "name": "a pick that owes facts is placed",
-  "find": "[\"owes %s — %s\" % (\", \".join(owed), _how_to_fill(path))] if set(owed) - set(LAYOUT_FACTS)",
+  "find": "[\"owes %s — %s\" % (\", \".join(owed), _how_to_fill(path))] if blocking_facts(owed)",
   "replace": "[] if False"
  },
  {

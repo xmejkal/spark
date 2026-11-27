@@ -37,7 +37,7 @@ class PageScriptTest(unittest.TestCase):
         run = subprocess.run([NODE, "--test", "--test-reporter=tap", str(JS_TESTS)], capture_output=True, text=True, cwd=str(ROOT), timeout=120)
         said = run.stdout + run.stderr
         self.assertEqual(run.returncode, 0, said)
-        self.assertIn("# pass 31\n", said)  # P1122: three tests of a chat offer's Copy; P1067: nine of several picks; P1135: two; P1286: two of the run block's Copy
+        self.assertIn("# pass 33\n", said)  # P1122: three tests of a chat offer's Copy; P1067: nine of several picks; P1135: two; P1286: two of the run block's Copy; P1180: two
         self.assertIn("# fail 0\n", said)
 
 

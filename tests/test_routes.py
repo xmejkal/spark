@@ -399,6 +399,18 @@ class ThePageCommandTest(unittest.TestCase):
         self.assertIn("| `/spark:page` |", (ROOT / "docs" / "guide" / "commands.md").read_text())
 
 
+    def test_the_command_names_no_offer_and_links_the_rule(self):
+        """P1138: the command says button, never offer, outside a code span, a fenced block and a link's target; its bullet
+        names flow_codes.BUTTON_WORD, and the rule stands once in agents/flow.md, with a choice for a pick."""
+        text = self.PAGE.read_text()
+        plain = re.sub(r"\]\([^)]*\)", "]", re.sub(r"`[^`]*`", "", re.sub(r"```.*?```", "", text, flags=re.S)))
+        self.assertIsNone(re.search(r"\boffer", plain, re.I))
+        self.assertIn("`flow_codes.BUTTON_WORD`", text)
+        rule = [each for each in (ROOT / "docs" / "guide" / "agents" / "flow.md").read_text().split("\n\n") if "BUTTON_WORD" in each]
+        self.assertEqual(len(rule), 1)
+        self.assertIn("choice", rule[0])
+
+
 class TheIdentifyPageTest(unittest.TestCase):
     """P781: /spark:identify writes its reading, searches the web wide and has rules for a module with no chip."""
 

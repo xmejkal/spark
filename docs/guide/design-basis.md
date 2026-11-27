@@ -248,7 +248,7 @@ How to read this page:
   - Summary: Write page.html in the project: each phase of the flow with a status word and a mark, and the project's pictures (P827).
 - `op:run-request`
   - Effects: writes. Data keys: for, key, keys, label, ran, status, mark, line, note, fingerprint.
-  - Summary: Run the step the page asked for in .spark/page-request.json, a pick or several picks, the parts list or the build, only when spark offers it now and the project has not changed since the page was read (P829, P1067).
+  - Summary: Run the step the page asked for in .spark/page-request.json, a pick or several picks, the parts list or the build, only when spark can run it now and the project has not changed since the page was read (P829, P1067).
 
 ## Unbuilt steps
 

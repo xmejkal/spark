@@ -196,12 +196,10 @@ RESERVE_UNKNOWN_MESSAGE = "Uses 1 of your “%s” for the %s, if you have one: 
 TO_GET_MESSAGE = "You have none, so it goes on the list to get."
 #: A pick that `needs.plan_holds` refuses writes nothing, so it is no offer (P976). When another need's pick cannot get
 #: its part, the need's says line holds the problem's own sentence once, and the need gets no offers. P993: it says that
-#: no new pick can be saved, so it does not read as a refusal of the pick named above it: the need, the other needs, the
-#: part's name and the problem's sentence.
+#: no new pick can be saved, so it is no refusal of the pick above it: the need, the other needs, the part, the problem.
 NO_NEW_PICK_MESSAGE = "Spark can save no new pick for %s: the pick for %s cannot get “%s” (%s)."
 #: The says line of a need with picks left out: how many more are not shown, and each pick its own part refuses, by
-#: REFUSED_PART (P991 review, the PO: "even if taken"), "; " between two; then LIST_PICKS_MESSAGE. A count of 0 is left
-#: out. The %s after a count is that count's word, from PICK_WORDS.
+#: REFUSED_PART (P991 review, the PO: "even if taken"), "; " between two; then LIST_PICKS_MESSAGE. A count of 0 is left out.
 MORE_PICKS_MESSAGE = "Not shown for %s: %d more %s."
 MORE_AND_REFUSED_MESSAGE = "Not shown for %s: %d more %s; refused: %s."
 REFUSED_PICKS_MESSAGE = "Not shown for %s, refused: %s."
@@ -217,16 +215,16 @@ FREES_MESSAGE = "Frees what the old pick held."
 FREES_UNPICKED_MESSAGE = "Frees a part this project held without a pick."
 LIST_PROJECT_MESSAGE = "Adds this project to your list of projects."
 PICK_HISTORY_MESSAGE = "May note the choice in your history."
-#: A pick the parts list would refuse because spark has no board file for it (P991): the part by its name. The parts
-#: list's own sentence starts with `need_requirements.NO_BOARD_FILE`.
-NO_BOARD_FILE_MESSAGE = "Spark cannot build from this pick: it has no board file for “%s”."
-#: A pick the parts list refuses because its record owes a fact the circuit needs (P993): the part by its name, the
-#: needs that pick it ("“…” for screen"), and the facts it owes, so the person reads the blocker before any click.
+#: A pick's notes (P1180, `pick_notes`), at most 8 words each, in order: no board file (P991; the parts list's sentence starts
+#: with `need_requirements.NO_BOARD_FILE`), a fact owed, a broken record, no simulation (% THIS_PART), an unsure entry.
+NO_BOARD_FILE_MESSAGE, OWED_NOTE = "Spark cannot build from it: no board file.", "Spark needs more facts about it: ask Claude."
+BROKEN_NOTE, UNSURE_NOTE = "Its record is broken: ask Claude.", "You may not have it: check your drawer."
+NO_STANCE_NOTE, THIS_PART = "Spark cannot simulate %s yet.", "this part"
+#: The requirements phase's line of a pick the parts list refuses because its record owes a fact the circuit needs (P993):
+#: the part by its name with its needs ("“…” for screen"), and the facts it owes, so the person reads the blocker.
 OWED_MESSAGE = "%s still lacks what spark needs: %s. Ask Claude how to fill it in."
-#: A pick the parts list takes though its record owes `simulation` (P996): a warning, never a blocker. The %s is the
-#: part's name in quotes with its needs (PICKED_BY).
-NO_STANCE_MESSAGE = ("Spark cannot simulate %s yet. The parts list and the build go on, and a deploy asks your yes for "
-                     "firmware that no simulation tested.")
+#: Its warning of a pick placed though it owes `simulation` (P996), never a blocker: the part as PICKED_BY names it, then more.
+NO_STANCE_MESSAGE = NO_STANCE_NOTE + " The parts list and the build go on, and a deploy asks your yes for firmware that no simulation tested."
 PICKED_BY = "%s for %s"
 #: A picked need's line after the ok tick, its first radio, and a pick's row with its have in parentheses (P991, P1135).
 PICKED_SAID, KEEP_PICK, PICK_ROW = "picked %s.", "keep %s", "%s (%s)"
@@ -276,22 +274,16 @@ WIRED_EFFECT = {PICK: WIRED_PICK_MESSAGE, BUILD_BOARD: WIRED_BUILD_MESSAGE}
 PROJECT_EFFECTS = (WIRED_PICK_MESSAGE, LIST_PROJECT_MESSAGE, PICK_HISTORY_MESSAGE)
 
 
-def effect_lines(effect):
-    """A pick's effect as the Send box's lines (P1135): the wired sentence first (P1044; PROJECT_EFFECTS holds it
-    first), its own, then its other PROJECT_EFFECTS, each once. One space joins sentences, so each is cut out whole."""
+def effect_lines(effect, notes=()):
+    """A pick's effect and its `notes` as the Send box's lines (P1135, P1180): the wired sentence first (P1044;
+    PROJECT_EFFECTS holds it first), its own, its notes, then its other PROJECT_EFFECTS, each once. One space joins
+    sentences, so each is cut out whole."""
     shared = [said for said in PROJECT_EFFECTS if said in effect]
     own = " %s " % effect
     for said in shared:
         own = own.replace(" %s " % said, " ")
-    return shared[:1] + [own.strip()] + shared[1:] if WIRED_PICK_MESSAGE in shared else [own.strip()] + shared
-
-
-def board_file_line(effect):
-    """The NO_BOARD_FILE_MESSAGE sentence of a pick's `effect` (P991), kept on its page row (P1135), or None."""
-    start, end = NO_BOARD_FILE_MESSAGE.split("%s")
-    at = effect.find(start)
-    stop = effect.find(end, at + len(start)) if at >= 0 else -1
-    return effect[at:stop + len(end)] if stop >= 0 else None
+    first = shared[:1] if WIRED_PICK_MESSAGE in shared else []
+    return first + [own.strip()] + list(notes) + shared[len(first):]
 
 
 def quoted(names):
@@ -304,9 +296,8 @@ def picked_sentence(names):
     return PICKED_SAID % quoted(names)
 
 
-#: The page's script (P829 PR 3): every word the script shows, for the kinds of offer the page sends (`SENDABLE`). Python
-#: writes them into the page's inert words block; the script fills in only a time, an offer's label or spark's own line.
-#: No word says "done" alone.
+#: The page's script (P829 PR 3): every word the script shows, for the kinds of offer the page sends (`SENDABLE`), written
+#: into the page's inert words block; the script fills in a time, an offer's label or spark's own line. No word says "done" alone.
 CONFIRM_STALE = "These steps may be marked out of date: %s."
 SEND, CANCEL, COPY, WITHDRAW = "Send", "Cancel", "Copy", "Withdraw"
 #: What Copy puts on the clipboard: the command that carries the request to spark.
@@ -317,14 +308,17 @@ WITHDRAWN_SAYS = "Withdrawn. If Claude had already started it, its answer shows 
 #: A write the database refused: the page puts its state back.
 NOT_SENT_SAYS = "Could not send. Nothing ran."
 NOT_WITHDRAWN_SAYS = "Could not withdraw. The request still waits."
-#: The intro of the published page, for its owner: the script puts it in place of PAGE_INTRO.
-PUBLISHED_INTRO = "Where this project stands. Use a button to ask spark for a step; Claude runs it at your next /spark:page."
+#: The person's word for an offer the page sends (P1138); the rule is in docs/guide/agents/flow.md. The intro of the
+#: published page, for its owner, is put in place of PAGE_INTRO by the script.
+BUTTON_WORD = "button"
+USE_BUTTON_SAYS = "Use the %s." % BUTTON_WORD
+PUBLISHED_INTRO = "Where this project stands. Use a %s to ask spark for a step; Claude runs it at your next /spark:page." % BUTTON_WORD
 WAITING_FOR = "Waiting for Claude: %s."
 #: The last request under the NOW box (P1062): its time in the browser's zone and its label, then what the page says of it.
 LAST_REQUEST_SAYS = "Your last request, %s: %s."
 #: The last request's words when its offer is no longer on the page (the review of #1619): by its kind, else one sentence.
 LAST_REQUEST_KINDS = {PICK: "a pick", WRITE_REQUIREMENTS: "the parts list", BUILD_BOARD: "the build"}
-LAST_REQUEST_OTHER = "a step this page no longer offers"
+LAST_REQUEST_OTHER = "a step this page no longer shows"
 #: Several picks in one Send (P1067, the P1038 design of 2026-11-23): each need's radios, "not now" first; the Send of the
 #: picks named by the count and their needs (PICKS_SAID: one, many), with CHOOSE_FIRST under it while none is chosen; the
 #: Send box's last line; the wait; an ok answer; and the last request's words when its picks left the page.
@@ -355,11 +349,11 @@ NO_PICK_SAVED_SAYS = "No pick was saved."
 COULD_NOT_RUN_SAYS = "Could not run: %s. " + NEW_STATE
 #: What the page says of each refusal of `flow.py run-request`, by the code's name: nothing ran, in grey, never red.
 REFUSED_SAYS = {"request_stale": "Nothing ran. The project changed after you clicked. Reload this page and click again.",
-                "request_not_offered": "Nothing ran. This button is no longer offered. Reload the page.",
+                "request_not_offered": "Nothing ran. Spark cannot run this step now. Reload this page to see the steps you can ask for.",
                 "request_in_chat": "Nothing ran. This step is asked in the chat: tell Claude.",
                 "request_malformed": "Nothing ran. The request could not be read. Reload the page and click again."}
-#: The refusals of a request of several picks (P1067): as REFUSED_SAYS, but one that spark no longer offers.
-REFUSED_PICKS_SAYS = "Nothing ran. Spark no longer offers one of these picks. Reload this page."
+#: The refusals of a request of several picks (P1067): as REFUSED_SAYS, but one that spark cannot save now.
+REFUSED_PICKS_SAYS = "Nothing ran. Spark cannot save one of these picks now. Reload this page and choose again."
 REFUSED_PICKS = dict(REFUSED_SAYS, request_not_offered=REFUSED_PICKS_SAYS)
 #: The mark of a request that ran nothing: a dash, grey.
 NOT_RUN_MARK = "–"
@@ -439,15 +433,15 @@ STALE_REQUIREMENTS = {True: (REQUIREMENTS_STALE_MESSAGE, REQUIREMENTS_STALE_NOW)
 BUILD_NOW = "Ask Claude in the chat to build the board. It takes seconds and costs nothing."
 BUILD_STALE_NOW = "The parts list changed since the last build. Ask Claude to build again."
 #: The NOW sentences that can carry the page's button (`page_sections.sendable_now`), each with what the published page says
-#: in its place where its script adds the button (P993): the step, and to use the button. The page from disk, a viewer
-#: who is not the owner and `flow.py show` keep the sentence that names Claude.
-NOW_BUTTON = {REQUIREMENTS_NOW: "Write the parts list from your picks. Use the button.",
-              REQUIREMENTS_STALE_NOW: "Your picks changed. Write the parts list again. Use the button.",
+#: in its place where its script adds it (P993). The page from disk, a viewer who is not the owner and `flow.py show` keep
+#: the sentence that names Claude.
+NOW_BUTTON = {REQUIREMENTS_NOW: "Write the parts list from your picks. " + USE_BUTTON_SAYS,
+              REQUIREMENTS_STALE_NOW: "Your picks changed. Write the parts list again. " + USE_BUTTON_SAYS,
               REQUIREMENTS_EDITED_NOW: ("The parts list was changed by hand. Writing it again keeps its parts and puts back what your "
-                                        "picks give. Use the button."),
-              REQUIREMENTS_DIFFERS_NOW: "The parts list differs from what your picks give. Write it from your picks. Use the button.",
-              BUILD_NOW: "Build the board. It takes seconds and costs nothing. Use the button.",
-              BUILD_STALE_NOW: "The parts list changed since the last build. Build the board again. Use the button."}
+                                        "picks give. " + USE_BUTTON_SAYS),
+              REQUIREMENTS_DIFFERS_NOW: "The parts list differs from what your picks give. Write it from your picks. " + USE_BUTTON_SAYS,
+              BUILD_NOW: "Build the board. It takes seconds and costs nothing. " + USE_BUTTON_SAYS,
+              BUILD_STALE_NOW: "The parts list changed since the last build. Build the board again. " + USE_BUTTON_SAYS}
 BUILD_PARTIAL_NOW = "The build stopped. Ask Claude what stopped it and what to do."
 SHEET_NOW = "No wiring sheet yet. Ask Claude to build the board."
 SHEET_STALE_NOW = "The wiring sheet is out of date. Ask Claude to build the board again."

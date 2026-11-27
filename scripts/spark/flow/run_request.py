@@ -161,7 +161,7 @@ class RunRequest(Operation):
 
     name = "run-request"
     summary = ("Run the step the page asked for in .spark/page-request.json, a pick or several picks, the parts list or the "
-               "build, only when spark offers it now and the project has not changed since the page was read (P829, P1067).")
+               "build, only when spark can run it now and the project has not changed since the page was read (P829, P1067).")
     #: The one text of the request's shape and its refusals (P1067): `--help` prints it, and the docs link to it.
     details = """flow.py run-request reads .spark/page-request.json, the page's request, and deletes it at once. A request
 is {id, key, seen, at} for one click, or {id, keys, seen, at} for one Send of several picks (P1067): a row holds key or

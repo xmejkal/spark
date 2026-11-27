@@ -25,7 +25,7 @@ Run init before installing anything: without a `package.json` in the project, np
 ([P113](https://github.com/xmejkal/spark/issues/47)).
 
 **Reading `tools.py --status`.** It exits 2 while any tool is missing, even one the current step does not need, so read
-the `[????]` rows.
+the `[????]` rows. An `[ok  ]` row of a Python tool names the Python that runs it and the executable it was found through: `mpremote 1.29.0, runs with <Python> (found through <executable>)`. A tool's `exe` field is the executable that spark looks for on the PATH when the running Python lacks the module (default: mpremote and esptool, in `data/tools.json`; the person's and the project's tools files win, field by field). `tools.py --pin mpremote.exe=` turns that lookup off. A sentence with `but no Python spark asked holds its module` or `Spark cannot ask` is no `--install` case, and the tool is left out of `N to install`: tell the person which Python holds the executable, and give the step at the end of the sentence if there is one.
 
 - **A `[????]` row** that says `/spark:setup add <name>`: run `tools.py --install <name> --project . --dry-run` and show
   the person the commands. If they say yes, run it again without `--dry-run`.
@@ -191,7 +191,7 @@ Run a short piece of code on the running board inside a grant, say whether the b
 These write:
 
 - `init_project.py`: four project files, three files that AI tools read, plus the store's projects list. With `--board`, it says when `requirements.json` names another board than the selection, whose board stays the project's ([P1024](https://github.com/xmejkal/spark/issues/1498)). With or without `--board`, it refuses a boards/active.json that cannot be opened, is a folder or is a dangling link: exit 2, nothing written ([P1099](https://github.com/xmejkal/spark/issues/1617)). With `--answers`, a brief that git holds as it is, on a branch, changes in one commit, and `git revert --no-edit <sha>` takes it back, newest first ([the brief step](needs-basis.md#the-brief-step-and-the-way-back)).
-- `flow.py run-request`: it deletes `.spark/page-request.json` and runs the step the page asked for there, a pick or several picks in one run, the parts list or the build, which writes what its offer's effect says, only when spark offers it now and the page was read at the project's fingerprint now; else it runs nothing and says why ([a page request](flow.md#a-page-request), P829). Exit 0 the step ran ok, 1 it ran with problems, 2 nothing ran or the step could not run.
+- `flow.py run-request`: it deletes `.spark/page-request.json` and runs the step the page asked for there, a pick or several picks in one run, the parts list or the build, which writes what its offer's effect says, only when spark can run it now and the page was read at the project's fingerprint now; else it runs nothing and says why ([a page request](flow.md#a-page-request), P829). Exit 0 the step ran ok, 1 it ran with problems, 2 nothing ran or the step could not run.
 - `breadboard.py`: `breadboard.md` beside the requirements file, or `--out`, new each time. It reads the drawer for what
   you have, and refuses a failed or stale build. Its Wiring section has numbered steps (one connection each), a mermaid
   diagram whose edges are those steps, and the points as a check list. Beside it, each build writes `breadboard.json`

@@ -127,7 +127,7 @@ another chip.
 
 Say to the person that nothing ran this firmware before the flash. A firmware that fails shows only on the board. `spark.json`, the board log, the store record and `data.simulation` say `none`.
 
-esptool and mpremote come from `/spark:setup`, as the tools list's `flasher` and `board-shell`. If esptool cannot
+esptool and mpremote come from `/spark:setup` or from the person's PATH, in the Python that holds them, as the tools list's `flasher` and `board-shell`. If esptool cannot
 connect, hold the board's BOOT button, press and release RESET, then release BOOT and run it again. When the board record
 says where the buttons are (`physical.buttons`, the XIAO ESP32-C6's does), the hint names each button's place. Before that hint,
 deploy.py makes one retry of an erase that stopped with exit 2, after 5 s, and prints `retry in 5 s: ...`
@@ -169,7 +169,7 @@ the port to go and come back, and reads the board again ([P243](https://github.c
 answers after it ([P462](https://github.com/xmejkal/spark/issues/630)); one that leaves the board in download mode is printed and not counted.
 The write restarts the chip with `--after watchdog-reset`, and deploy.py finds the board's port again by its MAC, because the port's name and USB
 id can change after the flash (MicroPython brings its own USB serial port). Each read asks for the port's USB id again. On Espressif's own USB-Serial/JTAG (303a:1001, for example the FireBeetle 2 C6), mpremote runs with DTR and RTS off and sends nothing for 2.5 s before its raw REPL, because its usual open and early Ctrl-C left that board deaf to the host until the next flash ([P1007](https://github.com/xmejkal/spark/issues/1466)). So on such a board, run mpremote by hand only after deploy.py's check, as the REPL line below is meant to be run. The next deploy's flash makes the board hear the host again. A port that is not listed or does not come back is `port_gone`: no REPL line, no `watch` step, and
-`python3 -m mpremote devs` lists the ports. To see the firmware start by hand, run the line deploy.py
+`mpremote devs` lists the ports. To see the firmware start by hand, run the line deploy.py
 prints, which opens mpremote's REPL, and press Ctrl-C, then Ctrl-D. Leave the REPL with Ctrl-X. While it is open, it
 holds the port, and the next deploy cannot read the board. deploy.py then runs the board doctor, which says another
 program holds the port and to leave mpremote's console with Ctrl-X ([P354](https://github.com/xmejkal/spark/issues/452)).
