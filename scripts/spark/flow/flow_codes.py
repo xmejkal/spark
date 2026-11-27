@@ -365,6 +365,12 @@ NOT_RUN_MARK = "–"
 #: code box, and the owner's page adds COPY beside it, which says COPIED_SAYS once it copied the tell. It never sends.
 ASK_CLAUDE = "Ask Claude"
 COPIED_SAYS = "Copied: paste it in Claude Code."
+#: The deploy's line to type (P1286, O4): the run block's label in the NOW box and in `flow.py show`, beside its line, and
+#: what its COPY says once it copied the line. With no line, the one sentence NO_LINE_TO_TYPE_SAYS stands in its place.
+LINE_TO_TYPE_LABEL = "In your own terminal"
+COPIED_LINE_SAYS = "Copied: paste it in your own terminal."
+NO_LINE_TO_TYPE_SAYS = ("Ask Claude in the chat for this step's line: spark shows it here only for the default store and a project "
+                        "in your home folder.")
 
 #: The page of the project (P827): its code when the file cannot be written, the words a status has no word for, and the
 #: bench note. This page does not look at the board, and the note says so.

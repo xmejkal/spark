@@ -22,6 +22,7 @@ from spark.records import store
 from spark.core.operation import COMMON_ARGUMENTS, READS, Operation
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 from spark.core.privacy import Privacy
+from spark.core.renderers import SCRIPTS, copy_line
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import printable
 from spark.core.zone_time import stamp
@@ -99,11 +100,13 @@ def now_tag(now, steps):
 
 def guide_lines(guide, steps=()):
     """The guide as a person reads it in a terminal (P1030): NOW with the key of its offer or the op of its next-only step
-    (`now_tag`), gate A's row (P1220), DONE, LATER, why there is no simulation, SET ASIDE. A list with no item draws no line. The page draws its
+    (`now_tag`), the deploy's line to type or why there is none (P1286, `with_command`), gate A's row (P1220), DONE, LATER, why there is no simulation, SET ASIDE. A list with no item draws no line. The page draws its
     station line in place of DONE and LATER (P1119); the CLI keeps them. The line that says nothing is open (P1043,
     `guide.get`, as the page reads it) stands where NOW would, right after it: the two never both hold (P1142)."""
     now = guide["now"]
     lines = [GUIDE_LINE % (flow_codes.GUIDE_NOW % now["phase"], now["says"] + now_tag(now, steps))] if now else []
+    lines += [GUIDE_LINE % (flow_codes.LINE_TO_TYPE_LABEL, now["command"])] if now and now.get("command") else []  # P1286
+    lines += ["  " + now["no_command"]] if now and now.get("no_command") else []
     lines += ["  " + guide["no_open_phase"]] if guide.get("no_open_phase") else []
     lines += [GUIDE_LINE % (flow_codes.TESTED_LABEL, guide["gate_a"]["says"])] if guide.get("gate_a") else []  # P1220: gate A's row
     lines += [GUIDE_LINE % (flow_codes.GUIDE_DONE, ", ".join(guide["done"]))] if guide["done"] else []
@@ -163,14 +166,30 @@ def stamp_of(project):
     return {"newest": stamp(datetime.datetime.fromtimestamp(max(times))) if times else None}
 
 
-def reading_of(project, readers=None):
+def with_command(guide, steps, project, scripts=SCRIPTS):
+    """`guide` with `command` and `no_command` on its now (P1286): for the deploy, `command` is the line a person types for
+    its step (`renderers.copy_line` of `steps[0]` without the default store's env, in the page's privacy), and when there
+    is none `no_command` is NO_LINE_TO_TYPE_SAYS; every other now gets both null. `scripts` is the scripts folder a test
+    swaps."""
+    now = guide["now"]
+    if not now:
+        return guide
+    deploy = now["phase"] == flow_codes.DEPLOY
+    command = copy_line(without_default_store(steps[0]), Path.home(), privacy_for(project), scripts) if deploy and steps else None
+    no_command = flow_codes.NO_LINE_TO_TYPE_SAYS if deploy and command is None else None
+    return dict(guide, now=dict(now, command=command, no_command=no_command))
+
+
+def reading_of(project, readers=None, scripts=SCRIPTS):
     """The FlowReading of `project`, the flow read once (P1060): its folder's name, the phases and the guide
-    (`flow_and_guide`), the fingerprint, the deploy, the stamp and the Artifact the page is published as. `show` prints
-    it and the page draws it. It adds no rule of its own. `readers` are the PhaseReaders a test swaps (None: `READERS`)."""
+    (`flow_and_guide`) with the deploy's line to type (`with_command`, P1286), the fingerprint, the deploy, the stamp, the
+    Artifact the page is published as and the now's steps (`now_steps`). `show` prints it and the page draws it. `readers`
+    are the PhaseReaders a test swaps (None: `READERS`), `scripts` the scripts folder."""
     deploy = deploy_reading.read_deploy(project)  # once: the phase, the guide and data.deploy agree (the review of #1579)
     phases, guide = flow_and_guide(project, readers, deploy)
-    return FlowReading(Path(project).resolve().name, phases, guide, fingerprint_of(project, phases), deploy_reading.deploy_data(deploy),
-                       stamp_of(project), PublishedPageStore(project).read())
+    steps = now_steps(project, phases, guide)
+    return FlowReading(Path(project).resolve().name, phases, with_command(guide, steps, project, scripts), fingerprint_of(project, phases),
+                       deploy_reading.deploy_data(deploy), stamp_of(project), PublishedPageStore(project).read(), steps)
 
 
 def read_flow(project, readers=None):
@@ -187,7 +206,7 @@ class ShowFlow(Operation):
     `data.name`, `data.title` (the page's), `data.stamp` and `data.artifact`. Its lines start with the guide's, and `next`
     holds the now offer's step (P1030), else the now phase's next-only step (P1034). A phase
     that holds problems or could not run adds one Finding of that status, so the exit says so; every phase still answers.
-    `readers` are the PhaseReaders a test swaps (None: `READERS`).
+    `readers` are the PhaseReaders a test swaps (None: `READERS`), `scripts` the scripts folder (None: `SCRIPTS`).
     """
 
     name = "show-flow"
@@ -210,16 +229,17 @@ offer."""
     data_keys = ("phases", "stands_at", "fingerprint", "guide", "deploy", "name", "title", "stamp", "artifact")
     privacy_for = staticmethod(privacy_for)
 
-    def __init__(self, readers=None):
+    def __init__(self, readers=None, scripts=None):
         self.readers = readers or READERS
+        self.scripts = scripts or SCRIPTS
 
     def run(self, project, *, outside):
-        reading = reading_of(project, self.readers)
+        reading = reading_of(project, self.readers, self.scripts)
         phases, guide = reading.phases, reading.guide
         findings = [Finding(phase.status, phase.phase, flow_codes.PHASE_PROBLEMS if phase.status == PROBLEMS else flow_codes.PHASE_COULD_NOT_RUN,
                             PHASE_SENTENCE % (phase.phase, phase.says[0]), PHASE_FIX)
                     for phase in phases if phase.status in (PROBLEMS, COULD_NOT_RUN)]
-        steps = now_steps(project, phases, guide)
+        steps = reading.steps
         lines = guide_lines(guide, steps)
         lines += [line for phase in phases for line in phase_line(phase)]
         data = reading.to_dict()

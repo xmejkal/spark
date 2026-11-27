@@ -54,6 +54,7 @@ from spark.design.entry_origin import EntryOriginStore  # noqa: E402
 from spark.design.pick_parts import NO_PASSED_OVER, PickParts  # noqa: E402
 from spark.design.write_requirements import WriteRequirements  # noqa: E402
 from spark.flow.flow_codes import LOOK_WHY, SCENARIO_FIRST_WHY, SCENARIO_WHY, SIM_FILES_NOW, STALE  # noqa: E402
+from spark.flow.flow_codes import LINE_TO_TYPE_LABEL, NO_LINE_TO_TYPE_SAYS  # noqa: E402
 from spark.flow.flow_codes import WIRED_BUILD_MESSAGE, WIRED_SHEET_MESSAGE, WIRED_STEP_MESSAGE  # noqa: E402
 from spark.flow.wired_board import day_of  # noqa: E402
 from spark.flow.phase_steps import SCENARIO_PLACEHOLDER  # noqa: E402
@@ -743,7 +744,7 @@ class TheGuideTest(FlowTest):
         # P977 PR 2: now holds `steps`, the wiring's step count while the wiring is part of now, else None.
         self.assertEqual(said["data"]["guide"], {
             "now": {"phase": "firmware", "by": ["you", "claude"], "offer": None, "chat_offer": "write-firmware", "needs": [], "steps": 10,
-                    "with_wiring": True,
+                    "with_wiring": True, "command": None, "no_command": None,
                     "says": "Two jobs, in any order: wire the breadboard (10 steps, power off), and ask Claude to write the "
                             "firmware. Spark cannot see your wiring."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)"],
@@ -803,7 +804,7 @@ class TheGuideTest(FlowTest):
         said, _ = show(project)
         self.assertEqual(said["data"]["guide"], {
             "now": {"phase": "deploy", "by": ["your terminal"], "offer": None, "chat_offer": "look-at-board", "needs": [], "steps": None,
-                    "with_wiring": True,
+                    "with_wiring": True, "command": None, "no_command": NO_LINE_TO_TYPE_SAYS,
                     "says": "When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then "
                             "run the deploy in your terminal."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)", "breadboard (spark cannot see it)", "firmware"],
@@ -897,7 +898,7 @@ class TheGuideTest(FlowTest):
         project = Path(tempfile.mkdtemp()) / "plant-alarm"
         project.mkdir()
         self.assertEqual(show(project)[0]["data"]["guide"], {
-            "now": {"phase": "idea", "by": ["you"], "offer": None, "chat_offer": None, "needs": [], "steps": None, "with_wiring": False,
+            "now": {"phase": "idea", "by": ["you"], "offer": None, "chat_offer": None, "needs": [], "steps": None, "with_wiring": False, "command": None, "no_command": None,
                     "says": "Tell Claude your goal in the chat, in your own words."},
             "done": [], "later": ["needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"],
             "set_aside": [], "no_simulation": None, "no_open_phase": None, "wired": None,  # P1044: no sheet and no board log
@@ -966,7 +967,7 @@ class TheGuideTest(FlowTest):
             {"id": "wet", "does": "sense", "what": "soil-moisture", "aside": True}])
         guide = show(project)[0]["data"]["guide"]
         self.assertEqual(guide["now"], {
-            "phase": "parts", "by": ["you"], "offer": None, "chat_offer": None, "needs": [], "steps": None, "with_wiring": False,
+            "phase": "parts", "by": ["you"], "offer": None, "chat_offer": None, "needs": [], "steps": None, "with_wiring": False, "command": None, "no_command": None,
             "says": "Every need is set aside, so no pick can make the parts list. Tell Claude which need to bring back, "
                     "then pick a part."})
         self.assertEqual((guide["done"], guide["later"], guide["set_aside"]), (
@@ -2021,7 +2022,7 @@ class TheNextOnlyStepTest(FlowTest):
         said, _ = show(project)
         whole = str(project.absolute())
         self.assertEqual(said["data"]["guide"]["now"], {"phase": "simulate", "by": ["claude"], "says": SIM_FILES_NOW, "offer": None,
-                                                        "chat_offer": None, "needs": [], "steps": None, "with_wiring": False})
+                                                        "chat_offer": None, "needs": [], "steps": None, "with_wiring": False, "command": None, "no_command": None})
         self.assertEqual(said["next"], [{"op": "build-board", "argv": [str(project.absolute() / "requirements.json"), "--keep", whole],
                                          "why": "Build the board", "effects": ["reads", "runs", "writes"], "needs_yes": False,
                                          "env": self.env()}])
@@ -2897,7 +2898,8 @@ class TheDeployNowTest(FlowTest):
             with self.subTest(name=name):
                 said, _ = show(a_board_log(a_deploy_project(), verdict, sentence, reason=reason))
                 self.assertEqual(self.now(said), {"phase": "deploy", "by": ["your terminal"], "says": now, "offer": None,
-                                                  "chat_offer": chat, "needs": [], "steps": None, "with_wiring": True})
+                                                  "chat_offer": chat, "needs": [], "steps": None, "with_wiring": True,
+                                                  "command": None, "no_command": NO_LINE_TO_TYPE_SAYS})
                 self.assertEqual([step["op"] for step in said["next"]], ["look"])
                 self.assertIsNone(said["data"]["guide"]["no_open_phase"])
 
@@ -2963,6 +2965,57 @@ def a_not_finished_log(project, reason="flash_failed", **kw):
     """A board log of a flash that did not finish after the yes (P1092), in the layout the bench writes."""
     return a_board_log(project, "flash not finished", NOT_FINISHED_SENTENCE, reason=reason,
                        facts_line="facts file: not written: the flash did not finish", **kw)
+
+
+class TheLineToTypeTest(FlowTest):
+    """P1286 step 3: the deploy's now carries `command`, the line a person types for its step in the `"$HOME"` form, or
+    `no_command`, the one sentence why there is none; every other now has both null. HOME is a resolved temp folder that
+    holds the project, the store is its default one (no XDG_DATA_HOME), and the scripts are a stub folder under it: with
+    the suite's scratch store, `command` is null. `next` keeps its steps and their env."""
+
+    def setUp(self):
+        super().setUp()
+        self.project = a_firmware(a_project_built_with_no_simulation()).resolve()  # the deploy is now
+        self.person = self.project.parent
+        self.store = self.person / ".local" / "share" / "spark"
+        shutil.copytree(self.home, self.store)
+        self.scripts = self.person / "spark" / "scripts"
+        self.scripts.mkdir(parents=True)
+        (self.scripts / "look.py").write_text("")
+        patcher = mock.patch.dict(os.environ, {"HOME": str(self.person), "SPARK_HOME": str(self.store)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        os.environ.pop("XDG_DATA_HOME", None)
+        self.line = '"$HOME"/spark/scripts/look.py --project "$HOME"%s --no-simulation' % shlex.quote("/" + self.project.name)
+
+    def shown(self, project=None):
+        return run_operation(ShowFlow(scripts=self.scripts), {"project": str(project or self.project)}, FakeOutsideWorld(clock=FakeClock()))
+
+    def test_the_deploy_now_holds_the_look_s_line_and_next_keeps_its_env(self):
+        result = self.shown()
+        now = result.data["guide"]["now"]
+        self.assertEqual((now["phase"], now["command"], now["no_command"]), ("deploy", self.line, None))
+        self.assertEqual([(step.op, step.env) for step in result.next], [("look", {"SPARK_HOME": str(self.store)})])
+
+    def test_the_text_view_prints_the_line_under_now(self):
+        lines = list(self.shown().lines)
+        self.assertTrue(lines[0].startswith("  NOW (deploy): "), lines[0])
+        self.assertEqual(lines[1], "  %s: %s" % (LINE_TO_TYPE_LABEL, self.line))
+
+    def test_with_the_suite_s_scratch_store_the_deploy_says_why_there_is_no_line(self):
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)}):
+            now = self.shown().data["guide"]["now"]
+            self.assertEqual((now["command"], now["no_command"]), (None, NO_LINE_TO_TYPE_SAYS))
+            self.assertEqual(lines_of(self.project)[1], "  " + NO_LINE_TO_TYPE_SAYS)
+
+    def test_a_now_that_is_not_the_deploy_has_both_null(self):
+        project = a_project_built_with_no_simulation().resolve()
+        with mock.patch.dict(os.environ, {"HOME": str(project.parent)}):
+            now = self.shown(project).data["guide"]["now"]
+        self.assertEqual((now["phase"], now["command"], now["no_command"]), ("firmware", None, None))
+
+    def test_the_reading_adds_the_keys_and_the_guide_alone_does_not(self):
+        self.assertNotIn("command", flow_and_guide(self.project)[1]["now"])
 
 
 class TheFlashNotFinishedTest(FlowTest):
@@ -3490,7 +3543,7 @@ class TheIdeaGoalTest(FlowTest):
         said, _ = show(a_project_with_a_brief(json.dumps({"goal": GOAL})))
         guide = said["data"]["guide"]
         self.assertEqual(guide["now"], {"phase": "needs", "by": ["claude"], "says": "Ask Claude in the chat to write the needs from your goal.",
-                                        "offer": None, "chat_offer": None, "needs": [], "steps": None, "with_wiring": False})
+                                        "offer": None, "chat_offer": None, "needs": [], "steps": None, "with_wiring": False, "command": None, "no_command": None})
         self.assertEqual(([each["place"] for each in guide["stations"] if each["phase"] == "idea"], said["next"], said["data"]["stands_at"]),
                          (["done"], [], "needs"))
 

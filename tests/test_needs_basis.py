@@ -303,7 +303,7 @@ class TheReaderTest(WithAStore):
         self.assertEqual([offer["key"] for offer in phase["offers"]], ["needs-drop:board", "needs-drop:screen"])
         self.assertEqual(said["data"]["stands_at"], "needs")
         self.assertEqual(said["data"]["guide"]["now"], {"phase": "needs", "by": ["claude"], "says": STALE_NOW, "offer": None,
-                                                        "chat_offer": None, "needs": [], "steps": None, "with_wiring": False})
+                                                        "chat_offer": None, "needs": [], "steps": None, "with_wiring": False, "command": None, "no_command": None})
 
     def test_a_goal_blanked_after_the_needs_makes_them_out_of_date(self):
         """The review of P1142: a blank goal is still a change of the goal's text, so the stamp sees it."""
