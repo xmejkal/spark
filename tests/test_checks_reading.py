@@ -70,9 +70,11 @@ class TheSimulationLineTest(unittest.TestCase):
         self.assertEqual((said["grey"], said["check"]["state"], said["check"]["current"]), (True, "recorded", True))
 
     def test_a_failed_check_is_never_grey(self):
-        said = simulation(with_record(a_project(), "problems", ["imports: 5 of 6 imported", "tests: 35 of 35 passed (tests/)"]))
-        self.assertIn("imports: 5 of 6 imported", said["line"])
+        said = simulation(with_record(a_project(), "problems", ["imports: 0 of 0 imported", "tests: none (no tests/ folder)"]))
         self.assertFalse(said["grey"])
+        # the card's page-check step 7: a run that answered problems says so, though its lines show no failure
+        self.assertEqual(said["line"], "Free checks, %s, problems: imports: 0 of 0 imported; tests: none (no tests/ folder). "
+                         "Ask Claude to go through them with you. %s" % (day_and_time(AT), NO_MODEL))
 
     def test_a_record_of_older_firmware_says_run_again_and_shows_no_counts(self):
         project = with_record(a_project())

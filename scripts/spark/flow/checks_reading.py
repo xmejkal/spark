@@ -22,6 +22,9 @@ NOT_RUN_YET = "%s: not run yet. Ask Claude to run them, for free."
 NOT_READ = "%s: %s. Ask Claude to run them again."
 OLDER = "%s, %s, on older %s: ask Claude to run them again."
 CURRENT = "%s, %s: %s."
+#: A current record of a run that did not end ok: its status word too, because its lines alone may show no failure
+#: (`nothing_to_import` counts "0 of 0 imported"; the card's page-check step 7).
+CURRENT_NOT_OK = "%s, %s, %s: %s. Ask Claude to go through them with you."
 #: How the result lines of a current record, and the inputs of an older one, are joined.
 LINES_JOIN, INPUTS_JOIN = "; ", " or "
 
@@ -33,13 +36,15 @@ def read_check(project, name):
 
 def said_of(check, label):
     """One sentence of the CheckRecord `check`, with `label`, from the record alone: not run yet, not read and why, older
-    (its time and its own inputs, no counts), or current (its time and its lines)."""
+    (its time and its own inputs, no counts), or current (its time and its lines, and its status when it is not ok)."""
     if check.state == NONE_RECORDED:
         return NOT_RUN_YET % label
     if check.state == NOT_CHECKED:
         return NOT_READ % (label, check.why)
     if not check.current:
         return OLDER % (label, day_and_time(check.at), INPUTS_JOIN.join(check.inputs))
+    if check.status != OK:
+        return CURRENT_NOT_OK % (label, day_and_time(check.at), check.status, LINES_JOIN.join(check.lines))
     return CURRENT % (label, day_and_time(check.at), LINES_JOIN.join(check.lines))
 
 
