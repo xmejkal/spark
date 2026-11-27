@@ -8,6 +8,7 @@ which puts them on the pick's Offer; the page, `flow.py show` and `--json` give 
 
 from spark.design import need_requirements
 from spark.flow import flow_codes
+from spark.sourcing import matching
 
 # --- MVP ---
 #: The verb of the need a board serves (`needs`' board need): a board is a plausible pick for it whatever its words.
@@ -33,11 +34,15 @@ def is_plausible(need, candidate):
 
 
 def own_part_of(need, candidate):
-    """The board's own part that serves `need` (P1136), as its first `what` word for the need's verb ("onboard button"),
-    for a board candidate (a row of `needs.match`) of a need that does not compute; else None."""
-    if candidate["kind"] == "board" and need["does"] != COMPUTE and candidate["what"]:
-        return candidate["what"][0]
-    return None
+    """The board's own part that serves `need` (P1136), for a board candidate (a row of `needs.match`) of a need that does
+    not compute; else None. Of its `what` words for the need's verb, sorted, the first that shares a word with the need's
+    `what` (`matching.need_words`, as `needs.serving_roles` admits a board): a button need names "user button", never
+    "joystick". With none shared, the first of them."""
+    if candidate["kind"] != "board" or need["does"] == COMPUTE or not candidate["what"]:
+        return None
+    wanted = set(matching.need_words(need.get("what")))
+    fitting = [what for what in candidate["what"] if wanted & set(matching.need_words(what))]
+    return (fitting or candidate["what"])[0]
 
 
 def part_words(part, own_part):
@@ -46,8 +51,9 @@ def part_words(part, own_part):
 
 
 def is_on_picked_board(plan, need, candidate):
-    """True when a compute need of the project picks the board `candidate` and its own part plausibly serves `need`
-    (P1136): another need's pick of it, or a part that holds none of the need's words, says nothing."""
+    """True when a compute need of the project picks the board `candidate`, the board has an own part for `need`, and the
+    board is a plausible pick for `need` (`is_plausible` judges the whole board, not its own part) (P1136): another need's
+    pick of it, or a board whose words and score give the need nothing, says nothing."""
     computing = {each["id"] for each in plan.current if each.get("does") == COMPUTE}
     return bool(own_part_of(need, candidate) and is_plausible(need, candidate)
                 and computing & set(candidate.get("picked_for", ())))

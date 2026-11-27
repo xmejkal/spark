@@ -1499,8 +1499,9 @@ class ThePickNotesTest(FlowTest):
 class TheBoardsOwnPartTest(FlowTest):
     """P1136 (the PO at the p829 walk: "i'm not sure if I'm picking the right button and light, because I want the onboard
     ones on the ttgo"): a pick of a board for a need that does not compute names the board's own part (`own_part`, the first
-    of its `what` words), and when a compute need picks that board and the match is plausible, its first note says so. The
-    scratch store's T-Display also says "user button" itself, so a button need reads two words, "onboard button" first."""
+    of its `what` words that shares a word with the need), and when a compute need picks that board and the match is
+    plausible, its first note says so. The scratch store's T-Display also says "user button" and "joystick" itself, so a
+    button need reads three words, "joystick" first, and names "onboard button", the first that fits (the review)."""
 
     BOARD, NAME = "lilygo-t-display", "LILYGO TTGO T-Display (ESP32, V1.1)"
     ONBOARD, UNSURE = "The board you picked has one.", "You may not have it: check your drawer."
@@ -1512,7 +1513,8 @@ class TheBoardsOwnPartTest(FlowTest):
         super().setUp()
         board = json.loads((ROOT / "tests" / "data" / "boards" / "lilygo-t-display.json").read_text())
         # a function of its own drops the board's default one, so it names the compute one too
-        board["function"] = [{"does": "compute", "what": "microcontroller"}, {"does": "input", "what": "user button"}]
+        board["function"] = [{"does": "compute", "what": "microcontroller"}, {"does": "input", "what": "user button"},
+                             {"does": "input", "what": "joystick"}]
         (self.home / "shelf" / "boards").mkdir(parents=True)
         (self.home / "shelf" / "boards" / (self.BOARD + ".json")).write_text(json.dumps(board))
 
@@ -1533,6 +1535,11 @@ class TheBoardsOwnPartTest(FlowTest):
         offer = offer_of(said, "pick:button:" + self.BOARD)
         self.assertEqual((offer["own_part"], offer["part"], offer["label"]),
                          ("onboard button", self.NAME, "Pick “%s, its onboard button” for button" % self.NAME))
+
+    def test_the_own_part_is_the_board_s_word_that_fits_the_need_else_its_first(self):
+        board = {"kind": "board", "what": ["joystick", "user button"]}
+        self.assertEqual([own_part_of(dict(self.BUTTON, what=what), board) for what in ("push button", "buzzer")],
+                         ["user button", "joystick"])
 
     def test_with_the_board_picked_by_the_compute_need_its_first_note_says_so(self):
         project = self.project(self.picks(self.BRAIN), self.BUTTON)

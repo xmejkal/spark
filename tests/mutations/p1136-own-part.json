@@ -2,20 +2,32 @@
  {
   "file": "scripts/spark/flow/pick_notes.py",
   "name": "P1136: own_part_of names a function for a compute need (test_flow.TheBoardsOwnPartTest.test_the_board_for_the_compute_need_and_a_part_for_the_button_name_no_own_part)",
-  "find": "    if candidate[\"kind\"] == \"board\" and need[\"does\"] != COMPUTE and candidate[\"what\"]:",
-  "replace": "    if candidate[\"kind\"] == \"board\" and candidate[\"what\"]:"
+  "find": "    if candidate[\"kind\"] != \"board\" or need[\"does\"] == COMPUTE or not candidate[\"what\"]:",
+  "replace": "    if candidate[\"kind\"] != \"board\" or not candidate[\"what\"]:"
  },
  {
   "file": "scripts/spark/flow/pick_notes.py",
   "name": "P1136: own_part_of names one for a part, not a board (test_flow.TheBoardsOwnPartTest.test_the_board_for_the_compute_need_and_a_part_for_the_button_name_no_own_part)",
-  "find": "    if candidate[\"kind\"] == \"board\" and need[\"does\"] != COMPUTE and candidate[\"what\"]:",
-  "replace": "    if need[\"does\"] != COMPUTE and candidate[\"what\"]:"
+  "find": "    if candidate[\"kind\"] != \"board\" or need[\"does\"] == COMPUTE or not candidate[\"what\"]:",
+  "replace": "    if need[\"does\"] == COMPUTE or not candidate[\"what\"]:"
  },
  {
   "file": "scripts/spark/flow/pick_notes.py",
-  "name": "P1136: own_part_of takes the last what word, not the first; the store's board has two for a button (test_flow.TheBoardsOwnPartTest.test_a_board_s_pick_for_a_button_names_its_onboard_button)",
-  "find": "        return candidate[\"what\"][0]",
-  "replace": "        return candidate[\"what\"][-1]"
+  "name": "P1136: own_part_of takes the last fitting what word, not the first; the store's board has two for a button (test_flow.TheBoardsOwnPartTest.test_a_board_s_pick_for_a_button_names_its_onboard_button)",
+  "find": "    return (fitting or candidate[\"what\"])[0]",
+  "replace": "    return (fitting or candidate[\"what\"])[-1]"
+ },
+ {
+  "file": "scripts/spark/flow/pick_notes.py",
+  "name": "P1136 review: own_part_of ignores the need's words and takes the first what word, so a button need reads \"joystick\" (test_flow.TheBoardsOwnPartTest.test_a_board_s_pick_for_a_button_names_its_onboard_button)",
+  "find": "    return (fitting or candidate[\"what\"])[0]",
+  "replace": "    return candidate[\"what\"][0]"
+ },
+ {
+  "file": "scripts/spark/flow/pick_notes.py",
+  "name": "P1136 review: own_part_of gives nothing when no word fits (test_flow.TheBoardsOwnPartTest.test_the_own_part_is_the_board_s_word_that_fits_the_need_else_its_first)",
+  "find": "    return (fitting or candidate[\"what\"])[0]",
+  "replace": "    return (fitting or [None])[0]"
  },
  {
   "file": "scripts/spark/flow/pick_notes.py",
