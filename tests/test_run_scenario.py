@@ -29,6 +29,7 @@ from spark.firmware import scenario_steps  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 from spark.firmware import image_builder  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
+from spark.core.outside import build_outside_world  # noqa: E402
 from spark.core.outcomes import (COULD_NOT_RUN, EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS, NOT_CHECKED, OK, PROBLEMS,  # noqa: E402
                                  RECORDED)
 
@@ -402,7 +403,9 @@ class ProjectCase(unittest.TestCase):
     def command(self, *argv, token="t", tool=FAKE_SIMULATOR, exit_code=0, **fake):
         real = tool_finder.ToolFinder(self.project).find  # littlefs and the interpreter stay real, as the project's tools list says
         self.finder = FakeToolFinder({"simulator": tool}, fall_back=lambda name, project: real(name))  # `tool` may be the exception to raise
-        find_tool = self.finder.find
+
+        def test_world(project, effects, reporter, values=None):  # the core's world, with the fake simulator found
+            return build_outside_world(effects, reporter, find_tool=self.finder.find)
         told = {"FAKE_WOKWI_SERIAL": "ready\n", "FAKE_WOKWI_OUT": READY_MATCHED, "FAKE_WOKWI_EXIT": str(exit_code),
                 "FAKE_WOKWI_SEEN": str(self.seen), **fake}
         env = {name: value for name, value in os.environ.items() if name != "WOKWI_CLI_TOKEN"}
@@ -410,7 +413,7 @@ class ProjectCase(unittest.TestCase):
         argv = list(argv) or [str(self.scenario.relative_to(self.project)), "--project", str(self.project),
                               "--micropython", str(self.micropython)]
         with mock.patch.dict(os.environ, env, clear=True), redirect_stdout(io.StringIO()) as out, redirect_stderr(io.StringIO()) as err:
-            code = run_scenario.main(argv, find_tool)
+            code = run_scenario.main(argv, test_world)
         self.stdout = out.getvalue()
         return code, out.getvalue() + err.getvalue()
 
@@ -579,11 +582,11 @@ class APassSaysWhatItsScenarioLeftOutTest(ProjectCase):
     def test_no_control_and_no_pin_read_prints_both_on_stdout(self):
         said = self.printed(self.NO_CONTROL)
         self.assertEqual(self.stdout, said)
-        self.assertEqual(said.splitlines()[0], "lights.v2.scenario.yaml: passed, but it has no set-control step (the step "
+        self.assertEqual(said.splitlines()[0], "✓ run-scenario: ok. lights.v2.scenario.yaml: passed, but it has no set-control step (the step "
                          "that presses a button or sets a sensor) and no expect-pin step (the step that reads a pin)")
 
     def test_a_pin_read_with_no_control_prints_only_the_control_caveat(self):
-        self.assertEqual(self.printed(self.PIN_ONLY).splitlines()[0], "lights.v2.scenario.yaml: passed, but it has "
+        self.assertEqual(self.printed(self.PIN_ONLY).splitlines()[0], "✓ run-scenario: ok. lights.v2.scenario.yaml: passed, but it has "
                          "no set-control step (the step that presses a button or sets a sensor)")
 
     def test_a_step_with_no_kind_prints_why_its_steps_were_not_counted(self):
@@ -939,7 +942,7 @@ class TheCommandTest(ProjectCase):
         code, said = self.command(
             tool=tool_finder.ToolError("simulator is not installed\u202e\r THE LINE", code="tool_missing"))
         self.assertEqual(code, EXIT_COULD_NOT_RUN)
-        self.assertIn("run_scenario.py: simulator is not installed?? THE LINE", said)
+        self.assertIn("    - simulator is not installed?? THE LINE\n", said)
 
     @needs_littlefs
     def test_a_missing_tool_could_not_run_with_its_install_line(self):
@@ -1167,7 +1170,7 @@ class TheDryRunTest(ProjectCase):
         self.assertEqual(code, EXIT_COULD_NOT_RUN)
         self.assertIn("tactilebuton", said)
         self.assertEqual(self.tree(), before)
-        self.assertEqual(self.stdout, "")
+        self.assertEqual(self.stdout.splitlines()[0], "? run-scenario: could-not-run. lights.v2.scenario.yaml: not run, so no Wokwi minute was spent")
 
     def test_an_interpreter_too_large_exits_2_and_changes_nothing(self):
         self.micropython.write_bytes(b"\xe9" * 0x400000)
