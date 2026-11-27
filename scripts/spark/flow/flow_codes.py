@@ -230,8 +230,9 @@ PICKED_BY = "%s for %s"
 #: tick of an ok status before it. KEEP_PICK is the first radio of a picked need on the page, its picks the same way.
 PICKED_SAID = "picked %s."
 KEEP_PICK = "keep %s"
-#: A pick's row in the page's parts fold (P1135): its part and what you have of it, in the sheet's have words.
-PICK_ROW = "%s: %s"
+#: A pick's row in the page's parts fold (P1135): its part and what you have of it, in the sheet's have words, in
+#: parentheses as `show` and the developer fold write it, so a part's name with a colon reads right.
+PICK_ROW = "%s (%s)"
 DROP_MESSAGE = "To drop this need, tell Claude: “drop the %s need”."
 REQUIREMENTS_MESSAGE = "Writes the parts list, requirements.json, from your picks. Parts you wrote there yourself stay."
 SHELVE_MESSAGE = "May copy a part's record from spark's catalog into your store."

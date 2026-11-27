@@ -116,7 +116,7 @@ function fakeWindow(db, owner = true, nowKey = "build", guide = true, ask = null
     const inner = row.appendChild(new FakeElement("ul"));
     for (const key of keys) {
       const item = inner.appendChild(new FakeElement("li", { "data-key": key, "data-makes-stale": "requirements" }));
-      item.appendChild(new FakeElement("#text")).textContent = PARTS[key] + ": in your drawer";
+      item.appendChild(new FakeElement("#text")).textContent = PARTS[key] + " (in your drawer)";
       picks.push(item);
     }
   }
@@ -466,8 +466,8 @@ test("P1067: each need gets native radios, not now first and checked, each label
     ["radio", "pick:display", "", true], ["radio", "pick:display", OLED, false], ["radio", "pick:display", "pick:display:lcd-1602", false],
     ["radio", "pick:button", "", true], ["radio", "pick:button", TACTILE, false], ["radio", "pick:button", "pick:button:tactile-12mm", false]]);
   const labels = made.filter((element) => element.tag === "label");
-  assert.deepEqual(labels.map(textOf), [" not now", " OLED 128: in your drawer", " LCD 1602: in your drawer", " not now",
-    " Tactile 6 mm: in your drawer", " Tactile 12 mm: in your drawer"]);
+  assert.deepEqual(labels.map(textOf), [" not now", " OLED 128 (in your drawer)", " LCD 1602 (in your drawer)", " not now",
+    " Tactile 6 mm (in your drawer)", " Tactile 12 mm (in your drawer)"]);
   assert.equal(display.children[1], labels[0], "not now stands first, before the need's picks");
   assert.equal(labels[1].parentNode.children[0], labels[1], "a pick's choice leads its row, as the design draws it");
   assert.deepEqual([labels[1].style.minHeight, labels[1].style.display], ["var(--button-height)", "inline-flex"]);
@@ -585,7 +585,7 @@ test("P1135: a pick's row becomes one label, its radio with the row's text, and 
   page.offer.textContent = "Build the board";  // the build's row holds its label alone, as Python writes it
   await script.start(page.win);
   const [label, line] = page.picks[1].children;
-  assert.deepEqual([page.picks[1].children.length, label.tag, textOf(label), line], [2, "label", " LCD 1602: in your drawer", refused]);
+  assert.deepEqual([page.picks[1].children.length, label.tag, textOf(label), line], [2, "label", " LCD 1602 (in your drawer)", refused]);
   // the button says the label, so the row's own text goes
   assert.deepEqual([page.offer.textContent, page.offer.children.map((child) => child.tag ? child.textContent : child.text)],
     ["", [" ", "Build the board"]]);

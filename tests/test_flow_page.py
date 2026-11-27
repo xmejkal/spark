@@ -2198,7 +2198,7 @@ class TheLessTextTest(unittest.TestCase):
     def test_a_picked_need_s_row_says_its_pick_before_its_offers_and_its_lines_after_them(self):
         self.assertIn('<li class="need" data-need="button"><strong>button</strong><p class="picked" id="picked-button">'
                       '<span aria-hidden="true">✓</span> picked “Tactile 6 mm”.</p><ul><li data-key="pick:button:tact-12mm" '
-                      'data-makes-stale="requirements">Tactile 12 mm: in your drawer</li></ul><p class="muted">Not shown for button: '
+                      'data-makes-stale="requirements">Tactile 12 mm (in your drawer)</li></ul><p class="muted">Not shown for button: '
                       '1 more pick.</p></li>', self.parts)
         self.assertIn('<li class="need" data-need="board"><strong>board</strong><ul>', self.parts)
         self.assertNotIn("picked-board", self.text)
@@ -2209,9 +2209,9 @@ class TheLessTextTest(unittest.TestCase):
         self.assertEqual(self.parts.count("Not shown for button"), 1)
 
     def test_a_pick_s_row_reads_its_part_and_what_you_have_and_keeps_its_board_file_line(self):
-        self.assertIn('<li data-key="pick:board:beetle" data-makes-stale="requirements">Beetle: in your drawer<p class="muted">'
+        self.assertIn('<li data-key="pick:board:beetle" data-makes-stale="requirements">Beetle (in your drawer)<p class="muted">'
                       'Spark cannot build from this pick: it has no board file for “Beetle”.</p></li>', self.parts)
-        self.assertIn('<li data-key="pick:board:c6" data-makes-stale="requirements">XIAO C6: to get</li>', self.parts)
+        self.assertIn('<li data-key="pick:board:c6" data-makes-stale="requirements">XIAO C6 (to get)</li>', self.parts)
         for said in ("Saves “Beetle”", html.escape(WIRED_PICK), MAY_NOTE):
             self.assertNotIn(said, before_developer(self.text))
 
