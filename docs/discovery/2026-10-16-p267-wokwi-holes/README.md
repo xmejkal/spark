@@ -64,10 +64,10 @@ e364bc227623649b8567f9e646e15c18d3f4ed1058f10d31d78ae8d68e8b2b4b) puts `wokwi-pu
 `wokwi-pushbutton` each at 0 and 90 degrees. `pushbutton-6mm-turn.png` shows them. The pins were read from the
 overlays as above.
 
-| type | unturned pins | turned 90, pin 1.l | center |
+| type | unturned pins | turned 90 | center |
 |---|---|---|---|
-| wokwi-pushbutton-6mm | 1.l (0, 2.2), 2.l (0, 21), 1.r (28, 2.2), 2.r (28, 21) | (24.8, -1) | (14, 13) |
-| wokwi-pushbutton | 1.l (0, 13), 2.l (0, 32), 1.r (67, 13), 2.r (67, 32) | (44.5, -9.5) | (33.5, 24) |
+| wokwi-pushbutton-6mm | 1.l (0, 2.2), 2.l (0, 21), 1.r (28, 2.2), 2.r (28, 21) | 1.l (24.8, -1), 2.l (6, -1), 1.r (24.8, 27), 2.r (6, 27) | (14, 13) |
+| wokwi-pushbutton | 1.l (0, 13), 2.l (0, 32), 1.r (67, 13), 2.r (67, 32) | 1.l (44.5, -9.5), 2.l (25.5, -9.5), 1.r (44.5, 57.5), 2.r (25.5, 57.5) | (33.5, 24) |
 
 The 6 mm part's unturned pins equal wokwi-elements `src/pushbutton-6mm-element.ts` at commit
 5178c0cc1b455719fdf562169293797e29d73dac (sha256 42bc1d72b3ade4433ac7ecfd73c76ba6ed8871167b41c9e2e7174757375076ce),

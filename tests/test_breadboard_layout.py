@@ -62,6 +62,14 @@ class TheTurnTest(unittest.TestCase):
             got = rotate(GEOMETRY.part("wokwi-pushbutton")["pins"], [33.5, 24.5], 90)[pin]
             self.assertEqual(tuple(_rounded(v) for v in got), at, pin)
 
+    def test_the_6_mm_button_turns_about_the_center_wokwi_showed(self):
+        # P1240, 2026-11-27: read from the editor's pin overlays with the part at (250, 100), turned 90 degrees
+        # (docs/discovery/2026-10-16-p267-wokwi-holes/README.md).
+        shape = GEOMETRY.part("wokwi-pushbutton-6mm")
+        turned = rotate(shape["pins"], shape["center"], 90)
+        self.assertEqual({pin: tuple(_rounded(v) for v in at) for pin, at in turned.items()},
+                         {"1.l": (24.8, -1), "2.l": (6, -1), "1.r": (24.8, 27), "2.r": (6, 27)})
+
     def test_a_turned_led_gives_the_pins_wokwi_drew(self):
         # The refuter: the LED is 40 wide and 50 high, so it turns about (20, 25); Wokwi drew A at (3, 30) turned 90.
         shape = GEOMETRY.part("wokwi-led")
@@ -1083,7 +1091,8 @@ class WhatIsNotDrawnTest(unittest.TestCase):
                          ["330", "10000", "4700", "1000000", ""])
 
 
-NO_ROAD = "no simulation.wokwi.part and no physical block, so the sheet draws no part for it"
+#: Why a record is undrawn when neither road of the sheet (its Wokwi part, or a block drawn from the record) gives a part.
+NO_ROAD = "no road draws it"
 #: Records with a body_mm that neither road of the sheet draws, each with its reason. Nothing is skipped in silence (P1240).
 UNDRAWN_BODIES = {
     "dfr0534-module": NO_ROAD,
@@ -1095,7 +1104,8 @@ UNDRAWN_BODIES = {
 }
 #: How far a leg may stand out of its body's edge on one axis: one pitch, the nearest hole (P1240).
 LEG_REACH_MM = 2.54
-#: Wokwi draws 96 px to the inch.
+#: Wokwi draws 96 px to the inch. The test keeps its own copy, so that it does not take the number from the code it
+#: checks (part_shape.PX_PER_MM), and the vocabulary test refuses a test that reads that constant.
 PX_PER_MM = 96 / 25.4
 
 
@@ -1132,7 +1142,7 @@ class TheBodySpanTest(unittest.TestCase):
                 continue
             component = [name for name in catalog if name != wiring_steps.THE_BOARD]
             if not component:
-                undrawn[record["id"]] = "no road draws it"
+                undrawn[record["id"]] = NO_ROAD
                 continue
             ledger = HoleLedger(geometry.surface)
             try:
@@ -1154,7 +1164,7 @@ class TheBodySpanTest(unittest.TestCase):
 
     def test_each_record_with_a_body_is_drawn_or_named_with_its_reason(self):
         placed, undrawn = self.drawn_parts()
-        self.assertEqual(set(undrawn), set(UNDRAWN_BODIES), "UNDRAWN_BODIES must name each undrawn record: %s" % undrawn)
+        self.assertEqual(undrawn, UNDRAWN_BODIES, "UNDRAWN_BODIES must name each undrawn record with its reason")
         self.assertEqual(set(placed) & set(UNDRAWN_BODIES), set())
 
 
