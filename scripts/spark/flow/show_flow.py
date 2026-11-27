@@ -38,6 +38,8 @@ OFFERS_SHOWN = 5
 #: One need of the parts phase (P1135): its id, then its pick with the tick, its lines and its pick keys (NEED_OFFERS), each
 #: with what you have of its part (HAVE_KEY).
 NEED_LINE, NEED_OFFERS, HAVE_KEY = "      %s: %s", "offers: %s", "%s (%s)"
+#: A pick's notes (P1180), on a line of their own under its need's line: its key, then its notes.
+NOTE_LINE = "        %s: %s"
 #: The Finding of a phase that holds problems or could not run: its first sentence, and where to look.
 PHASE_SENTENCE = "%s: %s"
 PHASE_FIX = "read what the phase says in data.phases"
@@ -61,13 +63,14 @@ def said_of(items):
 
 def need_lines(phase):
     """One NEED_LINE per need of the parts phase that has a pick, a line or a pick offer (P1135): its pick with the tick,
-    its lines, then its pick keys, each with its `have`."""
+    its lines, then its pick keys, each with its `have`; under it a NOTE_LINE per pick that has notes (P1180)."""
     lines = []
     for need in phase.needs or []:
         picks = [offer for offer in phase.offers if pick_need(offer.key) == need.need]
         items = ([MARKS[OK][1] + " " + picked_sentence(need.picked)] if need.picked else []) + need.says
         items += [NEED_OFFERS % ", ".join(HAVE_KEY % (offer.key, offer.have) for offer in picks)] if picks else []
         lines += [NEED_LINE % (need.need, said_of(items))] if items else []
+        lines += [NOTE_LINE % (offer.key, said_of(list(offer.notes))) for offer in picks if offer.notes]
     return lines
 
 

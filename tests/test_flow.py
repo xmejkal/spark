@@ -35,7 +35,7 @@ import flow  # noqa: E402
 from fakes import FakeClock, FakeOutsideWorld, FakeTextFileWriter  # noqa: E402
 from spark.build.build_record import BUILD_RECORD_FILE, EARLIER_DIST, BuildRecordStore, sha256_of  # noqa: E402
 from spark.core import zone_time  # noqa: E402
-from spark.flow.phase_readers import Offer, Phase, SimulateReader  # noqa: E402
+from spark.flow.phase_readers import Offer, PartsNeed, Phase, SimulateReader  # noqa: E402
 from spark.breadboard.sheet import have_of  # noqa: E402
 from spark.flow.flow_codes import effect_lines, picked_sentence  # noqa: E402
 from spark.flow import flow_codes  # noqa: E402
@@ -45,7 +45,7 @@ from spark.bench import board_log  # noqa: E402
 from spark.flow.deploy_reading import DeployState  # noqa: E402
 from spark.flow.guide import NO_IMAGE_FACT, ImageFact, chat_offer_of, guide_of, job_offer, names_at, requirements_now  # noqa: E402
 from spark.flow.guide import stations_of, who_and_sentence  # noqa: E402
-from spark.flow.show_flow import ShowFlow, flow_and_guide, read_flow  # noqa: E402
+from spark.flow.show_flow import ShowFlow, flow_and_guide, need_lines, read_flow  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.outcomes import OK, PROBLEMS  # noqa: E402
@@ -1585,13 +1585,18 @@ class TheNeedLinesTest(FlowTest):
     def test_the_parts_line_ends_at_the_count_and_each_need_s_line_follows_it(self):
         lines = self.lines()
         at = lines.index(self.PARTS_LINE.replace("1 of 2", "2 of 3").replace(" (you)", ", set aside: odd (you)"))
-        self.assertEqual(lines[at + 1:at + 4], [
+        # P1180 (Q5): a pick's notes stand on their own line under its need's line; the store's probes owe facts
+        owed = "Spark needs more facts about it: ask Claude."
+        self.assertEqual(lines[at + 1:at + 7], [
             "      soil: ✓ picked “A soil probe”. Not shown for soil, refused: %s.%s offers: pick:soil:x-unknown (in your drawer)"
             % (HELD, LIST),
+            "        pick:soil:x-unknown: " + owed,
             "      odd: ✓ picked “A soil probe”.",
             "      wet: Not shown for wet, refused: %s.%s offers: pick:wet:x-many (in your drawer), pick:wet:x-unknown (in your drawer)"
-            % (HELD, LIST)])
-        self.assertTrue(lines[at + 4].startswith("  "), lines[at + 4])
+            % (HELD, LIST),
+            "        pick:wet:x-many: " + owed,
+            "        pick:wet:x-unknown: " + owed])
+        self.assertTrue(lines[at + 7].startswith("  "), lines[at + 7])
         self.assertFalse([line for line in lines if line.startswith("      offers: pick:")])
 
     def test_a_need_with_nothing_to_say_has_no_line(self):
@@ -1605,6 +1610,16 @@ class TheNeedLinesTest(FlowTest):
         self.assertEqual(len(now), 1)
         self.assertTrue(now[0].startswith("  NOW (parts): 1 need has no part yet: wet. Pick a part for each, or ask Claude to set "
                                           "one aside."), now[0])
+
+    def test_a_pick_with_notes_says_them_on_a_line_under_its_need_s_line_and_one_with_none_has_none(self):
+        # P1180: the line holds the offer's notes as they are, its key first
+        notes = ("Spark needs more facts about it: ask Claude.", "You may not have it: check your drawer.")
+        offers = [Offer("pick:soil:x-a", "Pick “A” for soil", "Saves “A”.", (), None, "A", "to get", notes),
+                  Offer("pick:soil:x-b", "Pick “B” for soil", "Saves “B”.", (), None, "B", "in your drawer")]
+        phase = Phase("parts", None, "○", "you", [], offers, [PartsNeed("soil", [], [])])
+        self.assertEqual(need_lines(phase), [
+            "      soil: offers: pick:soil:x-a (to get), pick:soil:x-b (in your drawer)",
+            "        pick:soil:x-a: Spark needs more facts about it: ask Claude. You may not have it: check your drawer."])
 
 
 class FingerprintTest(FlowTest):
