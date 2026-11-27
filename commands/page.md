@@ -15,7 +15,7 @@ project's secrets files (`firmware/*secret*.py`) as `***` ([the secrets](../docs
 After an ok `parts.py --pick`, spark also writes an existing `page.html` again on disk, but never publishes it (P1035).
 The published copy lags until the next `/spark:page` republishes it ([carry the requests](#carry-the-requests), step 3).
 Published as an Artifact with its database, it shows its owner a button for each step that spark lets the page ask for,
-and in its parts each need's pick marked ✓ and a choice of a part for each need, with one Send of the chosen picks
+and in its parts each need's pick marked ✓ and a choice of a part for each need, with what to know of each, with one Send of the chosen picks
 ([P1067](https://github.com/xmejkal/spark/issues/1565)). If the page shows no button, spark has no step for the page now. A click,
 after the person's Send, writes one row in the collection `requests`, whose shape `flow.py run-request --help` says.
 The page then waits for the row `answers/<id>`. Nothing runs until the

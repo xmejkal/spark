@@ -183,8 +183,8 @@ Case greyed, P1119; DONE and LATER stand only in the developer fold), the phases
 the wiring of a built project (the lines before power, then the steps, one at a time or all at once) and the pictures
 the project holds: the breadboard, and the schematic and the PCB that the build with --keep kept as files. No tick on
 a phase that is not ok. Only the build with --keep draws the schematic and the PCB. The page reads the project's files and its board logs, and cannot see your wiring or what the board shows now. In
-the parts fold each need has a row: its pick with a tick, each part it may pick with what you have of it, then the
-need's own lines (P1135). Every other offer is a %s with its label, or a choice in a need's row for a pick; its effect stands in its Send box and in the developer
+the parts fold each need has a row: its pick with a tick, each part it may pick with what you have of it and its notes, muted
+(P1180), then the need's own lines (P1135). Every other offer is a %s with its label, or a choice in a need's row for a pick; its effect stands in its Send box and in the developer
 fold, which also says a pick's have. The page's <body> carries data-fingerprint (the first 12 hex digits of the
 fingerprint) and data-written (the newest change time of .spark/needs.json, requirements.json and .spark/build.json).
 Only /spark:page publishes the page.""" % flow_codes.BUTTON_WORD
