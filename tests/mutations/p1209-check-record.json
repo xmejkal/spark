@@ -136,5 +136,35 @@
   "name": "P1209: the guide counts firmware that is not written (test_flow.TheGuideTest.test_a_board_wokwi_has_no_model_of_passes_the_build_and_the_firmware_and_the_wiring_are_now)",
   "find": "firmware is not None and firmware.status != flow_codes.NOT_STARTED",
   "replace": "True"
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1209 fix pass: a record that cannot be read says it is no JSON (test_check_record.TheCheckRecordTest.test_a_record_that_cannot_be_read_is_not_checked_with_its_own_reason)",
+  "find": "            return CheckRecord(self.name, outcomes.NOT_CHECKED, WHY_CANNOT_READ % type(failed).__name__)\n",
+  "replace": "            return CheckRecord(self.name, outcomes.NOT_CHECKED, WHY_NO_JSON)\n"
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1209 fix pass: the exists() of the record stands outside the try, so a .spark/ that cannot be searched raises (test_check_record.TheCheckRecordTest.test_a_spark_folder_that_cannot_be_searched_is_not_checked_with_its_own_reason)",
+  "find": "        try:\n            if not self.path.exists():  # raises under a .spark/ that cannot be searched\n                return CheckRecord(self.name, outcomes.NONE_RECORDED)\n",
+  "replace": "        if not self.path.exists():\n            return CheckRecord(self.name, outcomes.NONE_RECORDED)\n        try:\n"
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1209 fix pass: JSON's true reads as schema 1 (test_check_record.TheCheckRecordTest.test_schema_true_is_not_schema_1)",
+  "find": "    if type(record[\"schema\"]) is not int or record[\"schema\"] != SCHEMA",
+  "replace": "    if record[\"schema\"] != SCHEMA"
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1209 fix pass: a record over no inputs reads as current (test_check_record.TheCheckRecordTest.test_a_record_with_no_inputs_is_not_checked)",
+  "find": "    if record[\"inputs\"] == []:\n        return WHY_NO_INPUTS\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/records/check_record.py",
+  "name": "P1209 fix pass: save keeps a record over inputs that are not plain (test_check_record.TheCheckRecordTest.test_save_refuses_an_input_that_is_not_plain)",
+  "find": "        if not inputs or not all(is_plain_input(each) for each in inputs):\n",
+  "replace": "        if False:\n"
  }
 ]

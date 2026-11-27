@@ -425,7 +425,7 @@ SHEET_NOW = "No wiring sheet yet. Ask Claude to build the board."
 SHEET_STALE_NOW = "The wiring sheet is out of date. Ask Claude to build the board again."
 #: The firmware with a current wiring sheet: two jobs in any order, and the count of the sheet's steps.
 TWO_JOBS_NOW = ("Two jobs, in any order: wire the breadboard (%d steps, power off), and ask Claude to write the firmware. "
-                "Spark cannot see your wiring.")
+                "Spark cannot see your wiring. " + THIN_MAIN_RULE)
 FIRMWARE_NOW = "Ask Claude in the chat to write the firmware for this board. " + THIN_MAIN_RULE
 SIMULATE_NOW = "Ask Claude for the scenario command, and run it in your terminal. It uses Wokwi CI minutes."
 #: The simulate phase's closing hint is the same sentence (P979).

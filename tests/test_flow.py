@@ -722,7 +722,8 @@ class TheGuideTest(FlowTest):
             "now": {"phase": "firmware", "by": ["you", "claude"], "offer": None, "chat_offer": "write-firmware", "needs": [], "steps": 10,
                     "with_wiring": True,
                     "says": "Two jobs, in any order: wire the breadboard (10 steps, power off), and ask Claude to write the "
-                            "firmware. Spark cannot see your wiring."},
+                            "firmware. Spark cannot see your wiring. Keep main.py thin, with the code in modules it calls, so "
+                            "the free checks can import them."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)"],
             "later": ["simulate (no Wokwi model of this board)", "deploy"], "set_aside": [], "no_simulation": NO_MODEL,
             "simulation": {"line": NO_MODEL, "grey": True, "check": NO_CHECK},  # P1209: no firmware and no check record
