@@ -14,7 +14,7 @@ from pathlib import Path
 
 from spark.core.follow_up import FollowUp
 from spark.flow.flow_page import FlowHtmlPage
-from spark.flow.show_flow import NEEDS_YOU, flow_and_guide, guide_now_line, needs_you, now_steps
+from spark.flow.show_flow import NEEDS_YOU, flow_and_guide, guide_now_line, needs_you, now_steps, privacy_for
 from spark.flow.write_flow_page import write_page
 
 # --- MVP ---
@@ -69,13 +69,14 @@ class FlowFollowUp(FollowUp):
 
     def closing_line(self, project):
         """Show's NOW line (`show_flow.guide_now_line`) when `says_now` is set and show names no step for `project`, else
-        None (P1292). It takes the reading of the last `steps`, so a second call, a call before `steps` or one for another
-        project gives None."""
+        None (P1292). It is masked with show's own mask (`show_flow.privacy_for`: the paths and the project's secrets), so
+        it is the line show prints, because the build's run masks nothing. It takes the reading of the last `steps`, so a
+        second call, a call before `steps` or one for another project gives None."""
         reading, self.reading = self.reading, None
         if not self.says_now or reading is None or reading[0] != project:
             return None
         _, steps, guide = reading
-        return None if steps else guide_now_line(guide, steps)
+        return None if steps else privacy_for(project).mask_text(guide_now_line(guide, steps))
 
     def after_command(self, step):
         return NEEDS_YOU if needs_you(step) else ""

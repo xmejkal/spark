@@ -2666,6 +2666,24 @@ class TheClosingLineTest(FlowTest):
         self.assertEqual(line, lines_of(project)[0])
         self.assertTrue(line.startswith("  NOW (firmware): Two jobs, in any order:"), line)
 
+    def test_the_closing_line_carries_show_s_mask_and_the_build_prints_it_as_show_does(self):
+        # P1292 review (refuter 1): a failed run's log named like a secret; show masks its NOW line with privacy_for, and
+        # check_spine's BuildBoard has no privacy_for, so FlowFollowUp masks the closing line with show's own mask
+        from spark.build.build_board import BuildBoard
+        from spark.build.stages import Stage
+        from spark.flow.now_follow_up import FlowFollowUp
+        project = with_secrets(a_run(an_image(a_firmware(a_built_project())), "failed"), 'WIFI_PASSWORD = "%s"\n' % SECRET)
+        (project / "sim" / "runs" / "one.log").rename(project / "sim" / "runs" / (SECRET + ".log"))
+        follow_up = FlowFollowUp(says_now=True)
+        self.assertEqual(follow_up.steps(project), [])
+        line = follow_up.closing_line(project)
+        self.assertEqual(line, lines_of(project)[0])
+        self.assertTrue(line.startswith("  NOW (simulate): A run failed on this image (***.log)."), line)
+        self.assertIsNone(BuildBoard.privacy_for)
+        text, code = a_kept_build(project, [Stage("build", OK, "fine")], as_json=False)
+        self.assertEqual((code, text[-1]), (0, lines_of(project)[0]))
+        self.assertNotIn(SECRET, "\n".join(text))
+
     def test_with_the_flag_where_show_names_a_step_there_is_no_closing_line(self):
         from spark.flow.now_follow_up import FlowFollowUp
         project, follow_up = an_image(a_firmware(a_built_project())), FlowFollowUp(says_now=True)

@@ -1431,11 +1431,21 @@ class TheFollowUpTest(unittest.TestCase):
         self.assertIsNone(FollowUp().closing_line(Path("p")))
         self.assertEqual(list(self.followed(Writing(), FollowUp()).lines), ["  done"])
 
-    def test_the_closing_line_is_masked(self):
-        # P1292: the closing line is a plain str, not a PastedLine, so the mask treats it as any line
-        privacy = Privacy.of(Path("/opt/someone/p"), Path("/opt/store"), Path("/opt/home"), ())
-        result = self.followed(Writing(), FakeFollowUp([], closing="  NOW (x): in /opt/someone/p"), privacy=privacy)
-        self.assertEqual(result.lines[-1], "  NOW (x): in <project>")
+    def test_the_closing_line_is_masked_by_the_operation_s_privacy_alone(self):
+        # P1292 review (refuter 1): run_cli masks a run with its Operation's `privacy_for`. check_spine's BuildBoard has
+        # none, so the CLI prints the closing line as the follow-up gave it, and FlowFollowUp masks it with show's own mask
+        # (test_flow's TheClosingLineTest). An Operation with a `privacy_for` masks it as any line: it is a plain str.
+        import contextlib
+        import io
+        line = "  NOW (x): in /opt/someone/p"
+
+        class Masked(Writing):
+            privacy_for = staticmethod(lambda project: Privacy.of(Path("/opt/someone/p"), Path("/opt/store"), Path("/opt/home"), ()))
+        for operation, said in ((Writing(), line), (Masked(), "  NOW (x): in <project>")):
+            with self.subTest(operation=type(operation).__name__), contextlib.redirect_stdout(io.StringIO()) as out:
+                code = run_cli(HelpText("writing.py", follow_up=FakeFollowUp([], closing=line)), operation, ["--project", "p"],
+                               outside_builder=None, outside=FakeOutsideWorld())
+                self.assertEqual((code, out.getvalue().splitlines()[-1]), (0, said))
 
     def test_run_cli_hands_the_cli_s_follow_up_to_the_run(self):
         import contextlib
