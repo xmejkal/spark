@@ -8,8 +8,8 @@
  {
   "file": "scripts/spark/build/stages.py",
   "name": "a board with no Wokwi part loses its own code (P977)",
-  "find": "NO_WOKWI_PART_TYPE_ENDING = StageEnding(build_codes.BOARD_NOT_IN_WOKWI, COULD_NOT_RUN,",
-  "replace": "NO_WOKWI_PART_TYPE_ENDING = StageEnding(build_codes.SIMULATION_FACT_MISSING, COULD_NOT_RUN,"
+  "find": "NO_WOKWI_PART_TYPE_ENDING = StageEnding(build_codes.BOARD_NOT_IN_WOKWI, SKIPPED,",
+  "replace": "NO_WOKWI_PART_TYPE_ENDING = StageEnding(build_codes.SIMULATION_FACT_MISSING, SKIPPED,"
  },
  {
   "file": "scripts/spark/design/needs.py",
@@ -42,21 +42,21 @@
   "replace": "[]"
  },
  {
-  "file": "scripts/spark/flow/guide.py",
+  "file": "scripts/spark/flow/phase_readers.py",
   "name": "the guide counts a build as done whatever stopped its simulation (P977)",
   "find": "and stopped[0].get(\"code\") in NO_MODEL_CODES",
   "replace": ""
  },
  {
-  "file": "scripts/spark/flow/guide.py",
+  "file": "scripts/spark/flow/phase_readers.py",
   "name": "a skipped stage stops a board-only build with no model counting as done (P977)",
-  "find": "if stage.get(\"status\") not in (OK, SKIPPED)]",
-  "replace": "if stage.get(\"status\") != OK]"
+  "find": "if stage.get(\"status\") not in (OK, SKIPPED) or stage.get(\"code\") in NO_MODEL_CODES]",
+  "replace": "if stage.get(\"status\") != OK or stage.get(\"code\") in NO_MODEL_CODES]"
  },
  {
   "file": "scripts/spark/flow/guide.py",
   "name": "the guide counts a stale build as done (P977)",
-  "find": "    if not build or build.status != COULD_NOT_RUN or not stops_only_for_no_model(",
+  "find": "    if not build or build.status not in (COULD_NOT_RUN, None) or not stops_only_for_no_model(",
   "replace": "    if not build or not stops_only_for_no_model("
  },
  {
