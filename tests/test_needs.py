@@ -3539,7 +3539,7 @@ class TheIdeaCommandTest(unittest.TestCase):
         flagged = [line for line in lines if any(op in line for op in ("--audit", "--function-set", "--fact-set", "--offer"))]
         self.assertTrue(flagged)
         for line in flagged:
-            self.assertIn("--project '<project>'", line, line)
+            self.assertRegex(line, r"--project '?<project>'?", line)  # P1256: quoted in a block, still bare in a line of prose
         for line in lines:
             if any(op in line for op in ("--needs-set", "--match", "--pick", "--requirements", "--step", "--tally")):
                 self.assertNotIn("--project", line, "--needs-set and --match take the project as their argument: " + line)
