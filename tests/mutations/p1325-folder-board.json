@@ -1,0 +1,46 @@
+[
+  {
+    "file": "scripts/spark/checks/check.py",
+    "name": "P1325: every board is checked again",
+    "find": "    return [board] if board in every else every",
+    "replace": "    return every",
+    "tier": "critical"
+  },
+  {
+    "file": "scripts/spark/checks/check.py",
+    "name": "P1325: a folder board with no record is checked alone",
+    "find": "    return [board] if board in every else every",
+    "replace": "    return [board] if board else every"
+  },
+  {
+    "file": "scripts/spark/checks/check.py",
+    "name": "P1325: a folder that names no board gets no board",
+    "find": "    return [board] if board in every else every",
+    "replace": "    return [board] if board in every else []"
+  },
+  {
+    "file": "scripts/spark/checks/check.py",
+    "name": "P1325: the folder's requirements are not read",
+    "find": "board_records.requirements_board(checked.folder) or board_records.marked_board",
+    "replace": "board_records.marked_board",
+    "tier": "critical"
+  },
+  {
+    "file": "scripts/spark/checks/check.py",
+    "name": "P1325: a broken requirements.json stops the board list",
+    "find": "    except board_records.BoardError:",
+    "replace": "    except ZeroDivisionError:"
+  },
+  {
+    "file": "scripts/spark/checks/check.py",
+    "name": "P1325: the note names every board, but one is checked",
+    "find": "\", \".join(ids)",
+    "replace": "\", \".join(sorted(board_records.available(project)))"
+  },
+  {
+    "file": "scripts/spark/checks/check.py",
+    "name": "P1325: a resolved folder board still says not resolved",
+    "find": "board_records.definition_path(project, board)\n",
+    "replace": "board_records.definition_path(project)\n"
+  }
+]
