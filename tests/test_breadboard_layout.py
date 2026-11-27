@@ -62,6 +62,14 @@ class TheTurnTest(unittest.TestCase):
             got = rotate(GEOMETRY.part("wokwi-pushbutton")["pins"], [33.5, 24.5], 90)[pin]
             self.assertEqual(tuple(_rounded(v) for v in got), at, pin)
 
+    def test_the_6_mm_button_turns_about_the_center_wokwi_showed(self):
+        # P1240, 2026-11-27: read from the editor's pin overlays with the part at (250, 100), turned 90 degrees
+        # (docs/discovery/2026-10-16-p267-wokwi-holes/README.md).
+        shape = GEOMETRY.part("wokwi-pushbutton-6mm")
+        turned = rotate(shape["pins"], shape["center"], 90)
+        self.assertEqual({pin: tuple(_rounded(v) for v in at) for pin, at in turned.items()},
+                         {"1.l": (24.8, -1), "2.l": (6, -1), "1.r": (24.8, 27), "2.r": (6, 27)})
+
     def test_a_turned_led_gives_the_pins_wokwi_drew(self):
         # The refuter: the LED is 40 wide and 50 high, so it turns about (20, 25); Wokwi drew A at (3, 30) turned 90.
         shape = GEOMETRY.part("wokwi-led")
@@ -249,13 +257,14 @@ class TheXiaoLayoutTest(unittest.TestCase):
         self.assertEqual(once, drawing.WokwiBreadboardDiagram().text(BreadboardSceneMaker().make(sheet._plan_layout(xiao_read()))))
 
     def test_the_drawing_keeps_the_bytes_wokwi_showed(self):
-        # The screenshot in docs/discovery/2026-10-16-p267-wokwi-holes/ shows exactly these bytes (P267, PR #303).
+        # docs/discovery/2026-10-16-p267-wokwi-holes/button-light-xiao-6mm.png shows exactly these bytes in Wokwi (P1240,
+        # 2026-11-27). The first screenshot of P267 (PR #303) showed an older layout.
         # A refactor must not move a part by a rounding step: P270 changes the units inside, never the file.
         with in_store():
             text = drawing_text(XIAO / "requirements.json")
         self.assertEqual(hashlib.sha256(text.encode()).hexdigest(),
-                         # P953: the three ground jumpers go to the bottom - rail (bn.6, bn.14, bn.10); no part moved
-                         "51af5c2905f30b678888b241a52dd115a7a7ad142cde56ce2929b6498b0cb528")
+                         # P1240: the 6 mm button in e12, e14, f12, f14
+                         "0409ac7ab08ffcd862cb777be7c59764a3f35d2cf1b2a5362408d130556d2faf")
 
     def test_every_hole_named_exists_on_a_half_board(self):
         drawn = json.loads(drawing.WokwiBreadboardDiagram().text(BreadboardSceneMaker().make(self.layout)))
@@ -389,7 +398,7 @@ class TheRecordBoardLayoutTest(unittest.TestCase):
         placed = drawing.BreadboardPlanner(*record_inputs(self.read)).plan(self.read.steps).parts
         button = next(part for part in placed if part.id == "TactileButton")
         # P953: the board's body ends in 25 and four columns stay free, so the button's body starts in 30
-        self.assertEqual((min(h.column for h in button.holes.values()), max(h.column for h in button.holes.values())), (31, 33))
+        self.assertEqual((min(h.column for h in button.holes.values()), max(h.column for h in button.holes.values())), (30, 32))
 
 
 EPAPER = ROOT / "tests" / "data" / "breadboard" / "epaper"
@@ -1080,6 +1089,83 @@ class WhatIsNotDrawnTest(unittest.TestCase):
     def test_a_resistor_value_is_in_ohms(self):
         self.assertEqual([drawing_catalog.to_ohms(v) for v in ("330Ω", "10kΩ", "4.7kΩ", "1MΩ", "")],
                          ["330", "10000", "4700", "1000000", ""])
+
+
+#: Why a record is undrawn when neither road of the sheet (its Wokwi part, or a block drawn from the record) gives a part.
+NO_ROAD = "no road draws it"
+#: Records with a body_mm that neither road of the sheet draws, each with its reason. Nothing is skipped in silence (P1240).
+UNDRAWN_BODIES = {
+    "dfr0534-module": NO_ROAD,
+    "jst-ph-2-power-inlet": NO_ROAD,
+    "l9110s-module": NO_ROAD,
+    "max98357a-dfr0954": NO_ROAD,
+    "speaker-terminal": NO_ROAD,
+    "vl6180x-breakout": NO_ROAD,
+}
+#: How far a leg may stand out of its body's edge on one axis: one pitch, the nearest hole (P1240).
+LEG_REACH_MM = 2.54
+#: Wokwi draws 96 px to the inch. The test keeps its own copy, so that it does not take the number from the code it
+#: checks (part_shape.PX_PER_MM), and the vocabulary test refuses a test that reads that constant.
+PX_PER_MM = 96 / 25.4
+
+
+def hole_extent_mm(placed):
+    """(the larger, the smaller) extent in mm of the holes a placed part's pins take, from the holes' own x and y."""
+    xs = [hole.x for hole in placed.holes.values()]
+    ys = [hole.y for hole in placed.holes.values()]
+    extents = sorted(((max(xs) - min(xs)) / PX_PER_MM, (max(ys) - min(ys)) / PX_PER_MM), reverse=True)
+    return tuple(extents)
+
+
+class TheBodySpanTest(unittest.TestCase):
+    """A part's legs may stand out of its body by one pitch at most: the holes it takes span no more than its body_mm
+    plus LEG_REACH_MM on each axis (P1240: the 6 mm button took holes 17.78 mm apart)."""
+
+    @staticmethod
+    def drawn_parts():
+        """{record id: (placed part, the record)} of each record in parts/ with a body_mm that a road of the sheet draws, and
+        {record id: why not} of each that none draws. Each part is placed alone on the full surface."""
+        read = xiao_read()
+        placed, undrawn = {}, {}
+        for path in sorted((ROOT / "parts").glob("*.json")):
+            record = json.loads(path.read_text())
+            if not record.get("body_mm"):
+                continue
+            one = mock.Mock(built=mock.Mock(board=read.built.board, parts=[record]), resistors={})
+            catalog = drawing_catalog.describe_parts(one, GEOMETRY)
+            geometry = GEOMETRY.with_surface(drawing.Surface.load_full())
+            try:
+                for wokwi_type, part_px in drawing_catalog.record_parts(one).items():
+                    geometry = geometry.with_part(wokwi_type, part_px)
+            except NotDrawnError as refused:
+                undrawn[record["id"]] = str(refused)
+                continue
+            component = [name for name in catalog if name != wiring_steps.THE_BOARD]
+            if not component:
+                undrawn[record["id"]] = NO_ROAD
+                continue
+            ledger = HoleLedger(geometry.surface)
+            try:
+                placed[record["id"]] = (drawing.FirstFitPartPlacement(geometry).place(record["id"], catalog[component[0]], ledger),
+                                        record)
+            except NotDrawnError as refused:
+                undrawn[record["id"]] = str(refused)
+        return placed, undrawn
+
+    def test_no_part_takes_holes_further_apart_than_its_body_and_one_pitch(self):
+        placed, _ = self.drawn_parts()
+        self.assertTrue(placed)
+        for record_id, (part, record) in placed.items():
+            body = sorted((record["body_mm"]["width"], record["body_mm"]["height"]), reverse=True)
+            with self.subTest(record=record_id):
+                for extent, side in zip(hole_extent_mm(part), body):
+                    self.assertLessEqual(extent, side + LEG_REACH_MM,
+                                         "%s: its holes span %.2f mm, its body side is %.2f mm" % (record_id, extent, side))
+
+    def test_each_record_with_a_body_is_drawn_or_named_with_its_reason(self):
+        placed, undrawn = self.drawn_parts()
+        self.assertEqual(undrawn, UNDRAWN_BODIES, "UNDRAWN_BODIES must name each undrawn record with its reason")
+        self.assertEqual(set(placed) & set(UNDRAWN_BODIES), set())
 
 
 if __name__ == "__main__":

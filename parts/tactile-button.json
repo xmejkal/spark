@@ -70,7 +70,7 @@
   },
   "simulation": {
     "wokwi": {
-      "part": "wokwi-pushbutton",
+      "part": "wokwi-pushbutton-6mm",
       "pins": {
         "A": "1.l",
         "B": "2.l"

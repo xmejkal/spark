@@ -347,7 +347,7 @@ class TheSheetTest(unittest.TestCase):
         self.assertEqual(router.calls, 1)
         self.assertIs(scene.layout, self.planned.layout)
         self.assertEqual(hashlib.sha256(texts[0].encode()).hexdigest(),
-                         "51af5c2905f30b678888b241a52dd115a7a7ad142cde56ce2929b6498b0cb528")  # the XIAO's Wokwi diagram
+                         "0409ac7ab08ffcd862cb777be7c59764a3f35d2cf1b2a5362408d130556d2faf")  # the XIAO's Wokwi diagram
         self.assertTrue(texts[1].startswith("<svg"), texts[1][:40])
 
     def test_no_scene_is_made_when_no_drawing_is_drawn(self):

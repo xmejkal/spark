@@ -7,7 +7,7 @@
   "parts": {
     "//covers_holes": "covers_holes is a drawing convention, not a measured fact: true means the part's body hides the breadboard holes under it, so no other part may use them. A part drawn from its own record (part_shape.py) says true for the same reason.",
     "//board-xiao-esp32-c6": "wokwi/wokwi-boards boards/xiao-esp32-c6/board.json (read 2026-10-16, sha256 e5200e012416f096bcc188f9cb4fe8f292cd9d973dc0249513624bf5768856a8), its mm times 96 / 25.4. Its 18.1 x 23.4 mm is drawn as 68 x 88 px, and the turn goes about (34, 44), measured.",
-    "//size": "Each type's drawn size in px, for a picture of it. Not derived from the center: the button's published size is not twice its measured center. XIAO: board.json's 18.1 x 23.4 mm drawn as 68 x 88 px (measured). LED: wokwi-elements src/led-element.ts, 40 x 50. Resistor: 15.645 x 3 mm in wokwi-elements, 59.13 x 11.34 px. Pushbutton: wokwi-elements, 67.28 x 45.35 px. Read by P267's refuter on 2026-10-16 (docs/discovery/2026-10-16-p267-drawn-breadboard/review/refuter.md).",
+    "//size": "Each type's drawn size in px, for a picture of it. Not derived from the center: the button's published size is not twice its measured center. XIAO: board.json's 18.1 x 23.4 mm drawn as 68 x 88 px (measured). LED: wokwi-elements src/led-element.ts, 40 x 50. Resistor: 15.645 x 3 mm in wokwi-elements, 59.13 x 11.34 px. Pushbutton: wokwi-elements, 67.28 x 45.35 px. Read by P267's refuter on 2026-10-16 (docs/discovery/2026-10-16-p267-drawn-breadboard/review/refuter.md). 6 mm pushbutton: wokwi-elements src/pushbutton-6mm-element.ts, 7.4129977 x 6 mm, 28.017 x 22.677 px, read on 2026-11-27 for P1240 (the source in //wokwi-pushbutton-6mm).",
     "board-xiao-esp32-c6": {
       "size": [68, 88],
       "center": [34, 44],
@@ -26,7 +26,11 @@
     "//wokwi-pushbutton": "Measured from the editor's pin overlays. 1.l and 1.r are one contact, and 2.l and 2.r the other (joined_pins, P279). Wokwi's part page https://docs.wokwi.com/parts/wokwi-pushbutton, read 2026-10-18: 1.l / 1.r are the first contact, 2.l / 2.r the second, and 'since both belong to the same contact, they are always connected, even when the button is not pressed'.",
     "wokwi-pushbutton": {"size": [67.28, 45.35], "center": [33.5, 24.5], "covers_holes": false,
                          "pins": {"1.l": [0, 13], "2.l": [0, 32], "1.r": [67, 13], "2.r": [67, 32]},
-                         "joined_pins": [["1.l", "1.r"], ["2.l", "2.r"]]}
+                         "joined_pins": [["1.l", "1.r"], ["2.l", "2.r"]]},
+    "//wokwi-pushbutton-6mm": "Pins from the part's source, https://docs.wokwi.com/parts/wokwi-pushbutton-6mm (read 2026-11-27: 'The function and pin-out of the 6mm pushbutton are same as wokwi-pushbutton'): wokwi-elements src/pushbutton-6mm-element.ts at commit 5178c0cc1b455719fdf562169293797e29d73dac, sha256 42bc1d72b3ade4433ac7ecfd73c76ba6ed8871167b41c9e2e7174757375076ce (MIT), pinInfo 1.l [0, 2.2], 2.l [0, 21], 1.r [28, 2.2], 2.r [28, 21]. The turn center (14, 13) was measured in the Wokwi editor on 2026-11-27: docs/discovery/2026-10-16-p267-wokwi-holes/README.md, its last section. The contacts are joined as the 12 mm part's.",
+    "wokwi-pushbutton-6mm": {"size": [28.017, 22.677], "center": [14, 13], "covers_holes": false,
+                             "pins": {"1.l": [0, 2.2], "2.l": [0, 21], "1.r": [28, 2.2], "2.r": [28, 21]},
+                             "joined_pins": [["1.l", "1.r"], ["2.l", "2.r"]]}
   },
   "//breadboard": "wokwi-breadboard-half. A row is the five joined holes of one column on one side of the gap: {column}t.{a-e} above it and {column}b.{f-j} below. A rail hole is {rail}.{1-25}, in five blocks of five with one empty pitch between blocks.",
   "breadboard": {
