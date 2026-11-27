@@ -13,7 +13,8 @@ import shlex
 import types
 from pathlib import Path
 
-from spark.core import outcomes
+from spark.core import outcomes, shell_line
+from spark.core.privacy import forms_of
 from spark.core.result import MARK_OK, MARK_STOP, MARK_UNCHECKED, MARK_WARNING, step_dicts
 from spark.core.text_guards import printable
 from spark.core.text_style import PLAIN
@@ -121,17 +122,36 @@ def script_of(op):
     return OP_SCRIPTS.get(op, "%s.py" % op)
 
 
-def shell_word(word):
+def shell_word(word, homes=()):
     """`word` quoted for bash and zsh: `shlex.quote`, and in single quotes a word that starts with `=`, which shlex leaves
-    bare and zsh reads as the path of a command (P1256, the review)."""
+    bare and zsh reads as the path of a command (P1256, the review). A word equal to or under one of `homes`, the person's
+    home folder as written and resolved, longest first, starts with `"$HOME"` and the rest of it quoted (P1286)."""
+    for home in sorted(homes, key=len, reverse=True):
+        if len(home) > 1 and (word == home or word.startswith(home + "/")):
+            return '"$HOME"' + (shell_word(word[len(home):]) if word != home else "")
     return "'%s'" % word if word.startswith("=") else shlex.quote(word)
 
 
-def step_command(step):
-    """The one line a person runs for `step`: `NAME=value` for each variable of its env, then its script and argv, all
-    shell-quoted (`shell_word`) and through `printable`, so a newline in an argument shows as `?` and never breaks the line."""
+def step_command(step, homes=(), scripts=SCRIPTS):
+    """The one line a person runs for `step`: `NAME=value` for each variable of its env, then its script in `scripts` and
+    its argv, all shell-quoted (`shell_word`, with `homes` in the `"$HOME"` form) and through `printable`, so a newline in an
+    argument shows as `?` and never breaks the line. With no `homes` it writes whole paths: the `next:` lines."""
     names = ["%s=%s" % (name, shlex.quote(str(value))) for name, value in sorted((step.env or {}).items())]
-    return printable(" ".join(names + [shell_word(str(each)) for each in [SCRIPTS / script_of(step.op)] + list(step.argv)]))
+    return printable(" ".join(names + [shell_word(str(each), homes) for each in [scripts / script_of(step.op)] + list(step.argv)]))
+
+
+def copy_line(step, home, privacy, scripts=SCRIPTS):
+    """The line a page offers a person to paste for `step` (P1286): `step_command` with `home`, the person's home folder,
+    in the `"$HOME"` form (`privacy.forms_of`: as written and resolved). None when the step has an env, its script in
+    `scripts` is no file, `printable` changes a word, `privacy` (the page's) changes the line, or the line fails
+    `shell_line.copyable`: the page then says why there is none."""
+    script = scripts / script_of(step.op)
+    if step.env or not script.is_file() or any(printable(word) != word for word in map(str, [script, *step.argv])):
+        return None
+    line = step_command(step, forms_of(home), scripts)
+    if privacy.mask_text(line) != line or not shell_line.copyable(line, str(home)):
+        return None
+    return line
 
 
 def import_rich():

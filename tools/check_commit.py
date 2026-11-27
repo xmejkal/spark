@@ -86,6 +86,19 @@ def node_refusal(story, which=shutil.which):
     return None
 
 
+#: The test module that pastes the page's line into zsh and bash (P1286): it skips a missing shell, and a skip is no pass.
+PASTE_TEST = "test_paste_line"
+PASTE_SHELLS = ("zsh", "bash")
+NO_SHELL_LINE = "could not run: the story run holds %s, which pastes the page's line into %s, and %s is not installed"
+
+
+def shell_refusal(story, which=shutil.which):
+    """The line that stops the gate when `story` is a story run that holds PASTE_TEST and `which` (a test's swap) finds
+    one of PASTE_SHELLS missing, else None."""
+    missing = [name for name in PASTE_SHELLS if which(name) is None] if story is not None and PASTE_TEST in story.modules else []
+    return NO_SHELL_LINE % (PASTE_TEST, missing[0], missing[0]) if missing else None
+
+
 #: The pinned major.minor of tsc, TypeScript's compiler, that compiles the page script (P1061, D29).
 TSC_VERSION = "7.0"
 #: The page script's folder, from the root; `tsc -p` reads its tsconfig.json.
@@ -399,7 +412,7 @@ def gate(root, commit, scratch, full=False, which=shutil.which, run=subprocess.r
     changed = None if full else changed_files(root, commit)
     story = None if full else story_tests_in(scratch, changed)
     compiles = needs_tsc(scratch, changed, full)
-    refused = node_refusal(story, which) or (compiles and tsc_refusal(which, run))
+    refused = node_refusal(story, which) or shell_refusal(story, which) or (compiles and tsc_refusal(which, run))
     if refused:
         print(refused)
         return EXIT_COULD_NOT_RUN

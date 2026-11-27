@@ -4,7 +4,9 @@ import ast
 import copy
 import json
 import pickle
+import shutil
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -20,7 +22,7 @@ from spark.core import codes, outcomes  # noqa: E402
 from spark.core.codes import Code  # noqa: E402
 from spark.core.cli import (DEFAULT_RUN, FOLLOW_FAILED_MESSAGE, REFRESH_FAILED_MESSAGE, HelpText, RunOptions, TextReport,  # noqa: E402
                              refreshes, run_cli, run_operation)
-from spark.core.renderers import FlatJsonLine, FixFlatJsonLine, FullEnvelope, JsonEnvelope, step_command  # noqa: E402
+from spark.core.renderers import FlatJsonLine, FixFlatJsonLine, FullEnvelope, JsonEnvelope, copy_line, shell_word, step_command  # noqa: E402
 from spark.core.errors import SparkError  # noqa: E402
 from spark.core.events import BEGIN, LINE, Event, TerminalReporter  # noqa: E402
 from spark.core.view_reporter import TextViewReporter  # noqa: E402
@@ -1124,6 +1126,81 @@ class AskedOnce(Writing):
 
 #: The step a FakeFollowUp adds, with a project path in its argv and its why.
 THEN = NextStep("then", ["--project", "/opt/someone/p"], "then this, for /opt/someone/p")
+
+
+class TheCopyLineTest(unittest.TestCase):
+    """P1286 step 2: one builder, two forms. `step_command(step)` keeps its bytes; with `homes` a word equal to or under the
+    person's home folder starts with `"$HOME"`; `copy_line` is the line a page offers, or None. The home folder is a resolved
+    temp folder with a space in its name, never the person's, and the scripts a folder of stubs under it."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp()).resolve()
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.home = self.tmp / "h o"
+        self.scripts = self.home / "spark" / "scripts"
+        self.scripts.mkdir(parents=True)
+        (self.scripts / "look.py").write_text("")
+        self.project = self.home / "my lamp"
+        self.project.mkdir()
+
+    def look(self, *argv, project=None, env=None):
+        return NextStep("look", ["--project", str(project or self.project), *argv], "why", None, False, True, env)
+
+    def privacy(self, project=None, secrets=()):
+        return Privacy.of(project or self.project, self.tmp / "store", self.home, secrets)
+
+    def line(self, step, home=None, privacy=None):
+        return copy_line(step, home or self.home, privacy or self.privacy(), self.scripts)
+
+    def test_with_no_homes_the_line_keeps_its_bytes(self):
+        self.assertEqual(step_command(THEN), step_command(THEN, ()))
+        self.assertTrue(step_command(THEN).endswith("/then.py --project /opt/someone/p"), step_command(THEN))
+
+    def test_a_word_equal_to_or_under_a_home_starts_with_the_home_variable(self):
+        homes = {str(self.home)}
+        self.assertEqual(shell_word(str(self.home), homes), '"$HOME"')
+        self.assertEqual(shell_word(str(self.project), homes), '"$HOME"\'/my lamp\'')
+        self.assertEqual(shell_word(str(self.home / "x"), homes), '"$HOME"/x')
+
+    def test_a_word_that_only_starts_with_the_home_s_text_stays_whole(self):
+        other = str(self.tmp / "h o2" / "x")
+        self.assertEqual(shell_word(other, {str(self.home)}), "'%s'" % other)
+
+    def test_the_longest_home_swaps_first_and_a_one_character_home_never(self):
+        homes = {str(self.tmp), str(self.home)}
+        self.assertEqual(shell_word(str(self.project), homes), '"$HOME"\'/my lamp\'')
+        self.assertEqual(shell_word("/x", {"/"}), "/x")
+
+    def test_the_line_of_a_look_under_the_home_folder(self):
+        self.assertEqual(self.line(self.look("--no-simulation")),
+                         '"$HOME"/spark/scripts/look.py --project "$HOME"\'/my lamp\' --no-simulation')
+
+    def test_the_home_as_written_and_resolved_both_swap(self):
+        link = self.tmp / "link"
+        link.symlink_to(self.home)
+        expected = '"$HOME"/spark/scripts/look.py --project "$HOME"\'/my lamp\''
+        self.assertEqual(copy_line(self.look(), link, self.privacy(), link / "spark" / "scripts"), expected)
+        self.assertEqual(copy_line(self.look(), link, self.privacy(), self.scripts), expected)
+
+    def test_a_step_with_an_env_gives_none(self):
+        self.assertIsNone(self.line(self.look(env={"SPARK_HOME": str(self.tmp / "store")})))
+
+    def test_a_script_that_is_not_a_file_gives_none(self):
+        (self.scripts / "look.py").unlink()
+        self.assertIsNone(self.line(self.look()))
+
+    def test_a_word_that_printable_changes_gives_none(self):
+        self.assertIsNone(self.line(self.look("a\nb")))
+
+    def test_a_line_that_the_mask_changes_gives_none(self):
+        outside = self.tmp / "lamp"
+        outside.mkdir()
+        self.assertIsNone(self.line(self.look(project=outside), privacy=self.privacy(outside)))
+        self.assertIsNone(self.line(self.look("--token", "s3cret"), privacy=self.privacy(secrets=["s3cret"])))
+
+    def test_a_line_that_is_not_copyable_gives_none(self):
+        # a quoted word that starts with ~ is no home folder to the shell: `copyable` refuses it
+        self.assertIsNone(self.line(self.look("~x")))
 
 
 class TheFollowUpTest(unittest.TestCase):
