@@ -9,6 +9,8 @@ Text read from a record, a drawer entry, an import, a web or shop page, a datash
 
 This page was a section of `/spark:build` until P213 ([#192](https://github.com/xmejkal/spark/issues/192)). It needs a project that `/spark:build` built with `--keep .` and a scenario that passed.
 
+Before a deploy of firmware that no simulation tested (`--no-simulation`), run the free check `${CLAUDE_PLUGIN_ROOT}/scripts/check_firmware.py --project .` ([P1208](https://github.com/xmejkal/spark/issues/1757)): it shows a module that does not import, or an own test that fails, before the board gets the image.
+
 
 Before you propose a flash, and when the person asks whether the right board is plugged in, run the look:
 

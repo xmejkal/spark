@@ -21,7 +21,7 @@ NEED_UNKNOWN_SENTENCE = "no need called %s: it was never there or is already dro
 RELEASE_LINE = "  %s %d of %d: %s — its need is dropped"
 #: The note when requirements.json still lists a part whose need is dropped.
 REQUIREMENTS_NOTE = ("requirements.json still lists %s: run parts.py --requirements %s or edit the file, then build. "
-                     "If the firmware imported its signal, run import_firmware.py.")
+                     "If the firmware imported its signal, run check_firmware.py.")
 
 
 class DropNeed(Operation):

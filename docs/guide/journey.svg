@@ -154,7 +154,7 @@
 <circle cx="609" cy="2032" r="36" fill="#ffdc4a"/>
 <text x="609" y="2043" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">6</text>
 <text x="609" y="2114" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Firmware</text>
-<text x="609" y="2146" font-size="22" font-weight="normal" fill="#595959" text-anchor="middle">import_firmware.py</text>
+<text x="609" y="2146" font-size="22" font-weight="normal" fill="#595959" text-anchor="middle">check_firmware.py</text>
 <rect x="430" y="2168" width="358" height="1540" rx="12" fill="#f0f5fd"/>
 <text x="450" y="2208" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You do</text>
 <text x="450" y="2242" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Write the firmware with</text>

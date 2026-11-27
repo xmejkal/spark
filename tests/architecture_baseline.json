@@ -106,7 +106,6 @@
 "T1:scripts/spark/build/requirements_build.py:subprocess": 1,
 "T1:scripts/spark/checks/vendor_pins_check.py:file-write": 1,
 "T1:scripts/spark/checks/vendor_pins_check.py:subprocess": 1,
-"T1:scripts/spark/firmware/import_probe.py:subprocess": 3,
 "T1:scripts/spark/firmware/scenario_run.py:datetime": 1,
 "T1:scripts/spark/firmware/scenario_run.py:file-write": 4,
 "T1:scripts/spark/firmware/scenario_run.py:os.environ": 1,

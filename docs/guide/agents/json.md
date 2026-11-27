@@ -134,7 +134,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 | `assign_pins.py` | `assignments`, `board`, `free`, `tool`, `unverified`. **No `status`:** read its exit code |
 | `check_vendor_pins.py` | **a bare list**, one entry per board file ([its keys](#check_vendor_pinspy)) |
 | `emit_footprint.py` | `check`, `message`, `status` |
-| `import_firmware.py` | `modules`, `problems`, `status`, `tool`, `unchecked` ([more](#import_firmwarepy)) |
+| `check_firmware.py` | the envelope, as `parts.py`'s, with `data.imports`, `data.modules` and `data.tests` ([more](#check_firmwarepy)) |
 | `check_spine.py` | `check`, `stages`, `status`, and `kept`, `missing_facts`, `next` and `unserved` when they apply ([its keys](#check_spinepy)) |
 | `look.py`, `deploy.py` | the envelope, as `parts.py`'s ([their envelope](#lookpy-and-deploypys-envelope)) |
 | `parts.py` | the envelope: `assumptions`, `data`, `envelope`, `next`, `notes`, `op`, `problems`, `status`, `tool`, `truncated`, `unchecked` |
@@ -184,12 +184,10 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
     way, under `requirements`, naming the file and the field (`car.json: signals[0].pin is a list; write a pin name …`,
     [P438](https://github.com/xmejkal/spark/issues/583)). A `.spark/rules.json` that is a folder is refused under `schematic`.
 
-### import_firmware.py
+### check_firmware.py
 
-- Each item of `modules` has `module`, `status` (`imported`, `raised` or `timed out`) and `detail`. One not imported also has `code`, `import_failed` or `import_timeout`: decide on it, never on `detail` ([the firmware codes](firmware-codes.md)).
-- A project with no `firmware/` folder is `could-not-run`.
-- A project with nothing to import but `main.py`, `boot.py` and `pins.py` is `problems`. Its firmware cannot be imported
-  without running `main.py`.
+- The envelope (op `check-firmware`, [P1208](https://github.com/xmejkal/spark/issues/1757)). `data` holds `project`, `imports` (`{"imported": n, "total": m}`, or `{"state": "not-checked"}` with no `firmware/`, the shape of `tests`: no number nobody took), `modules` and `tests`. Each problem is an item of `problems` with `subject`, `code`, `sentence` and `fix`. Each item of `modules` has `module`, `status` (`imported`, `raised` or `timed out`) and `detail`; one not imported also has `code`, `import_failed` or `import_timeout`: decide on it, never on `detail` ([the firmware codes](firmware-codes.md)). `tests` is the project's own tests: its `state` is `recorded` (then `passed`, `total`, `failed`, the ids, and `skipped`), `none-recorded` or `not-checked`, and a number is never 0 where nobody counted ([the own tests](firmware-codes.md#the-own-tests)).
+- A project with no `firmware/` folder is `could-not-run`, and its tests still run. A project with nothing to import but `main.py`, `boot.py` and `pins.py` is `problems`: its firmware cannot be imported without running `main.py`.
 
 ### check_vendor_pins.py
 
@@ -294,7 +292,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --unverified jst-ph-2-power-inlet
 
 ### Which scripts take --json
 
-These take it: `assign_pins.py`, `bench.py`, `check_all.py`, `check_footprints.py`, `check_physics.py`, `boards.py` (with `--list`: `data.boards` rows of `id`, `layer`, `active` and `stops_why`. `active` marks the project's board: the board requirements.json names, else the selection in boards/active.json. A requirements.json or a boards/active.json that cannot be read (`record_file_broken`) marks no board, and `notes` says why. A missing selection or one that names no board marks none in silence), `check_spine.py`, `check_vendor_pins.py`, `compare_design.py`, `emit_footprint.py`, `deploy.py`, `flow.py`, `grant.py` (with `--check`), `import_firmware.py`, `live.py`, `look.py`, `parts.py` and `research.py` (its `data.open` and `needs_reply` are in [replies.md](replies.md)). `grant.py`, `live.py` and `reach.py` print one flat line of JSON, not the envelope (P657): the keys of `data` below and `fix` (P1055), and no line at all after a crash or a reach that could not start, but for reach's open board question (`reached` false, `port`, `product`, `open`, `known_board`, `fix`, P892). `check_spine.py` (one flat line) and `check_all.py` (one indented document) print no line after a crash either (P804). A bad argument with `--json` prints the usage on stderr, exit 2. These do not take
+These take it: `assign_pins.py`, `bench.py`, `check_all.py`, `check_footprints.py`, `check_physics.py`, `boards.py` (with `--list`: `data.boards` rows of `id`, `layer`, `active` and `stops_why`. `active` marks the project's board: the board requirements.json names, else the selection in boards/active.json. A requirements.json or a boards/active.json that cannot be read (`record_file_broken`) marks no board, and `notes` says why. A missing selection or one that names no board marks none in silence), `check_spine.py`, `check_vendor_pins.py`, `compare_design.py`, `emit_footprint.py`, `deploy.py`, `flow.py`, `grant.py` (with `--check`), `check_firmware.py`, `live.py`, `look.py`, `parts.py` and `research.py` (its `data.open` and `needs_reply` are in [replies.md](replies.md)). `grant.py`, `live.py` and `reach.py` print one flat line of JSON, not the envelope (P657): the keys of `data` below and `fix` (P1055), and no line at all after a crash or a reach that could not start, but for reach's open board question (`reached` false, `port`, `product`, `open`, `known_board`, `fix`, P892). `check_spine.py` (one flat line) and `check_all.py` (one indented document) print no line after a crash either (P804). A bad argument with `--json` prints the usage on stderr, exit 2. These do not take
 it: `boards.py` (but `--list`), `breadboard.py`, `check_bom.py`, `emit_board.py`, `flash_image.py`, `init_project.py`, `run_scenario.py` and `tools.py`. `tools.py --status` taking `--json` is not built yet ([P92](https://github.com/xmejkal/spark/issues/23)).
 
 ### What the text output shows

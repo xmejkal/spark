@@ -27,7 +27,7 @@ about these parts nobody has verified, each with what depends on it. `firmware/p
 integers. The firmware does `import pins`; it never types a GPIO number.
 
 The firmware imports on a Mac before any hardware ([P59](https://github.com/xmejkal/spark/issues/7)).
-`import_firmware.py` imports each file and each package in `firmware/`, except the boot files `main.py` and `boot.py`.
+`check_firmware.py` imports each file and each package in `firmware/`, except the boot files `main.py` and `boot.py`, and runs the tests in your `tests/` with `unittest` (P1208). It needs no `sim/` and no board.
 Each import is a process of its own. Every import uses spark's stand-ins for MicroPython's modules, unless the firmware ships its own `framebuf` or `micropython`. They live in `scripts/spark/firmware/stand_in/`. `machine` has a
 `Pin` that remembers its level, and a `PWM` that keeps its last frequency and duty but makes no signal
 ([P352](https://github.com/xmejkal/spark/issues/450)). It has an `ADC`, an `SPI` and `SoftSPI`, an `I2C` and `SoftI2C`,
@@ -46,7 +46,7 @@ button-and-LED firmware does that (`import light`, then `light.run()`). You writ
 command first, copy spark's example from `tests/data/breadboard/button-light/firmware/` into your `firmware/`.
 
 ```sh
-python3 "$CLAUDE_PLUGIN_ROOT/scripts/import_firmware.py"
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_firmware.py"
 ```
 
 <!-- output: run 2026-10-12, spark 0.8.1 -->
