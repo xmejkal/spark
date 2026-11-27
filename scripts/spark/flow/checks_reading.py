@@ -10,6 +10,7 @@ with its own name and label.
 from spark.core.outcomes import NONE_RECORDED, NOT_CHECKED, OK, RECORDED
 from spark.core.zone_time import day_and_time
 from spark.firmware.firmware_check import CheckFirmware
+from spark.firmware.pin_map_uses import PinMapUses
 from spark.firmware.project_secrets import is_secret_path
 from spark.flow import flow_codes
 from spark.records.check_record import CheckRecordStore
@@ -54,6 +55,16 @@ def said_of(check, label):
 def is_current_ok(check):
     """True for a check record that is current and whose run was ok: nothing more for the free checks to do."""
     return check.state == RECORDED and check.current and check.status == OK
+
+
+def missing_pin_line(project):
+    """The pin map line (`PinMapUses.line_from`) of the current check-firmware record of `project` when it names a pin name that
+    firmware/pins.py lacks, else None: no record, an older or unread one, one with no `pin_map` or one of another shape (P882). It
+    reads the record and runs nothing."""
+    check = read_check(project, CheckFirmware.name)
+    if check.state != RECORDED or not check.current:
+        return None
+    return PinMapUses.line_from(check.data.get("pin_map"), missing_only=True)
 
 
 def simulation_of(project, firmware_written, no_model):

@@ -15,7 +15,7 @@ from spark.breadboard import sheet
 from spark.design import entry_origin, need_requirements, needs, needs_basis
 from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
-from spark.flow import deploy_reading, flow_codes, offer_steps
+from spark.flow import checks_reading, deploy_reading, flow_codes, offer_steps
 from spark.flow.no_model import skipped_simulation_line, stops_only_for_no_model
 from spark.flow.pick_notes import candidate_label, is_plausible, own_part_of, part_words, pick_id_of, pick_notes
 from spark.records import record_kind, records_codes, store
@@ -509,7 +509,8 @@ class BreadboardReader(PhaseReader):
 
 class FirmwareReader(PhaseReader):
     """Strategy: firmware/main.py, which Claude writes in the chat: not started when it is not there, else when it was last
-    written, in the machine's zone, with no status, because spark cannot judge the firmware."""
+    written, in the machine's zone. Problems when the current check record names a pin name that the pin map lacks (P882), with
+    that line first. Else no status, because spark cannot judge the firmware."""
 
     PHASE, BY = flow_codes.FIRMWARE, flow_codes.BY_CLAUDE
 
@@ -517,7 +518,9 @@ class FirmwareReader(PhaseReader):
         main = project / MAIN_FILE
         if not main.is_file():
             return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_FIRMWARE_MESSAGE])
-        return self.phase(None, [flow_codes.FIRMWARE_MESSAGE % stamp(datetime.datetime.fromtimestamp(main.stat().st_mtime))])
+        written = flow_codes.FIRMWARE_MESSAGE % stamp(datetime.datetime.fromtimestamp(main.stat().st_mtime))
+        pin_line = checks_reading.missing_pin_line(project)
+        return self.phase(PROBLEMS, [pin_line, written]) if pin_line else self.phase(None, [written])
 
 
 class SimulateReader(PhaseReader):
