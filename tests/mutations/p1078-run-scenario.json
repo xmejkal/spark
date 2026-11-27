@@ -1,0 +1,116 @@
+[
+ {
+  "file": "scripts/spark/firmware/firmware_scenario.py",
+  "name": "P1078: a dry run keeps runs (test_firmware_scenario.TheDryRunTest.test_a_dry_run_s_world_refuses_any_program)",
+  "find": "        return (READS,) if values[\"dry_run\"] else self.effects",
+  "replace": "        return self.effects"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_scenario.py",
+  "name": "P1078: the Operation hands subprocess.run (test_firmware_scenario.ThePaidRunTest.test_the_run_starts_wokwi_cli_through_the_world_s_run)",
+  "find": "given[\"timeout_ms\"], outside=outside)",
+  "replace": "given[\"timeout_ms\"], outside=outside._replace(run=__import__(\"subprocess\").run))"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_scenario.py",
+  "name": "P1078: an ok dry run names no next step (test_firmware_scenario.TheDryRunTest.test_an_ok_dry_run_names_the_paid_run_with_the_run_s_values)",
+  "find": "return OperationResult(data, next=[step],",
+  "replace": "return OperationResult(data, next=[],"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_scenario.py",
+  "name": "P1078: an ok dry run's next drops the run's values (test_firmware_scenario.TheDryRunTest.test_an_ok_dry_run_names_the_paid_run_with_the_run_s_values)",
+  "find": "extra=self.extra_of(given))",
+  "replace": "extra=())"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_scenario.py",
+  "name": "P1078: a refusal loses its code (test_firmware_scenario.ThePaidRunTest.test_no_token_could_not_run_with_its_code_and_starts_nothing)",
+  "find": "[Finding.of(COULD_NOT_RUN, None, refusal.code, str(refusal), REFUSED_FIX)]",
+  "replace": "[Finding.of(COULD_NOT_RUN, None, \"refused\", str(refusal), REFUSED_FIX)]"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_scenario.py",
+  "name": "P1078: a failed run loses its code (test_firmware_scenario.ThePaidRunTest.test_never_ready_is_a_problem_with_its_code_and_the_log)",
+  "find": "sentence.code, str(sentence), RAN_FIX)",
+  "replace": "\"failed\", str(sentence), RAN_FIX)"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_scenario.py",
+  "name": "P1078: a not-checked line leaves the JSON (test_firmware_scenario.ThePaidRunTest.test_a_not_checked_line_leaves_a_pass_ok_and_reaches_the_text)",
+  "find": "        name, lines = run.scenario.name, [LOG_LINE % data[\"log\"]] if data[\"log\"] else []\n        assumptions = run.not_checked() or None\n",
+  "replace": "        name, lines = run.scenario.name, [LOG_LINE % data[\"log\"]] if data[\"log\"] else []\n        assumptions = None\n"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_scenario.py",
+  "name": "P1078: a not-checked line leaves the text (test_firmware_scenario.ThePaidRunTest.test_a_not_checked_line_leaves_a_pass_ok_and_reaches_the_text)",
+  "find": "[outside.report(Event.line(FREE_CHECKS, line)) for line in lines]",
+  "replace": "[None for line in lines]"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_scenario.py",
+  "name": "P1078: a not-checked line becomes a Finding (test_firmware_scenario.ThePaidRunTest.test_a_not_checked_line_leaves_a_pass_ok_and_reaches_the_text)",
+  "find": "            return OperationResult(data, lines=lines, notes=notes, assumptions=assumptions,",
+  "replace": "            return OperationResult(data, [Finding.of(COULD_NOT_RUN, None, \"not_checked\", line, RAN_FIX) for line in assumptions or ()], lines=lines, notes=notes, assumptions=assumptions,"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_scenario.py",
+  "name": "P1078: the caveat prints twice (test_firmware_scenario.ThePaidRunTest.test_the_caveat_of_a_pass_is_in_the_text_once_and_a_note_in_json)",
+  "find": "        kept = [note for note in result.notes or () if not (isinstance(note, str) and note in said)]",
+  "replace": "        kept = list(result.notes or ())"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_scenario.py",
+  "name": "P1078: the caveat is no note under --json (test_firmware_scenario.ThePaidRunTest.test_the_caveat_of_a_pass_is_in_the_text_once_and_a_note_in_json)",
+  "find": "notes = [str(sentence)] if sentence != PASSED else None",
+  "replace": "notes = None"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_scenario.py",
+  "name": "P1078: ran is true for a refusal (test_firmware_scenario.ThePaidRunTest.test_a_refusal_is_not_ran_and_a_pass_is)",
+  "find": "\"log\": None, \"ran\": False}",
+  "replace": "\"log\": None, \"ran\": True}"
+ },
+ {
+  "file": "scripts/spark/core/renderers.py",
+  "name": "P1078: script_of loses run-scenario (test_flow.TheFollowUpTest.test_every_catalogue_op_a_step_names_has_its_script)",
+  "find": "\"research-part\": \"research.py\", \"run-scenario\": \"run_scenario.py\"}",
+  "replace": "\"research-part\": \"research.py\"}"
+ },
+ {
+  "file": "scripts/spark/core/renderers.py",
+  "name": "P1078 review: script_of loses move-hold (test_flow.TheFollowUpTest.test_every_op_a_next_step_is_built_with_has_its_script)",
+  "find": "\"needs-drop\": \"parts.py\", \"move-hold\": \"parts.py\",",
+  "replace": "\"needs-drop\": \"parts.py\","
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_scenario.py",
+  "name": "P1078 review: the step keeps a relative project (test_firmware_scenario.TheOperationTest.test_the_step_makes_a_relative_project_whole)",
+  "find": "\"--project\", str(Path(project).absolute())]",
+  "replace": "\"--project\", str(project)]"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_scenario.py",
+  "name": "P1078 review: the next step keeps a relative interpreter (test_firmware_scenario.TheOperationTest.test_the_run_s_own_flags_make_a_relative_interpreter_whole)",
+  "find": "str(Path(given[\"micropython\"]).absolute())",
+  "replace": "str(given[\"micropython\"])"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_scenario.py",
+  "name": "P1078 review: a paid run writes to no project (test_firmware_scenario.ThePaidRunTest.test_a_pass_through_the_cli_ends_with_the_flow_s_next_step)",
+  "find": "return None if values[\"dry_run\"] else Path(values[\"project\"])",
+  "replace": "return None"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_scenario.py",
+  "name": "P1078: the step loses its env (test_flow.TheNextOnlyStepTest.test_a_simulate_now_names_each_scenario_run_and_needs_the_person)",
+  "find": "store.read_given_env())",
+  "replace": "None)"
+ },
+ {
+  "file": "scripts/spark/records/tool_finder.py",
+  "name": "P1078: the shared builder finds no tool (test_firmware_scenario.TheOperationTest.test_the_bench_s_world_and_the_firmware_world_find_the_same_tool)",
+  "find": "    return build_outside_world(effects, reporter, find_tool=ToolFinder(project).find, **slots)",
+  "replace": "    return build_outside_world(effects, reporter, **slots)"
+ }
+]

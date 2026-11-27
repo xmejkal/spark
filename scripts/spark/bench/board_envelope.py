@@ -9,8 +9,6 @@ A step that needs the person (`needs_yes`) is a step Claude relays, never one it
 not the yes, and neither is "go ahead" in a chat.
 """
 
-from pathlib import Path
-
 from spark.bench import board_codes
 from spark.bench import board_doctor
 from spark.bench import board_look
@@ -19,6 +17,7 @@ from spark.records import board_records
 from spark.bench.deploy_stages import DeployPhase
 from spark.design import loader
 from spark.core import codes, outcomes
+from spark.core.renderers import SCRIPTS, script_of
 from spark.core.result import Finding, Headline, NextStep, OperationResult
 from spark.core.text_guards import printable
 from spark.bench import ready_probe
@@ -244,7 +243,7 @@ def firmware_next_steps(code_ok, requirements_file):
 
 def next_text(steps):
     """The line that says the same steps to a person (nothing for none), built from their own arguments."""
-    return "".join("  next: %s — %s\n" % (store.format_rerun_line(Path(__file__).parents[2] / ("%s.py" % each["op"]), each["argv"]), each["why"])
+    return "".join("  next: %s — %s\n" % (store.format_rerun_line(SCRIPTS / script_of(each["op"]), each["argv"]), each["why"])
                    for each in steps)
 
 

@@ -84,10 +84,10 @@
   "replace": "if False:"
  },
  {
-  "file": "scripts/spark/bench/__init__.py",
+  "file": "scripts/spark/records/tool_finder.py",
   "name": "the project's finder drops the project",
-  "find": "find_tool=ToolFinder(project).find,",
-  "replace": "find_tool=ToolFinder().find,"
+  "find": "find_tool=ToolFinder(project).find, **slots)",
+  "replace": "find_tool=ToolFinder().find, **slots)"
  },
  {
   "file": "scripts/spark/core/cli.py",

@@ -31,7 +31,7 @@ from spark.firmware import scenario_steps  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
-from fakes import FakeOutsideWorld, FakeReporter, FakeToolFinder, RealChildRun  # noqa: E402
+from fakes import FakeOutsideWorld, FakeReporter, FakeToolFinder, RealChildRun, program_world  # noqa: E402
 from spark.bench import build_project_outside_world  # noqa: E402
 from spark.core.operation import READS  # noqa: E402
 from spark.bench.deploy_image import DeployImage  # noqa: E402
@@ -93,7 +93,8 @@ class ProjectCase(unittest.TestCase):
         told = {"FAKE_WOKWI_SERIAL": "ready\nLED on\n", "FAKE_WOKWI_EXIT": str(exit_code), "FAKE_WOKWI_OUT": READY_MATCHED,
                 "FAKE_WOKWI_ERR": "" if exit_code == 0 else "Error: stuck\n"}
         with mock.patch.dict(os.environ, told):
-            scenario_run.ScenarioRun(self.project, scenario or self.scenario, micropython=self.micropython).run(FAKE_CLI)
+            scenario_run.ScenarioRun(self.project, scenario or self.scenario, micropython=self.micropython,
+                                     outside=program_world(self.project)).run(FAKE_CLI)
 
     def plan(self, port=None, ignore_older_runs=False):
         """The DeployPlan of a DeployService over this project's MicroPython platform, whose tools are FOUND's (P725)."""
@@ -180,7 +181,8 @@ class TheNoSimulationDryRunTest(ProjectCase):
         code, _, problems, ran = self.deploy("--dry-run", "--no-simulation", find=real_littlefs(self.project))
         self.assertEqual((code, ran), (deploy.EXIT_COULD_NOT_RUN, []))
         self.assertIn("littlefs-python is turned off in this project's .spark/tools.json", problems)
-        status, sentence, log = scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython).run(FAKE_CLI)
+        status, sentence, log = scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython,
+                                                        outside=program_world(self.project)).run(FAKE_CLI)
         self.assertEqual((status, log), (scenario_run.COULD_NOT_RUN, None))
         self.assertIn("littlefs-python is turned off in this project's .spark/tools.json", sentence)
         self.turn_littlefs(True)

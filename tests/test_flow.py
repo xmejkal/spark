@@ -1956,7 +1956,7 @@ class TheNextOnlyStepTest(FlowTest):
         return {"SPARK_HOME": str(self.home.resolve())}
 
     def scenario_step(self, project, scenario, why=SCENARIO_WHY):
-        return {"op": "run_scenario", "argv": [scenario, "--project", str(project.absolute())], "why": why,
+        return {"op": "run-scenario", "argv": [scenario, "--project", str(project.absolute())], "why": why,
                 "effects": ["reads", "runs", "writes"], "needs_yes": False, "needs_person": True, "env": self.env()}
 
     def test_a_firmware_now_names_no_step_because_main_py_is_not_written_yet(self):
@@ -1967,18 +1967,16 @@ class TheNextOnlyStepTest(FlowTest):
                 self.assertNotIn("[next:", now_line(project))
 
     def test_a_simulate_now_names_each_scenario_run_and_needs_the_person(self):
-        import argparse
-        import run_scenario
+        from spark.core.cli import values_of
+        from spark.firmware.firmware_scenario import RunScenario
         project = a_simulate_now(a_built_project(), "b.scenario.yaml", "a.scenario.yaml")
         said, _ = show(project)
         self.assertEqual(said["data"]["guide"]["now"]["phase"], "simulate")
         self.assertEqual(said["next"], [self.scenario_step(project, "sim/scenarios/%s.scenario.yaml" % name) for name in "ab"])
-        parser = argparse.ArgumentParser()
-        for flags, options in run_scenario.ARGUMENTS:
-            parser.add_argument(*flags, **options)
-        self.assertEqual([(values.scenario, values.project) for values in (parser.parse_args(step["argv"]) for step in said["next"])],
+        parsed = [values_of(RunScenario(), step["argv"])[0] for step in said["next"]]
+        self.assertEqual([(values["scenario"], values["project"]) for values in parsed],
                          [(Path("sim/scenarios/%s.scenario.yaml" % name), project.absolute()) for name in "ab"])
-        self.assertTrue(now_line(project).endswith(" [next: run_scenario, needs you]"), now_line(project))
+        self.assertTrue(now_line(project).endswith(" [next: run-scenario, needs you]"), now_line(project))
 
     def test_with_no_scenario_the_step_names_the_placeholder_and_claude_writes_it_first(self):
         project = a_simulate_now(a_built_project())
@@ -2005,7 +2003,7 @@ class TheNextOnlyStepTest(FlowTest):
         project = a_run(an_image(a_firmware(a_built_project())), "passed")
         os.utime(project / "firmware" / "main.py", (1_700_007_200, 1_700_007_200))
         said, _ = show(project)
-        self.assertEqual((said["data"]["guide"]["now"]["phase"], said["next"][0]["op"]), ("simulate", "run_scenario"))
+        self.assertEqual((said["data"]["guide"]["now"]["phase"], said["next"][0]["op"]), ("simulate", "run-scenario"))
 
     def test_a_failed_run_and_a_simulate_with_problems_name_no_step(self):
         failed = a_run(an_image(a_firmware(a_built_project())), "failed")
@@ -2095,7 +2093,7 @@ class TheNextOnlyStepTest(FlowTest):
         from spark.flow.write_flow_page import FlowPageStore, write_page
         simulate, deploy = a_simulate_now(a_built_project(), "a.scenario.yaml"), a_run(an_image(a_firmware(a_built_project())), "passed")
         ops = {step["op"] for project in (simulate, deploy) for step in show(project)[0]["next"]}
-        self.assertEqual(ops, {"run_scenario", "look"})
+        self.assertEqual(ops, {"run-scenario", "look"})
         self.assertFalse(ops & set(STEP_OPERATIONS))
         said = show(deploy)[0]
         self.assertIsNone(said["data"]["guide"]["now"]["offer"])
@@ -2227,7 +2225,7 @@ class TheFollowUpTest(FlowTest):
         self.assertEqual(show(project)[0]["data"]["guide"]["now"]["phase"], "deploy")
         lines, code = a_kept_build(project, [Stage("build", OK, "fine")])
         steps, flow_steps = json.loads(lines[0])["next"], show(project)[0]["next"]
-        self.assertEqual((code, [step["op"] for step in flow_steps]), (0, ["run_scenario"]))
+        self.assertEqual((code, [step["op"] for step in flow_steps]), (0, ["run-scenario"]))
         self.assertEqual(steps[-len(flow_steps):], flow_steps)
 
     def test_a_build_that_could_not_run_names_no_flow_step(self):
@@ -2262,7 +2260,7 @@ class TheFollowUpTest(FlowTest):
         project = an_image(a_firmware(a_built_project()))
         lines, code = a_kept_build(project, [Stage("build", OK, "fine")], keep=False)
         self.assertEqual((code, [step["op"] for step in json.loads(lines[0])["next"]]), (0, ["look"]))
-        self.assertEqual([step["op"] for step in show(project)[0]["next"]], ["run_scenario"])
+        self.assertEqual([step["op"] for step in show(project)[0]["next"]], ["run-scenario"])
 
     def test_the_line_marks_a_step_that_needs_the_person_s_yes_and_names_its_script(self):
         # round 2, amendment D: the brief step has needs_yes and no needs_person, and its op is its script's name
@@ -2276,11 +2274,12 @@ class TheFollowUpTest(FlowTest):
         self.assertIn("/init_project.py --project %s --answers %s%s — " % (project.absolute(), shlex.quote(ANSWERS_PLACEHOLDER), NEEDS_YOU), line)
         self.assertNotIn(NEEDS_YOU, FlowFollowUp().line(step._replace(needs_yes=False)))
 
-    def test_every_op_a_flow_step_names_has_its_script(self):
+    @staticmethod
+    def flow_step_ops():
+        """The op of every step that a step function of offer_steps or phase_steps builds."""
         import inspect
         import types
         from spark.flow import offer_steps, phase_steps
-        from spark.flow.now_follow_up import STEP_SCRIPTS
         project = a_firmware(a_built_project())
         given = {"project": project, "need": "soil", "pick_id": "x-many", "name": "A soil probe", "no_simulation": False,
                  "phase": types.SimpleNamespace(status=NS), "pairs": ["soil=x-many"], "why": "the why",
@@ -2291,10 +2290,65 @@ class TheFollowUpTest(FlowTest):
                 if builder.__module__ == module.__name__ and name.endswith(("_step", "_steps")):
                     made = builder(*[given[parameter] for parameter in inspect.signature(builder).parameters])
                     ops |= {step.op for step in (made if isinstance(made, list) else [made])}
-        self.assertTrue({"pick", "requirements", "build-board", "needs-drop", "init_project", "run_scenario", "look"} <= ops, ops)
+        return ops
+
+    def test_every_op_a_flow_step_names_has_its_script(self):
+        from spark.core.renderers import script_of
+        ops = self.flow_step_ops()
+        self.assertTrue({"pick", "requirements", "build-board", "needs-drop", "init_project", "run-scenario", "look"} <= ops, ops)
         for op in sorted(ops):
             with self.subTest(op=op):
-                self.assertTrue((ROOT / "scripts" / STEP_SCRIPTS.get(op, op + ".py")).is_file())
+                self.assertTrue((ROOT / "scripts" / script_of(op)).is_file())
+
+    def test_every_catalogue_op_a_step_names_has_its_script(self):
+        # P1081 #1585: one script_of for the CLI frontend, and every op on the core that a step names runs a script
+        from spark.core.renderers import script_of
+        from spark.operation_catalogue import CATALOGUE
+        named = self.flow_step_ops() & set(CATALOGUE)
+        self.assertTrue({"pick", "requirements", "build-board", "needs-drop", "run-scenario", "look"} <= named, named)
+        for op in sorted(named):
+            with self.subTest(op=op):
+                self.assertTrue((ROOT / "scripts" / script_of(op)).is_file())
+        self.assertEqual((script_of("run-scenario"), script_of("pick"), script_of("look")), ("run_scenario.py", "parts.py", "look.py"))
+
+    def test_every_op_a_next_step_is_built_with_has_its_script(self):
+        # P1081 #1585 (the review of P1078): each NextStep(...) in scripts/spark whose op is a literal, a module constant or
+        # a class's `name` runs the script script_of names, and that script exists
+        import ast
+        from spark.core.renderers import script_of
+        ops = set()
+        for module in sorted((ROOT / "scripts" / "spark").rglob("*.py")):
+            tree = ast.parse(module.read_text())
+            consts = {}
+            for node in tree.body:
+                if isinstance(node, ast.Assign) and isinstance(node.value, (ast.Constant, ast.Tuple)):
+                    names = node.targets[0].elts if isinstance(node.targets[0], ast.Tuple) else [node.targets[0]]
+                    values = node.value.elts if isinstance(node.value, ast.Tuple) else [node.value]
+                    consts.update({name.id: value.value for name, value in zip(names, values)
+                                   if isinstance(name, ast.Name) and isinstance(value, ast.Constant)})
+            for cls in [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]:
+                for node in cls.body:
+                    if isinstance(node, ast.Assign) and [t.id for t in node.targets if isinstance(t, ast.Name)] == ["name"]:
+                        value = node.value
+                        consts[cls.name + ".name"] = value.value if isinstance(value, ast.Constant) else consts.get(getattr(value, "id", None))
+                owner = consts.get(cls.name + ".name")
+                for call in [node for node in ast.walk(cls) if isinstance(node, ast.Call) and getattr(node.func, "id", None) == "NextStep"]:
+                    first = call.args[0] if call.args else None
+                    if isinstance(first, ast.Attribute) and getattr(first.value, "id", None) == "self" and first.attr == "name":
+                        ops.add(owner)
+            for call in [node for node in ast.walk(tree) if isinstance(node, ast.Call) and getattr(node.func, "id", None) == "NextStep"]:
+                first = call.args[0] if call.args else None
+                if isinstance(first, ast.Constant):
+                    ops.add(first.value)
+                elif isinstance(first, ast.Name) and first.id in consts:
+                    ops.add(consts[first.id])
+                elif isinstance(first, ast.Attribute) and isinstance(first.value, ast.Name) and first.value.id != "self":
+                    ops.add(consts.get(first.value.id + ".name"))
+        self.assertTrue({"look", "move-hold", "research-part", "run-scenario", "pick", "init_project"} <= ops, ops)
+        for op in sorted(ops):
+            with self.subTest(op=op):
+                self.assertTrue((ROOT / "scripts" / script_of(op)).is_file(), script_of(op))
+        self.assertEqual((script_of("move-hold"), script_of("research-part")), ("parts.py", "research.py"))
 
 
 def wrote_nothing():
