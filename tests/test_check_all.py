@@ -1245,14 +1245,14 @@ class OneCircuitConventionTest(unittest.TestCase):
         self.assertEqual(check.CONVENTIONS["circuit"], ("folder", list(loader.CIRCUIT_PATHS)))
         self.assertIs(project_setup.CIRCUIT_PATHS, loader.CIRCUIT_PATHS)
 
-class TheCheckRecordIsKeptTest(unittest.TestCase):
+class TheCheckRecordIsWrittenTest(unittest.TestCase):
     """
     P1255: check-design keeps its answer in the check record `.spark/check-design.json` of the project, over the inputs
     its checks read, so the flow can say it without running a check. The boards are hashed after the `--boards` merge.
     """
 
     NOT_KEPT_OUTSIDE = "did not keep the check record: an input is outside the project, spark and the store"
-    NOT_KEPT_SUB_FOLDER = "did not keep the check record: a sub-folder of a project keeps none"
+    NOT_KEPT_SUB_FOLDER = "did not keep the check record: a sub-folder of a project writes none"
 
     def setUp(self):
         self.store = Path(tempfile.mkdtemp())

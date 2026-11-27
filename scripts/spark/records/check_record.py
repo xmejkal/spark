@@ -1,7 +1,7 @@
 """
 The check record of a project (P1209, #1758): what a check Operation keeps of its last answer, `<project>/.spark/<op>.json`,
 named by the op that wrote it (`check-firmware`, and `check-design` since P1255). `CheckRecordStore` writes and reads it; the
-flow reads it to say the checks' state, and no gate reads it. `answer_saved` and `answer_not_saved` are the one keep step
+flow reads it to say the checks' state, and no gate reads it. `answer_saved` and `answer_not_saved` are the one save step
 that both check Operations call.
 
 The record: `{"schema", "op", "at", "inputs", "inputs_sha256", "status", "data", "lines"}`. `inputs` are the paths the

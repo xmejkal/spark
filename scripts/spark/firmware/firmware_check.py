@@ -129,7 +129,7 @@ class CheckFirmware(Operation):
     def keep(self, project, result, kept_lines, outside):
         """`result` with `data.written`, after its check record is saved (P1209): its status, the data of KEPT_KEYS and
         `kept_lines`, at `outside.clock`'s time. With no firmware/ nothing is kept. A write that fails adds its sentence
-        as a note and a line, and the result stands (`check_record.answer_saved`, the keep step check-design shares)."""
+        as a note and a line, and the result stands (`check_record.answer_saved`, the save step check-design shares)."""
         if result.data["imports"].get("state") == NOT_CHECKED:
             return result._replace(data=dict(result.data, written=False))
         answer = {"status": result.status(), "data": {key: result.data[key] for key in KEPT_KEYS}, "lines": kept_lines}

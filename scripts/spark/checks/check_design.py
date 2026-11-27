@@ -1,7 +1,7 @@
 """
 check_all as an Operation on the core (P804): every deterministic check in one call, with one answer. check_all.py is its
 CLI, and its `--json` is the document `check.every_check` gives, indented (`JsonDocument`), with `written` and
-`not_written` (P1255). It keeps its answer in the check record `.spark/check-design.json` (`records/check_record`), which
+`not_written` (P1255). It writes its answer to the check record `.spark/check-design.json` (`records/check_record`), which
 `flow.py show` and the page read. An MCP tool or an agent calls it with plain values.
 """
 
@@ -21,10 +21,10 @@ from spark.records.check_record import (NOT_KEPT_SENTENCE, CheckRecordStore, ans
                                         record_file)
 
 # --- MVP ---
-#: Why a run keeps no check record, as a note and a line (P1255). A run with no project, or a folder in no project, says nothing.
-SUB_FOLDER = NOT_KEPT_SENTENCE % "a sub-folder of a project keeps none"
+#: Why a run writes no check record, as a note and a line (P1255). A run with no project, or a folder in no project, says nothing.
+SUB_FOLDER = NOT_KEPT_SENTENCE % "a sub-folder of a project writes none"
 OUTSIDE = NOT_KEPT_SENTENCE % "an input is outside the project, spark and the store"
-#: The kept lines of a check record (`record_lines`): a check with problems, the checks that could not look, the count
+#: The lines a check record holds (`record_lines`): a check with problems, the checks that could not look, the count
 #: of the checks that found nothing and what it rests on, and the checks not asked for.
 FOUND_LINE, BLIND_LINE = "%s found %s", "%s could not look"
 CLEAN_LINE, RESTING_PART, NOT_ASKED_LINE = "%d check(s) found nothing", "resting on %d unmeasured value(s)", "not asked for: %s"
@@ -36,14 +36,14 @@ DETAILS = """It writes one file, .spark/check-design.json, the check record that
 status, the result lines (each check that found problems, the checks that could not look, how many found nothing and
 the checks not asked for), the time and the sha256 of each input. The inputs are the circuit, the rules, the fab
 package, the requirements files, boards/ and each board file checked, each named by its path in the project, or as
-spark:<path> or store:<path> for a board of spark's library or of the store's shelf. No gate reads it. It is kept only
-for a project folder: a run with no --project, or on a folder in no project, keeps none, and a sub-folder of a project
-or an input outside the project, spark and the store keeps none and says why. When the project has a page.html, it
+spark:<path> or store:<path> for a board of spark's library or of the store's shelf. No gate reads it. It is written only
+for a project folder: a run with no --project, or on a folder in no project, writes none, and a sub-folder of a project
+or an input outside the project, spark and the store writes none and says why. When the project has a page.html, it
 writes that page again."""
 
 
 def record_project(checked):
-    """(the project whose check record a run over the CheckedFolder `checked` keeps, None), or (None, why) when it keeps
+    """(the project whose check record a run over the CheckedFolder `checked` writes, None), or (None, why) when it writes
     none: `why` is None for no folder and for a folder in no project, and SUB_FOLDER for a sub-folder, whose build reads
     its project's records. The library is tested first, because `CheckedFolder.at` gives spark's folder as the project of
     a folder in no project, which then reads as a sub-folder."""
@@ -83,7 +83,7 @@ def record_target(checked, inputs):
 
 
 def record_lines(findings, results, unmeasured):
-    """The lines a check record keeps, from the Findings `CheckDesign.run` made and the `results`: one per check that
+    """The lines a check record holds, from the Findings `CheckDesign.run` made and the `results`: one per check that
     found problems, one for the checks that could not look, the count of the other checks that ran, with the `unmeasured`
     lines it rests on, and the checks not asked for."""
     lines = [FOUND_LINE % (found.subject, found.sentence) for found in findings if found.code == check_codes.CHECK_FOUND_PROBLEMS]
@@ -122,7 +122,7 @@ class CheckDesign(Operation):
     data_keys = ("tool", "status", "unmeasured", "resolved", "results", "project", "written", "not_written")
 
     def effects_of(self, values):
-        """With no `--project` a run keeps no record, so it only reads."""
+        """With no `--project` a run writes no record, so it only reads."""
         return self.effects if values.get("project") else (READS,)
 
     def written_project(self, values):
@@ -133,20 +133,20 @@ class CheckDesign(Operation):
         return record_target(checked, check.inputs_for(values, checked)[0])[0]
 
     def run(self, project=None, *, outside, **paths):
-        """Every check over `project` and `paths` (boards, circuit, rules, package, each a plain value), its answer kept (`keep`)."""
+        """Every check over `project` and `paths` (boards, circuit, rules, package, each a plain value), its answer saved (`save_answer`)."""
         said, inputs, checked = check.every_check(project, **paths)
         if "reason" in said:
             findings = [Finding.of(COULD_NOT_RUN, None, check_codes.PROJECT_UNUSABLE, str(said["reason"]))]
         else:
             findings = check.findings_of(said["results"])
         result = OperationResult(said, findings, lines=check.render_every_check(said, project).split("\n"))
-        return result if "reason" in said else self.keep(result, checked, inputs, outside)
+        return result if "reason" in said else self.save_answer(result, checked, inputs, outside)
 
-    def keep(self, result, checked, inputs, outside):
-        """`result` with `data.written` and `data.not_written` (P1255): its status and `record_lines` kept in the check
+    def save_answer(self, result, checked, inputs, outside):
+        """`result` with `data.written` and `data.not_written` (P1255): its status and `record_lines` saved in the check
         record of the project `record_project` names, over the inputs `record_inputs` names, at `outside.clock`'s time
         (`check_record.answer_saved`). With no record, `not_written` is the sentence that says why, a note and a line
-        too, or None for a run that keeps none and says nothing."""
+        too, or None for a run that writes none and says nothing."""
         project, names, why = record_target(checked, inputs)
         if project is None:
             said = answer_not_saved(result, record_file(self.name), why)

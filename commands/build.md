@@ -432,7 +432,7 @@ first look on a board asks the person before it reads (`needs_reply`): `commands
 ## After it builds
 
 With `--keep`, `breadboard.md` lists the parts and how to wire them, and `firmware/pins.py` holds their pins. The firmware does `import pins`, and the simulation
-(above) runs it. `check_all.py --project .` runs the deterministic checks, keeps the answer in `.spark/check-design.json`, and `flow.py show` says it. A board is on request: the `spark-review`
+(above) runs it. `check_all.py --project .` runs the deterministic checks, writes the answer to `.spark/check-design.json`, and `flow.py show` says it. A board is on request: the `spark-review`
 skill is the full gate before anything is fabricated, and the fab package (the zip of Gerbers and bill of materials a
 board house takes) comes after the gate: the `spark-design` skill makes no Gerbers while anything load-bearing is unverified. When the
 time comes, `npx --no tsci export board.tsx -f gerbers -o board-gerbers.zip` makes one; `check_all` finds `*-gerbers.zip`
