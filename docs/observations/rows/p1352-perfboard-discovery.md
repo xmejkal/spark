@@ -28,4 +28,4 @@ Card: [P1352 #1939](https://github.com/xmejkal/spark/issues/1939). Four lenses o
 | 22 | the new lines use semicolons | refuter 4 (PR #1954) | acted | commas and full stops in D24 and C30 |
 | 23 | items.md's P1359 line and P1359 #1949 on GitHub do not name P1237 | refuter 4 (PR #1954) | acted | items.md's depends-on line names P1237 #1790 through P275 #311. No link on #1949: it is a sub-issue of P275, which spark-main set as blocked by P1237 (D24) |
 | 24 | risks-and-tests.md still points at Q2 as open | refuter 4 (PR #1954) | acted | both lines name D5 and D24 |
-| 25 | brief.md has 163 lines, over the guide's 150 | refuter 4 (PR #1954) | dropped because the check warns and passes, and the brief holds 24 decisions that the design reads |
+| 25 | brief.md has 163 lines, over the guide's 150 | refuter 4 (PR #1954) | rejected | dropped because the check warns and passes, and the brief holds 24 decisions that the design reads |
