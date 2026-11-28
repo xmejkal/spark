@@ -322,6 +322,21 @@ def gate_a_of(fact, reached, no_model):
     return {"shut_by": [], "fact": code, "says": flow_codes.GATE_A_SAYS[code]}
 
 
+def image_fact_of(project, by_name, no_model):
+    """The ImageFact (`image_fact`) of a simulate that has no status or is not started, else NO_IMAGE_FACT: `no_model` holds
+    the phases counted as done for no Wokwi model."""
+    simulate = by_name.get(flow_codes.SIMULATE)
+    fact = image_fact(project, flow_codes.SIMULATE in no_model) if simulate and simulate.status in (None, flow_codes.NOT_STARTED) \
+        else NO_IMAGE_FACT
+    return fact
+
+
+def count_beside_sheet(project, now, by_name, steps):
+    """The steps of a current wiring sheet (`steps`) when the firmware is now and not started, else None: the two jobs."""
+    beside_sheet = now and now.phase == flow_codes.FIRMWARE and now.status == flow_codes.NOT_STARTED and is_sheet_current(project, by_name)
+    return steps(project) if beside_sheet else None
+
+
 def guide_of(project, phases, steps=count_steps, deploy=None, board=None):
     """What the person does now, what is done, what comes later and what they set aside, from the Phases of `project`:
     `{"now": {phase, by, says, offer, chat_offer, needs, steps, with_wiring, design_checks}, "stations", "done", "later", "set_aside", "no_simulation", "simulation", "no_open_phase", "wired", "gate_a"}`.
@@ -335,17 +350,14 @@ def guide_of(project, phases, steps=count_steps, deploy=None, board=None):
     by_name, listed = {phase.phase: phase for phase in phases}, readable(lambda: needs.read(project), [])
     deploy = deploy if deploy is not None else deploy_reading.read_deploy(project)
     no_model = no_model_phases(project, by_name)
-    simulate = by_name.get(flow_codes.SIMULATE)
-    fact = image_fact(project, flow_codes.SIMULATE in no_model) if simulate and simulate.status in (None, flow_codes.NOT_STARTED) \
-        else NO_IMAGE_FACT
+    fact = image_fact_of(project, by_name, no_model)
     all_aside = bool(listed) and not counted(listed)
     now = now_phase(phases, no_model, fact, all_aside)
     deployed = by_name.get(flow_codes.DEPLOY)
     reached = bool(deployed) and (deployed.status != flow_codes.NOT_STARTED or bool(now and now.phase == flow_codes.DEPLOY))  # the On the board station
     at = phases.index(now) if now else len(phases)
     open_needs = [need["id"] for need in counted(listed) if not need.get("pick")]
-    beside_sheet = now and now.phase == flow_codes.FIRMWARE and now.status == flow_codes.NOT_STARTED and is_sheet_current(project, by_name)
-    count = steps(project) if beside_sheet else None
+    count = count_beside_sheet(project, now, by_name, steps)
     two_jobs = count is not None  # no count: no two jobs, so the breadboard stays in done
     written = not (now and now.phase == flow_codes.SIMULATE) or bool(scenario_names(project))
     sentence = with_requirements_now(project, with_deploy_now(now_sentence(now, open_needs, fact, count, written), now, deploy), now) \
