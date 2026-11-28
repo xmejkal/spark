@@ -143,14 +143,27 @@ class TheRoutesTest(unittest.TestCase):
                                                     pitch - 0.01, (step, other, crossing))
 
     def test_no_wire_kept_to_the_rules_passes_beside_another_jumper_s_end(self):
-        # an end's dot is 8 px wide: a wire half a pitch from it would touch it and look joined
+        # an end's dot is 6.8 px wide with its ring, and a wire's white edge reaches 2 px, so a wire closer than
+        # END_CLEARANCE_PX touches it and looks joined
         for fixture, layout, _, jumper, path in self.each_path():
             if path.fallback:
                 continue
             ends = [(hole.x, hole.y) for other in layout.jumpers if other.step != jumper.step for hole in (other.one, other.other)]
             with self.subTest(fixture=fixture, step=jumper.step):
-                near = [end for piece in pieces(path.points) for end in ends if touches(piece, BodyBox(*end, *end), 4.81)]
+                near = [end for piece in pieces(path.points) for end in ends if wire_routing.is_beside_an_end(piece, end)]
                 self.assertEqual(near, [])
+
+    def test_the_rings_hold_the_4_plus_cells_of_every_end(self):
+        # P1350: every end keeps the 4 cells beside it, never a diagonal, the XIAO's three off-grid rail ends too
+        plus = {(1, 0), (0, 1), (-1, 0), (0, -1)}
+        for fixture, (layout, _, routing) in self.routed.items():
+            for jumper in layout.jumpers:
+                for hole in (jumper.one, jumper.other):
+                    u, v = routing.grid.cell(hole.x, hole.y)
+                    held = {(du, dv) for du in range(-3, 4) for dv in range(-3, 4)
+                            if (du or dv) and jumper.step in routing.rings.get((u + du, v + dv), set())}
+                    with self.subTest(fixture=fixture, step=jumper.step):
+                        self.assertEqual(held, plus)
 
     def test_the_walk_s_result_is_pinned(self):
         # 7 wires around the parts with at most 4 bends, 4 dashed; none over a body (it was 7 before P953). P953 PR 3:
@@ -185,6 +198,26 @@ class TheRoutesTest(unittest.TestCase):
     def test_the_walk_routes_within_its_budget_of_states(self):
         # the states the searches took, in place of seconds: 233824 on 2026-11-20
         self.assertLessEqual(self.routed["walk-c6"][2].expanded, 300000)
+
+
+class TheEndClearanceTest(unittest.TestCase):
+    """P1350: one rule for a wire beside another jumper's end, which the router's rings and the routes test share."""
+
+    END = (448.4, 118.2)
+
+    def test_is_beside_an_end_holds_the_4_plus_cells_only(self):
+        beside = wire_routing.is_beside_an_end
+        self.assertTrue(beside(((448.4, 113.4),) * 2, self.END))  # the plus cell, 4.8 px off
+        self.assertFalse(beside(((443.6, 113.4),) * 2, self.END))  # the diagonal, 6.79 px off
+        self.assertFalse(beside(((438.8, 118.2),) * 2, self.END))  # one pitch off
+        self.assertTrue(beside(((438.8, 113.4), (458.0, 113.4)), self.END))  # a piece that passes beside it
+        self.assertFalse(beside(((458.0, 113.4), (468.0, 113.4)), self.END))  # a piece that ends short of it
+
+    def test_the_end_clearance_covers_the_drawn_dot_and_the_wire_s_white_edge(self):
+        sizes = wire_pills.WIRE_SIZES_PX
+        reach = sizes.end_dot + sizes.end_ring / 2 + sizes.under_stroke / 2
+        self.assertAlmostEqual(reach, 5.4)
+        self.assertGreaterEqual(wire_routing.TrackRouting.END_CLEARANCE_PX, reach)
 
 
 def _overlap(one, other):
