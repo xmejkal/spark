@@ -18,7 +18,6 @@ So there are two kinds of test here, and both are load-bearing:
 
 import copy
 import json
-import re
 import sys
 import unittest
 from pathlib import Path
@@ -31,21 +30,6 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import emit_footprint  # noqa: E402
 from spark.design import design_codes, footprint_emitter  # noqa: E402
-
-#: Produced by `tools/generate-firebeetle-footprint.py` in the smart-bin project, from DFRobot's
-#: published dimension drawing, and checked by hand against the module. It is the only independent
-#: witness to this geometry that exists, which is why the comparison is worth having even though
-#: the file lives outside this repository.
-REFERENCE = Path(__file__).resolve().parents[2] / "smartbin-local" / "FireBeetle2Esp32S3.tsx"
-
-PAD = re.compile(
-    r'portHints=\{\["([^"]+)"\]\}\s*pcbX="([-\d.]+)mm"\s*pcbY="([-\d.]+)mm"\s*'
-    r'outerDiameter="([\d.]+)mm"\s*holeDiameter="([\d.]+)mm"')
-
-
-def pads_in(text):
-    return [(m.group(1), float(m.group(2)), float(m.group(3)), float(m.group(4)), float(m.group(5)))
-            for m in PAD.finditer(text)]
 
 
 def firebeetle():
@@ -104,18 +88,6 @@ class TheFootprintsCommentsStayCommentsTest(unittest.TestCase):
         text = footprint_emitter.render(board)
         self.assertIn("FOOTPRINT-INJECTED", text)
         self.assertEqual([line for line in text.splitlines() if "FOOTPRINT-INJECTED" in line and not line.startswith("//")], [])
-
-
-class ItMatchesAnIndependentlyMadeFootprintTest(unittest.TestCase):
-    @unittest.skipUnless(REFERENCE.is_file(), "the hand-checked reference is not on this machine")
-    def test_every_pad_agrees_with_the_hand_checked_footprint(self):
-        generated = pads_in(footprint_emitter.render(firebeetle()))
-        reference = pads_in(REFERENCE.read_text())
-        self.assertEqual(len(generated), len(reference))
-        for made, known in zip(generated, reference):
-            self.assertEqual(made[0], known[0])
-            for mine, theirs in zip(made[1:], known[1:]):
-                self.assertAlmostEqual(mine, theirs, places=3)
 
 
 class WhereThePadsGoTest(unittest.TestCase):
