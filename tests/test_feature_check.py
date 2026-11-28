@@ -24,6 +24,8 @@ from spark.breadboard.feature_measure import MeasuredFeatures  # noqa: E402
 #: The C6's geometry and pad order before the walk swapped its rows (row_18 first), and the four anchors measured on
 #: DFRobot's top view in the frame's mm (the walk's measurement, 2026-11-20): numbers only, no vendor's bytes.
 C6_BEFORE_THE_SWAP = ROOT / "tests" / "data" / "pictures" / "c6-rows-before-the-swap.json"
+#: The S3's four anchors on DFRobot's top view (P1334, measured 2026-11-28): numbers only, no vendor's bytes.
+S3_TOP_VIEW_ANCHORS = ROOT / "tests" / "data" / "pictures" / "s3-top-view-anchors.json"
 GOOD_ANCHORS = (("A1", 1.11, 5.0), ("B6", 18.89, 17.7))
 
 
@@ -98,6 +100,18 @@ class FeatureCheckTest(unittest.TestCase):
         swapped["physical"]["header_order"] = {"row_14": order["row_14"], "row_18": order["row_18"]}
         swapped["physical"]["header"]["pins"] = [14, 18]
         self.assertEqual(FeatureCheck(picture_makers.shape_of(swapped), swapped).anchor_problems(anchors), [])
+
+    def test_the_s3_s_anchors_fail_on_the_old_row_order_and_pass_on_the_record(self):
+        anchors = tuple(tuple(anchor) for anchor in json.loads(S3_TOP_VIEW_ANCHORS.read_text())["anchors_mm"])
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        self.assertEqual(FeatureCheck(picture_makers.shape_of(board), board).anchor_problems(anchors), [])
+        old = json.loads(json.dumps(board))
+        order = old["physical"]["header_order"]
+        old["physical"]["header_order"] = {"row_18": order["row_18"], "row_14": order["row_14"]}
+        old["physical"]["header"]["pins"] = [18, 14]
+        refused = FeatureCheck(picture_makers.shape_of(old), old).anchor_problems(anchors)
+        self.assertEqual([(problem.code, problem.feature) for problem in refused],
+                         [("feature_off_drawing", pad) for pad in ("RST", "RX", "VCC", "D10")])
 
     def test_hole_off_the_mounting_holes_is_refused(self):
         # the record's holes are 16 x 36 mm apart about the centre: (2, 2) is one, (3, 2) is 1 mm off it

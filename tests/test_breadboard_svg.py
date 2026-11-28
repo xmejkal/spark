@@ -119,14 +119,19 @@ class TheFireBeetlePictureTest(unittest.TestCase):
         self.assertEqual(part_pictures.read_picture(self.PATH.read_text()).credit,
                          "FireBeetle 2 ESP32-S3: drawing from the PO's pixel-games wiring page (pixel-master/docs/wiring.html), MIT")
 
-    def test_the_battery_socket_is_on_the_rx_edge_as_the_po_s_board_has_it(self):
-        # The PO's bench look (2026-11-20): USB-C at the near edge, RX on the left edge, BAT on the same edge as RX
+    def test_the_battery_socket_is_on_the_d10_edge_as_the_po_s_board_has_it(self):
+        # The PO's bench look (2026-11-28, P1334): USB-C at the near edge, the 14-pin row with D10 on the left edge, BAT on the same edge
         root = ElementTree.fromstring(self.PATH.read_text())
         group = root.find("svg:g", NS)
         a, b, c, d, e, f = [float(n) for n in re.findall(r"-?[\d.]+", group.get("transform"))]
         bat = next(text for text in group.findall("svg:text", NS) if text.text == "BAT")
         x = a * float(bat.get("x")) + c * float(bat.get("y")) + e
         self.assertLess(x, 25.4 / 2)
+        from spark.breadboard import part_shape
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        pins = part_shape.RecordShapeSource().find_shape(board).pins
+        self.assertLess(pins["D10"][0], 25.4 / 2)
+        self.assertGreater(pins["RX"][0], 25.4 / 2)
 
 
 class TheSvgTest(unittest.TestCase):
@@ -263,9 +268,9 @@ class TheRecordBoardSvgTest(unittest.TestCase):
     def test_the_picture_is_the_one_looked_at_on_2026_11_20(self):
         # rendered and looked at once (pad labels, rings, USB end, note); regenerate the hash only on purpose. P949: the keys,
         # and the dot of each pin used or free, seen in a render on 2026-11-20. P946: the FireBeetle drawn from the old
-        # page's group (no glow, each word upright or sideways on the sheet), BAT on the RX edge, and no "row side not verified" in the note, seen in a render on 2026-11-20.
+        # page's group (no glow, each word upright or sideways on the sheet), BAT then on the RX edge (P1334 moved RX to the other edge, 2026-11-28), and no "row side not verified" in the note, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
-                         "97cafe0e2ecaefdc0cd5c41a685bd8304496b9d24f15cc567c689da957b48e5b")  # P1240: the 6 mm button over the gap in e30, e32, f30, f32, seen in Chrome on 2026-11-27. Before it, P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex; PR 4b: the pads in the steps' words read bottom to top, a caption per part and its note line, seen in a render on 2026-11-20
+                         "d11159f4f865be6058de7e9569a0e5217a05058aee5f25ee8a0c68cf443dcdf6")  # P1334: the FireBeetle's 14-pin row and BAT on one edge, D10 farthest from USB-C, RX on the other, seen in Chrome on 2026-11-28. Before it, P1240: the 6 mm button over the gap in e30, e32, f30, f32, seen in Chrome on 2026-11-27. Before it, P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex; PR 4b: the pads in the steps' words read bottom to top, a caption per part and its note line, seen in a render on 2026-11-20
 
     def test_the_board_is_drawn_from_its_record_s_picture_with_its_credit(self):
         board = next(group for group in self.root.findall("svg:g", NS) if group.get("data-part") == wiring_steps.THE_BOARD)

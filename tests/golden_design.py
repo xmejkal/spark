@@ -98,7 +98,7 @@ def record_without(kind, record_id, *path):
 
 #: The board's header with one pad fewer than its second row's labels: a footprint that cannot be drawn, nothing missing.
 SHORT_HEADER_BOARD = json.loads((ROOT / golden_checks.BOARD_FILE).read_text())
-SHORT_HEADER_BOARD["physical"]["header"]["pins"] = [18, 13]
+SHORT_HEADER_BOARD["physical"]["header"]["pins"] = [14, 17]
 SHORT_HEADER = ((golden_checks.BOARD_FILE, json.dumps(SHORT_HEADER_BOARD, indent=2)),)
 
 

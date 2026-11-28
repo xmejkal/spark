@@ -1,0 +1,3 @@
+[
+ {"file": "scripts/spark/design/footprint_emitter.py", "name": "P1334: row 0 goes to +x, the board's header rows mirrored (test_part_shape.TheShapeIsReadFromTheRecordTest.test_the_firebeetle_has_32_pins_in_a_25_4_by_60_mm_outline)", "find": "        x = -half_spacing if index == 0 else half_spacing", "replace": "        x = half_spacing if index == 0 else -half_spacing"}
+]
