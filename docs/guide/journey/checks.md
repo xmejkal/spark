@@ -56,7 +56,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_all.py" --project .
 ```
 
 The lines are a dated record, not today's output: the last line now ends in a count of the `?` lines, and the
-four-resistor `!` line now names its cause (below), and the `boards` line now names the folder's board alone ([the rule](../agents/json.md), P1325).
+four-resistor `!` line now names its cause (below), and the `boards` line now names the folder's board alone ([the rule](../agents/json.md), P1325). Since P1255 the answer is written to `.spark/check-design.json`, and `flow.py show` says it in the build row as the Design checks' line.
 
 <!-- output: run 2026-10-05, spark 0.6.0 -->
 ```text

@@ -99,7 +99,7 @@ class ChecksOpTest(unittest.TestCase):
     """Each golden's name starts with its op, the script's name with dashes, so an accept run names it."""
 
     def test_each_golden_starts_with_its_op(self):
-        for case in golden_checks.CASES:
+        for case in golden_checks.CASES + golden_checks.SHOWN_CASES:
             self.assertTrue(case.golden.startswith(golden_bench.op_of(case) + "-"), case.golden)
 
 
@@ -117,12 +117,17 @@ class ChecksGoldenTest(unittest.TestCase):
         cls.project = golden_checks.build_project(cls.folder, cls.bin)
         cls.cache = spark_cache()
 
-    def run_case(self, case):
+    def run_case(self, case, shown=False):
+        """Run `case` in a copy of the project and compare its text with its golden; with `shown`, the text is the build row
+        of `flow.py show` run after it in the same copy (P1255)."""
         work = Path(tempfile.mkdtemp(dir=self.folder))
         project, store = work / self.project.name, work / "store"
         shutil.copytree(self.project, project)
-        code, text = golden_firmware.run_script(case, project, store, golden_checks.child_env(store, self.bin))
+        env = golden_checks.child_env(store, self.bin)
+        code, text = golden_firmware.run_script(case, project, store, env)
         self.assertEqual(code, case.exit_code, text)
+        if shown:
+            text = golden_checks.build_row(golden_bench.run_child("flow.py", ["show", "--project", str(project)], project, env).stdout)
         self.assertEqual(spark_cache(), self.cache, "a golden run wrote into spark's own cache")
         scrubbed = golden_bench.scrub(text, golden_bench.replacements_of(project, store))
         self.assertIsNone(golden_bench.check_golden(case, scrubbed, golden_dir=golden_checks.GOLDEN_DIR))
@@ -141,12 +146,12 @@ class ChecksGoldenTest(unittest.TestCase):
 
     def test_every_golden_has_its_case(self):
         written = {golden.name for golden in golden_checks.GOLDEN_DIR.iterdir()}
-        self.assertEqual(written, {case.golden for case in golden_checks.CASES})
+        self.assertEqual(written, {case.golden for case in golden_checks.CASES + golden_checks.SHOWN_CASES})
 
 
-for _case in golden_checks.CASES:
+for _case in golden_checks.CASES + golden_checks.SHOWN_CASES:
     setattr(ChecksGoldenTest, "test_" + _case.golden.replace("-", "_").replace(".", "_"),
-            lambda self, case=_case: self.run_case(case))
+            lambda self, case=_case, shown=_case in golden_checks.SHOWN_CASES: self.run_case(case, shown))
 
 
 if __name__ == "__main__":

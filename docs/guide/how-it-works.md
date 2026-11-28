@@ -57,7 +57,7 @@ The files that join the steps:
 | `.spark/cache/<variant>.pins_arduino.h`, the vendor's pin header | `check_vendor_pins.py` without `--offline` | `check_vendor_pins.py --offline` and `check_all.py`'s vendor-truth, which fall back to spark's own copy for the variants of the two boards it ships (`dfrobot_firebeetle2_esp32s3`, `XIAO_ESP32C6`) |
 | `parts/<id>.json` | research | the chain, which takes a project's own record first |
 | `firmware/pins.py` | `check_spine.py --keep`, or `assign_pins.py --emit-pins` | your firmware |
-| `.spark/check-firmware.json`, the check record: the free checks' status, counts and result lines, their time and the sha256 of the files under `firmware/` and `tests/` (secrets files left out) | `check_firmware.py`, when `firmware/` is there (P1209) | `flow.py show` and the page, for the simulation line; no gate |
+| `.spark/check-firmware.json`, the check record: the free checks' status, counts and result lines, their time and the sha256 of the files under `firmware/` and `tests/` (secrets files left out); `.spark/check-design.json`, the same of the design checks (P1255) | `check_firmware.py`, when `firmware/` is there (P1209); `check_all.py` in a project | `flow.py show` and the page, for the simulation line and the build's Design checks line; no gate |
 | `breadboard.md`, the parts and how to wire them | `check_spine.py --keep .` after a build that finished, or `breadboard.py` | you, at the bench |
 | `breadboard.json`, the same steps drawn on a Wokwi half breadboard | the same, when the board is in `data/wokwi-geometry.json` (a board drawn from its own record gets `breadboard.svg` alone, P412) | you, in a new project on wokwi.com |
 

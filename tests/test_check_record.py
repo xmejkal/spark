@@ -7,6 +7,7 @@ older, never as current.
 """
 
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -19,8 +20,9 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.core import outcomes  # noqa: E402
+from spark.core.result import OperationResult  # noqa: E402
 from spark.firmware.project_secrets import is_secret_path  # noqa: E402
-from spark.records.check_record import CheckRecordStore, is_plain_input  # noqa: E402
+from spark.records.check_record import CheckRecordStore, answer_not_saved, answer_saved, input_name, is_plain_input  # noqa: E402
 
 AT = "2026-11-27T02:10:00+01:00"
 ANSWER = {"status": "ok", "data": {"imports": {"imported": 1, "total": 1}, "tests": {"state": "none-recorded"}},
@@ -224,6 +226,114 @@ class TheSecretsTest(unittest.TestCase):
         self.assertEqual([is_secret_path(name) for name in ("firmware/wifi_secrets.py", "firmware/lib/x_secret.py",
                                                             "tests/test_secrets.py", "firmware/light.py")],
                          [True, False, False, False])
+
+
+def two_roots():
+    """{"spark": ..., "store": ...}: two scratch folders that stand in for spark's folder and the store, each holding a board."""
+    roots = {}
+    for root, board in (("spark", "boards/lib-board.json"), ("store", "shelf/boards/own-board.json")):
+        folder = Path(tempfile.mkdtemp()) / root
+        (folder / board).parent.mkdir(parents=True)
+        (folder / board).write_text('{"id": "%s"}\n' % root)
+        roots[root] = lambda folder=folder: folder
+    return roots
+
+
+class TheRootInputsTest(unittest.TestCase):
+    """P1255: a record names an input in spark's folder or the store as `spark:<path>` or `store:<path>`, never as an
+    absolute path, so no home path lands in a tracked `.spark/` file. Any other first part with `:` is refused."""
+
+    INPUTS = ("firmware", "spark:boards/lib-board.json", "store:shelf/boards/own-board.json")
+
+    def test_a_record_over_root_inputs_reads_current_and_a_changed_byte_in_either_reads_older(self):
+        for root, board in (("spark", "boards/lib-board.json"), ("store", "shelf/boards/own-board.json")):
+            with self.subTest(root=root):
+                roots, project = two_roots(), a_project()
+                records = saved(project, self.INPUTS, roots=roots)
+                read = records.read()
+                self.assertEqual((read.state, read.current, read.inputs), (outcomes.RECORDED, True, list(self.INPUTS)))
+                self.assertIn("%s:%s" % (root, board), json.loads(records.path.read_text())["inputs_sha256"])
+                (roots[root]() / board).write_text('{"id": "changed"}\n')
+                self.assertFalse(records.read().current)
+
+    def test_an_unknown_root_a_drive_and_a_climb_out_of_a_root_are_refused(self):
+        """Now refused: before P1255 `is_plain_input` took `home:x` and `C:/x` as paths in the project."""
+        roots = two_roots()
+        self.assertEqual([is_plain_input(text, roots) for text in ("home:x", "C:/x", "spark:../x", "spark:", "spark:/etc",
+                                                                   "spark:boards/x.json", "store:shelf/boards/x.json")],
+                         [False, False, False, False, False, True, True])
+        for inputs in (("home:x",), ("C:/x",), ("spark:../x",)):
+            with self.subTest(inputs=inputs), self.assertRaises(ValueError):
+                CheckRecordStore(a_project(), "check-design", roots=roots).save(inputs, AT, ANSWER)
+
+    def test_a_record_with_an_unknown_root_is_not_checked(self):
+        project = a_project()
+        path = saved(project).path
+        path.write_text(json.dumps(dict(json.loads(path.read_text()), inputs=["home:x"])))
+        read = CheckRecordStore(project, "check-firmware").read()
+        self.assertEqual((read.state, read.why), (outcomes.NOT_CHECKED,
+                                                  "the check record names an input outside the project and its roots (['home:x'])"))
+
+    def test_a_missing_root_input_hashes_as_missing_under_its_own_name(self):
+        roots, project = two_roots(), a_project()
+        records = saved(project, ("firmware", "spark:boards/gone.json"), roots=roots)
+        self.assertIn("spark:boards/gone.json", json.loads(records.path.read_text())["inputs_sha256"])
+        self.assertTrue(records.read().current)
+        (roots["spark"]() / "boards" / "gone.json").write_text("{}\n")
+        self.assertFalse(records.read().current)
+
+    def test_input_name_gives_the_project_first_then_spark_then_the_store(self):
+        roots, project = two_roots(), a_project()
+        self.assertEqual([input_name(project, where, roots) for where in (
+            project / "firmware" / "main.py", roots["spark"]() / "boards" / "lib-board.json",
+            roots["store"]() / "shelf" / "boards" / "own-board.json", Path(tempfile.mkdtemp()) / "elsewhere.json")],
+            ["firmware/main.py", "spark:boards/lib-board.json", "store:shelf/boards/own-board.json", None])
+
+    def test_input_name_resolves_a_project_given_through_a_link(self):
+        """macOS maps /var to /private/var: a folder given one way and a file found the other way are still the project."""
+        project = a_project()
+        link = Path(tempfile.mkdtemp()) / "link"
+        os.symlink(project, link)
+        self.assertEqual(input_name(link, project / "firmware" / "main.py", two_roots()), "firmware/main.py")
+        self.assertEqual(input_name(project, link / "firmware" / "main.py", two_roots()), "firmware/main.py")
+
+    def test_input_name_gives_none_for_the_project_itself_and_a_name_with_a_colon(self):
+        project = a_project()
+        (project / "a:b.json").write_text("{}\n")
+        self.assertEqual([input_name(project, where, two_roots()) for where in (project, project / "a:b.json")], [None, None])
+
+
+class TheAnswerSavedTest(unittest.TestCase):
+    """P1255: the one keep step of every check Operation (`answer_saved`, `answer_not_saved`), which check-firmware and
+    check-design both call."""
+
+    RESULT = OperationResult({"status": "ok"}, [], lines=["a line"])
+
+    def test_a_saved_answer_is_written_true(self):
+        project = a_project()
+        result, sentence = answer_saved(CheckRecordStore(project, "check-firmware"), self.RESULT, INPUTS, AT, ANSWER)
+        self.assertEqual((result.data, list(result.lines), result.notes, sentence), ({"status": "ok", "written": True}, ["a line"], None, None))
+        self.assertTrue(CheckRecordStore(project, "check-firmware").read().current)
+
+    def test_a_failed_save_is_written_false_with_one_note_and_one_line(self):
+        project = a_project()
+        (project / ".spark").write_text("a file where the folder goes")
+        result, said = answer_saved(CheckRecordStore(project, "check-firmware"), self.RESULT, INPUTS, AT, ANSWER)
+        sentence = "did not keep the check record: FileExistsError"
+        self.assertEqual((result.data["written"], list(result.lines), said), (False, ["a line", sentence], sentence))
+        self.assertEqual(result.notes, [{"subject": ".spark/check-firmware.json", "sentence": sentence}])
+
+    def test_an_input_save_refuses_is_written_false_and_the_answer_stands(self):
+        """P1255 fix A: a ValueError of `save` (an input that is no plain input) never loses the check's answer."""
+        result, _ = answer_saved(CheckRecordStore(a_project(), "check-design"), self.RESULT, ("home:x",), AT, ANSWER)
+        self.assertEqual((result.data["written"], list(result.lines)), (False, ["a line", "did not keep the check record: ValueError"]))
+
+    def test_an_answer_not_saved_with_a_reason_says_it_and_with_none_says_nothing(self):
+        said = answer_not_saved(self.RESULT, ".spark/check-design.json", "did not keep the check record: a reason")
+        self.assertEqual((said.data["written"], list(said.lines)), (False, ["a line", "did not keep the check record: a reason"]))
+        self.assertEqual(said.notes, [{"subject": ".spark/check-design.json", "sentence": "did not keep the check record: a reason"}])
+        quiet = answer_not_saved(self.RESULT, ".spark/check-design.json", None)
+        self.assertEqual((quiet.data, list(quiet.lines), quiet.notes), ({"status": "ok", "written": False}, ["a line"], None))
 
 
 if __name__ == "__main__":

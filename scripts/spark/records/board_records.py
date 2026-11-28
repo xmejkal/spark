@@ -172,6 +172,7 @@ def active_id(project: Path) -> str:
 
 #: The file whose `board` names the project's board (D35, P988), and the line said once when it cannot be read.
 REQUIREMENTS_NAME, NOT_MARKED = "requirements.json", "no board is marked: %s"
+REQUIREMENTS_GLOB = "*" + REQUIREMENTS_NAME  # a folder's requirements files, the car's and its remote's (P1325): checks and record (P1255)
 
 
 def requirements_board(project: Path):

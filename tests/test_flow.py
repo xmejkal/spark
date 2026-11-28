@@ -12,6 +12,7 @@ build record `build_record`.
 import contextlib
 import datetime
 import hashlib
+import html
 import io
 import json
 import os
@@ -31,6 +32,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import check_all  # noqa: E402
 import check_firmware  # noqa: E402
 import flow  # noqa: E402
 from fakes import FakeClock, FakeOutsideWorld, FakeTextFileWriter  # noqa: E402
@@ -57,6 +59,8 @@ from spark.design.pick_parts import NO_PASSED_OVER, PickParts  # noqa: E402
 from spark.design.write_requirements import WriteRequirements  # noqa: E402
 from spark.flow.flow_codes import LOOK_WHY, SCENARIO_FIRST_WHY, SCENARIO_WHY, SIM_FILES_NOW, STALE  # noqa: E402
 from spark.flow.flow_codes import LINE_TO_TYPE_LABEL, NO_LINE_TO_TYPE_SAYS  # noqa: E402
+from spark.flow.write_flow_page import write_page  # noqa: E402
+from spark.records.check_record import CheckRecordStore  # noqa: E402
 from spark.flow.flow_codes import WIRED_BUILD_MESSAGE, WIRED_SHEET_MESSAGE, WIRED_STEP_MESSAGE  # noqa: E402
 from spark.flow.wired_board import day_of  # noqa: E402
 from spark.flow.phase_steps import SCENARIO_PLACEHOLDER  # noqa: E402
@@ -412,8 +416,8 @@ class ThePhasesTest(FlowTest):
         project = a_built_project(stages={"board": "ok", "build": "ok", "simulation": "skipped"})
         said, code = show(project)
         self.assertEqual((code, statuses(said)["build"], marks(said)["build"]), (0, None, "·"))
-        self.assertEqual(says(said, "build")[1:], ["simulation: skipped",
-                                                   "every part is skipped from the simulation, so spark did not judge the diagram"])
+        self.assertEqual(says(said, "build")[1:], ["simulation: skipped", "every part is skipped from the simulation, so spark did not judge the diagram",
+                                                   "Design checks: not run yet. Ask Claude to run them, for free."])
         self.assertEqual(said["data"]["stands_at"], "firmware")
         self.assertFalse([line for line in lines_of(project) if "✓ build" in line])
 
@@ -421,14 +425,14 @@ class ThePhasesTest(FlowTest):
         # P999: the build phase says why, in the code's own words, and has no status, as any skipped simulation alone
         said, code = show(a_project_built_with_no_simulation_now("pin_not_in_wokwi_part"))
         self.assertEqual((code, statuses(said)["build"]), (0, None))
-        self.assertEqual(says(said, "build")[-1], "not simulated: the design wires a board pin that the board's Wokwi part has "
+        self.assertEqual(says(said, "build")[-2], "not simulated: the design wires a board pin that the board's Wokwi part has "
                                                   "no pin for, so no diagram is written; the board built")
 
     def test_every_part_skipped_and_a_code_the_build_does_not_know_keep_the_every_part_line(self):
         for skipped in ("every_part_skipped", "no_such_code"):
             with self.subTest(code=skipped):
                 said, _ = show(a_project_built_with_no_simulation_now(skipped))
-                self.assertEqual(says(said, "build")[-1], "every part is skipped from the simulation, so spark did not judge the diagram")
+                self.assertEqual(says(said, "build")[-2], "every part is skipped from the simulation, so spark did not judge the diagram")
 
     def test_any_other_skipped_stage_makes_the_build_partly_done(self):
         for stages in ({"board": "ok", "footprint": "skipped", "build": "ok"},
@@ -650,6 +654,73 @@ class TheCommandTest(FlowTest):
         self.assertIn("cannot read sim/runs/a.log: [Errno 13]", json.dumps(said))  # the project's path is cut off the front (P979: `<project>` no longer appears)
 
 
+class TheDesignChecksLineTest(FlowTest):
+    """P1255: the build phase says the Design checks' line, read from the check-design record, and show, its --json and
+    the page's Board files step hold the same string. The build's mark stays the build's (O2)."""
+
+    AT, NOT_RUN = "2026-11-27T21:10:00+01:00", "Design checks: not run yet. Ask Claude to run them, for free."
+
+    def kept(self, project, status="problems", lines=("rules-vs-netlist found 1 problem(s)", "2 check(s) found nothing")):
+        CheckRecordStore(project, "check-design").save(["requirements.json"], self.AT, {"status": status, "data": {}, "lines": list(lines)})
+        return project
+
+    def test_a_build_with_no_record_says_not_run_yet(self):
+        said, _ = show(a_built_project())
+        self.assertEqual(says(said, "build")[-1], self.NOT_RUN)
+
+    def test_an_ok_build_with_a_record_of_problems_keeps_its_tick_and_says_them(self):
+        said, _ = show(self.kept(a_built_project()))
+        self.assertEqual((statuses(said)["build"], marks(said)["build"]), ("ok", "✓"))
+        self.assertEqual(says(said, "build")[-1], "Design checks, %s, problems: rules-vs-netlist found 1 problem(s); 2 check(s) found "
+                                                  "nothing. Ask Claude to go through them with you." % zone_time.day_and_time(self.AT))
+
+    def test_show_its_json_and_the_page_hold_the_same_line(self):
+        project = self.kept(a_built_project())
+        said, _ = show(project)
+        line = says(said, "build")[-1]
+        self.assertTrue(line.startswith("Design checks, "), line)
+        self.assertTrue([row for row in lines_of(project) if row.startswith("  ✓ build: ") and row.endswith(line + " (claude)")], lines_of(project))
+        write_page(project)
+        self.assertIn("<p>%s</p>" % html.escape(line), (project / "page.html").read_text())
+
+    def test_the_line_is_the_build_row_s_last_clause_so_no_clause_follows_its_full_stop(self):
+        """P1255 fix D (the Chrome check): show joins a clause after a full stop with a space, so a lower-case clause after
+        the line read "... with you. every part is skipped ...". The line comes last of the build's notes."""
+        project = a_built_project(stages={"board": "ok", "build": "ok", "simulation": "skipped"})
+        row = next(row for row in lines_of(project) if " build: " in row)
+        self.assertTrue(row.endswith(self.NOT_RUN + " (claude)"), row)
+
+    def test_a_stale_build_and_a_build_wokwi_has_no_model_of_say_the_line_once(self):
+        """P1255 fix C: every branch says the line, and once: the stale one and the no-model one too."""
+        stale = a_built_project()
+        (stale / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": []}))
+        for name, project, status in (("stale", stale, "stale"), ("no model", a_project_built_with_no_simulation_now(), None)):
+            with self.subTest(build=name):
+                said, _ = show(project)
+                self.assertEqual(statuses(said)["build"], status)
+                self.assertEqual(says(said, "build").count(self.NOT_RUN), 1, says(said, "build"))
+
+    def test_a_board_only_build_says_the_line_only_with_a_record(self):
+        self.assertEqual(says(show(a_board_only_project())[0], "build"), ["board only: nothing to wire, no board was built"])
+        said, _ = show(self.kept(a_board_only_project(), "ok", ["2 check(s) found nothing"]))
+        self.assertEqual(says(said, "build"), ["board only: nothing to wire, no board was built",
+                                               "Design checks, %s: 2 check(s) found nothing." % zone_time.day_and_time(self.AT)])
+
+    def test_a_project_not_built_says_the_line_only_with_a_record(self):
+        project = a_built_project()
+        (project / BUILD_RECORD_FILE).unlink()
+        self.assertNotIn(self.NOT_RUN, says(show(project)[0], "build"))
+        self.assertTrue(says(show(self.kept(project))[0], "build")[-1].startswith("Design checks, "))
+
+    def test_the_page_holds_the_line_after_check_all(self):
+        project = a_built_project()
+        write_page(project)
+        self.assertIn(html.escape(self.NOT_RUN), (project / "page.html").read_text())
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            check_all.main(["--project", str(project)], outside=FakeOutsideWorld())
+        self.assertIn("<p>Design checks, ", (project / "page.html").read_text())
+
+
 class TheBuildRecordStoreTest(unittest.TestCase):
     def test_a_write_holds_the_schema_the_record_and_the_time_in_the_machine_s_zone(self):
         writer, project = FakeTextFileWriter(), Path(tempfile.mkdtemp())
@@ -788,7 +859,7 @@ class TheGuideTest(FlowTest):
         old_guide.pop("wired")
         self.assertEqual(guide, old_guide)
         self.assertEqual((code, statuses(said)["build"], said["data"]["stands_at"]), (0, None, "firmware"))
-        self.assertEqual(says(said, "build")[-1], "No simulation: Wokwi has no model of this board. You test it on the real board.")
+        self.assertEqual(says(said, "build")[-2], "No simulation: Wokwi has no model of this board. You test it on the real board.")
 
     def test_a_new_board_only_record_of_a_board_wokwi_has_no_model_of_is_done_once_with_the_board_only_sentence(self):
         project = a_built_project(OK, {"board": "ok", "parts": "skipped", "schematic": "skipped", "footprint": "skipped",

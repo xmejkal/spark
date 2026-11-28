@@ -1,6 +1,7 @@
 """
 The checks goldens (P687, #925, W6-C1): what check_all.py, check_physics.py, check_footprints.py, compare_design.py,
-check_bom.py and check_vendor_pins.py print today, kept in tests/golden-checks/.
+check_bom.py and check_vendor_pins.py print today, kept in tests/golden-checks/. SHOWN_CASES keep the build row of
+`flow.py show` after check_all.py (P1255): the Design checks' line, its day and time masked (`build_row`).
 
 A helper module beside golden_firmware.py, no tests in it: tests/test_golden_checks.py runs each Case with
 golden_firmware's Case, plant and run_script, in its own copy of one project: the button-light fixture after
@@ -11,8 +12,10 @@ No child reaches the network. Its PATH is the gh shim's folder alone, so the gh 
 proxies are a closed port, so store.fetch fails too. It carries no WOKWI_CLI_TOKEN.
 """
 
+import hashlib
 import io
 import json
+import re
 import shlex
 import shutil
 import sys
@@ -93,6 +96,31 @@ CASES = [
     Case("check-vendor-pins-could-not-run-fetch-failed.txt", "check_vendor_pins.py", [BOARD_FILE], 2, OWN_BOARD,
          {"FAKE_GH_EXIT": "1"}),
 ]
+
+#: The record of a build of the fixture's requirements.json as it is, so show's build row reads built and says the Design
+#: checks' line (P1255). Only `requirements_sha256` decides whether a build is current (`phase_readers.why_build_stale`).
+BUILD_RECORD = ((".spark/build.json", json.dumps({
+    "schema": 1, "status": "ok", "stages": [{"name": "board", "status": "ok"}, {"name": "build", "status": "ok"}],
+    "missing_facts": [], "requirements": "requirements.json",
+    "requirements_sha256": hashlib.sha256((FIXTURE / "requirements.json").read_bytes()).hexdigest(),
+    "at": "2026-11-27T21:10:00+01:00"}, indent=1) + "\n"),)
+#: The Cases whose run is check_all.py, then `flow.py show` in the same copy: each golden keeps show's build row (P1255).
+SHOWN_CASES = [
+    Case("check-all-show-ok.txt", "check_all.py", ["--project", PROJECT], 0, NO_RULES + BUILD_RECORD),
+    Case("check-all-show-problems.txt", "check_all.py", ["--project", PROJECT, "--rules", FLOATING_RULES], 1, BUILD_RECORD),
+    Case("check-all-show-could-not-run.txt", "check_all.py", ["--project", PROJECT], 2, BUILD_RECORD),
+]
+#: A time as `zone_time.day_and_time` says it, in the machine's zone: the Design checks' line holds the run's own.
+DAY_TIME = re.compile(r"\d{1,2} [A-Z][a-z]{2} \d{4}, \d\d:\d\d")
+#: The build row of `flow.py show`'s text, after its mark.
+BUILD_ROW = re.compile(r"^  \S build: .*$", re.MULTILINE)
+
+
+def build_row(text):
+    """The build row of `flow.py show`'s `text`, with each day and time masked as `<day-time>`, or the whole text when it
+    holds no build row, so the golden shows what went wrong."""
+    found = BUILD_ROW.search(text)
+    return DAY_TIME.sub("<day-time>", found.group(0) + "\n" if found else text)
 
 
 def name_the_gh(folder):
