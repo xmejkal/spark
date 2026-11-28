@@ -56,7 +56,7 @@ The proposals below are cards for spark-main to file after the PO's yes. P275 #3
 ## After a drag that changes the wiring, one sentence for Claude with Copy (the drag's first slice)
 - type: story
 - needed by: "and for now it can for example based on it generate a prompt, or something, when the wiring changes, to copy and say to claude" (the PO, 2026-11-28, #1699)
-- value proven by: one Operation takes a dragged layout and names the wiring change in one sentence, on button-light's breadboard and perfboard at once (D11). The CLI with `--json`, spark's commands and skills, and the page's Copy all reach it
+- value proven by: one Operation takes a dragged layout and names the wiring change in one sentence, on the handheld console's breadboard and perfboard at once (D11, D21). The CLI with `--json`, spark's commands and skills, and the page's Copy all reach it
 - depends on: the design's drag model (P1352's design), the perfboard's text plan, because the drag comes for both editors at once (D11)
 - status: filed D15 as P1360 [#1950](https://github.com/xmejkal/spark/issues/1950), label story (the repository has no refactor or feature label)
 - label (the repository's type label): feature

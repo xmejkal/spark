@@ -27,7 +27,7 @@
 
 ## Journeys
 <!-- One ### per actor and scenario: the table, then a Mermaid flowchart of the same steps. -->
-### The maker: from a tested breadboard to a soldered perfboard (button-light on a FIT0193) <!-- REQUIRED:journey -->
+### The maker: from a tested breadboard to a soldered perfboard (the handheld game console on a board he picks, D9, D21) <!-- REQUIRED:journey -->
 | step | what they do | evidence | friction or harm | today | open question |
 | --- | --- | --- | --- | --- | --- |
 | 1 | says the breadboard works and opens the perfboard step | E councils/past-breadboard/architect.md section 1 (the station opens after "it works") | — | not yet | Q3: what done is |

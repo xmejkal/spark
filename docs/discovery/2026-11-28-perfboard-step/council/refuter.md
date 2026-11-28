@@ -341,3 +341,70 @@ so each D is judged against the options it lists and the Q it answers.
 - "J1 to J6" holds: six jobs in jobs-and-journeys.md.
 
 Searches: none
+
+## Third pass, 2026-11-28
+
+The refuter on Opus, read-only, on `git diff e7ddbe50 cef1e410 -- docs/`: D15 to D22, C27 to C29, README.md,
+items.md's filed lines, the rough rows, the Results rows and the rows file. I could not see the chat or the question
+dialog, nor spark-artifact's session, so each D is judged against its own quote. GitHub was not read (no web), so the
+raised rows' cards were not opened.
+
+### 1. The D rows against their quotes
+
+- D17 drops his hedges. He wrote "could also be done ... maybe, but it should probably somehow roghly always be part
+  o f discovery" and "potentially, that would be cool". D17 turns that into a standing rule, "every discovery takes a
+  rough pass". A standing rule for every discovery is a rule change, and those are his to merge (CLAUDE.local.md,
+  "His to merge: these rules"). Nothing outside this folder records it.
+- D16: "remeber it" can also mean a standing rule for every design (faint slice tags everywhere). D16 records it for
+  this design only.
+- D21: "of his own design" is not in "lets make a handheld game boy kinda small thing".
+- D22: "It also says why: a perfboard pays off when several modules are joined". He asked a question ("why would one
+  use a perfboard in a case like this?"). The reason is the team's answer to it, not his words.
+- D18: the description of the board (the print, 24 x 10, 24 x 18, the plated pads) is the team's reading of photos
+  that are not kept. Only "10 of these and 5 of the bigger ones" is his. No caveat says that the reading cannot be
+  checked.
+
+### 2. Caveats against their sources
+
+- C28 and C29 are marked H and not reproduced, and C29's caveat names the summaries it read. The pointer is right:
+  finding.md:3 says "Search-result summaries only", and :68-72 give the licences. C28 cites no file for its
+  61.1 x 60 mm, its pin list or its 2.0 mm pitch. It names only "spark-artifact's round".
+- The Results row for D18 says "met" against A7's pass line, "pitch 2.54 ± 0.05 mm and each pad its own island". That
+  line needs a measurement. Board 2's pitch is inferred from "50*70MM" and a hole count. 24 holes in 70 mm also fit a
+  2.0 mm pitch (23 x 2.0 = 46 mm). And A7 is about the FIT0193, so "A7 holds for the boards he named" tests a belief
+  that A7 does not hold.
+
+### 3. The rows file
+
+- Rows 1 to 11 say "acted", but some of the second pass is neither fixed nor listed. The Riskiest line still says
+  "pending Q1" and "about three months", while A1 says "a few months". Board actions still says "while the questions
+  run". The D times still name no clock. The Hand-off still copies the "proposed" Outcome.
+- Row 11 says "★C8 carries both readings". ★C8's caveat holds only "how another person turns it is unknown". The
+  notepad reading is in D13 alone.
+- Rows 12 and 13 name P1359 #1949 and P1239 #1792 (not opened). They come from spark-artifact's canvas round, not from
+  a review of this PR.
+
+### 4. README against the brief
+
+- "Filing needs the PO's yes" contradicts D15, which filed the cards.
+- The mermaid "text plan on the CLI for button-light (D7)" and the row "D10 ... Button-light is the example" go
+  against D20 ("it replaces D10 for the plan") and D21. "Redrawn to D8 to D13" leaves out D19 and D22, the
+  canvas's example. The table holds no D15 to D22.
+- "No design and no refactor is written before the spike's finding (D5, D6)". The brief narrowed this: D5 says no
+  refactor is decided, D6 says no design is written meanwhile, and the Hand-off says the design comes when the PO
+  orders it. The README says more than the brief. Readiness otherwise matches ("an experiment: the clock spike").
+- "You solder soon" is quoted, but neither he nor A1 says it.
+- Button-light outlives D20 and D21. It is still the example in the Hand-off ("button-light as the example (D10)"),
+  in story-map.md's slice 0, in the journey's title and in A3, A5 and A8. The drag item (P1360 #1950) is proven "on
+  button-light's breadboard and perfboard at once". No filed card makes button-light's perfboard plan, because P1359
+  #1949 now runs on the console.
+
+### 5. Numbers
+
+- "10 H, 1 of which would change the decision". A1's change line ("none planned yet") was met by D10 and then
+  overruled by D16, so A1 can no longer change the decision.
+- "drawing.py has 599 of 600 lines" names no source for the 600. 599 is reproduced: `wc -l` gives 599.
+- The D times "by 13:22", "relayed by 13:36" and "relayed by 14:02" name no clock and no relaying log.
+- "The board fields of #1948 to #1950 follow GitHub's limit reset" names no time.
+
+Searches: none

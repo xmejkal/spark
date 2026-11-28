@@ -4,13 +4,13 @@ Card P1352 [#1939](https://github.com/xmejkal/spark/issues/1939), a sub-issue of
 
 ## Where it stands
 
-The discovery is ready for an experiment: the clock spike P1074 [#1575](https://github.com/xmejkal/spark/issues/1575), after the MVP walk. The design comes after it, on the PO's order. The PO confirmed the frame (D1), the jobs, the direction and the remaining risk (D14). No design and no refactor is written before the spike's finding (D5, D6).
+The discovery is ready for an experiment: the clock spike P1074 [#1575](https://github.com/xmejkal/spark/issues/1575), after the MVP walk. The design comes after it, on the PO's order. The PO confirmed the frame (D1), the jobs, the direction and the remaining risk (D14). No refactor is decided before the spike's finding, and no design is written meanwhile (D5, D6).
 
 ```mermaid
 flowchart LR
   MVP["MVP walk"] --> SP["clock spike P1074:<br/>where spark stops"]
   SP --> DS["design: the shared layout parts<br/>and the drag model"]
-  DS --> SK["first done: a text plan<br/>on the CLI for button-light (D7)"]
+  DS --> SK["first done: a text plan<br/>on the CLI for the handheld console (D7, D20, D21)"]
   SK --> DR["both faces drawn,<br/>then the page station"]
   SK --> DG["drag for both editors at once,<br/>a sentence for Claude with Copy (D11)"]
 ```
@@ -24,7 +24,10 @@ flowchart LR
 | D7 | The first done result is a text and JSON plan on the CLI, with the same-pins check passing. |
 | D8 | The dev board goes on female headers by default, through a setting `perfboard.board_mount`. |
 | D9 | The person picks the board each time, and spark spreads the parts over it. |
-| D10 | No gadget is planned for a perfboard yet. Button-light is the example. |
+| D10, D20 to D22 | No gadget was planned (D10). The example is now a small handheld game console made during the walk (P1361 #1951), on the canvas too. |
+| D15 | The six cards are filed: P1355 #1944 to P1360 #1950. |
+| D18 | His two blue boards (10 of 3 x 7 cm, 5 of 5 x 7 cm) are in his drawer. |
+| D19 | The canvas draws real part drawings, not boxes. |
 | D11 | The drag comes for the breadboard and the perfboard editors at once. |
 | D12 | Spike P1239 reads Perfboard Designer's licence and router first. |
 | D13 | He turns a board over like a page, so the back view mirrors left to right. |
@@ -52,5 +55,5 @@ A rough pass over the features around this step, each with its slice. The tags a
 
 ## What comes next
 
-- The six proposed cards are in [items.md](items.md). Filing needs the PO's yes.
-- The canvas artboards Perfboard and LayoutPerfboard are redrawn to D8 to D13. The drag screens for both editors come with them, and each gets its row on the Built board.
+- The six cards are filed (D15): see [items.md](items.md).
+- spark-artifact redraws the canvas artboards Perfboard and LayoutPerfboard to D8 to D22, with the console. The drag screens for both editors are not drawn yet.

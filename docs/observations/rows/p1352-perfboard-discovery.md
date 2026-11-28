@@ -14,6 +14,11 @@ Card: [P1352 #1939](https://github.com/xmejkal/spark/issues/1939). Four lenses o
 | 8 | readiness "design" breaks the brief's own rule, because D5 chose a test before an option | refuter 2 | acted | Ready for: an experiment, the clock spike P1074 |
 | 9 | D4, D5, D6, D12 and D3 say more than the options he picked | refuter 2 | acted | each D narrowed to his option; D16 later settled D4's scope |
 | 10 | A2 is met by D7 but still open; items.md's depends-on lines are stale | refuter 2 | acted | A2 retired with a Results row; items.md updated |
-| 11 | D13 answers half of Q9, and "like a page" has a rival reading | refuter 2 | acted | Q9 marked half answered; ★C8 carries both readings |
+| 11 | D13 answers half of Q9, and "like a page" has a rival reading | refuter 2 | acted | Q9 marked half answered; D13 carries both readings, ★C8's caveat says how another person turns it is unknown |
 | 12 | the 2.0 mm JST PH speaker terminal does not fit a 2.54 mm grid | spark-artifact's canvas round | raised | P1359 [#1949](https://github.com/xmejkal/spark/issues/1949), the text plan refuses it or offers a 2.54 mm terminal (brief.md C28) |
 | 13 | the free hole between nets cannot hold where a wire leaves a header pin | spark-artifact's canvas round | raised | P1239 [#1792](https://github.com/xmejkal/spark/issues/1792), the join router spike (brief.md C28) |
+| 14 | the README is stale: filing, button-light, D15 to D22 missing, "no design and no refactor" too strong | refuter 3 | acted | README table, diagram and next steps updated |
+| 15 | button-light stays the example after D20 and D21 | refuter 3 | acted | the story map, the journey, A3, A5, A8, A11, the Hand-off and P1360's line name the console |
+| 16 | D17, D21 and D22 say more than his words; D18's photos are not kept | refuter 3 | acted | each D marks the team's reading as H; D18 says its details cannot be checked here |
+| 17 | the D18 Results row marks A7 met without a measurement | refuter 3 | acted | the row says partly, nothing measured; A7 stays open |
+| 18 | the Riskiest line, the board actions and the Hand-off's Outcome are stale; A1 still counts | refuter 3 | acted | each updated; A1 retired as accepted, not tested, with a Results row |

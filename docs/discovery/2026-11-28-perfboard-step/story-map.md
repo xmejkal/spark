@@ -19,7 +19,7 @@ flowchart LR
 <!-- Walking skeleton first: the thinnest slice that runs end to end. -->
 | slice | activity | story | job | tag | proof |
 | --- | --- | --- | --- | --- | --- |
-| 0 walking skeleton <!-- REQUIRED:slices --> | Plan the perfboard | one CLI run on button-light writes the perfboard plan in text and JSON: each part's holes, each join with its kind and every hole, the cut in holes and mm, and the same-pins check passes over the joins | J1, J4 | H PA-6, UL-5 | the run's output and its `--json` on button-light |
+| 0 walking skeleton <!-- REQUIRED:slices --> | Plan the perfboard | one CLI run on the small handheld game console (P1361 #1951) writes the perfboard plan in text and JSON: each part's holes, each join with its kind and every hole, the cut in holes and mm, and the same-pins check passes over the joins | J1, J4 | H PA-6, UL-5 | the run's output and its `--json` on the console |
 | 0 | Describe the board | the drawer's FIT0193 gets holes across, holes down and pitch, with each fact's origin (assumed or measured) | J1 | E UL-2, D-f (D8 calipers) | the drawer entry after the Operation |
 | 0 | Share the layout parts | the same-pins check reads joins as sets of holes (`ConnectedGroups`) | J1, J6 | E ★C15 | the 9 goldens byte for byte and a test with a bare wire over another net's pad |
 | 0 | Share the layout parts | one `GridSearch` lifted from `TrackRouting`, with `TrackWeights` as a named Value (after P1350) | J6 | E ★C13, ★C14 | the router's tests and 9 of 9 goldens |
