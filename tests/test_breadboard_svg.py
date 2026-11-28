@@ -268,7 +268,7 @@ class TheRecordBoardSvgTest(unittest.TestCase):
     def test_the_picture_is_the_one_looked_at_on_2026_11_20(self):
         # rendered and looked at once (pad labels, rings, USB end, note); regenerate the hash only on purpose. P949: the keys,
         # and the dot of each pin used or free, seen in a render on 2026-11-20. P946: the FireBeetle drawn from the old
-        # page's group (no glow, each word upright or sideways on the sheet), BAT on the RX edge, and no "row side not verified" in the note, seen in a render on 2026-11-20.
+        # page's group (no glow, each word upright or sideways on the sheet), BAT then on the RX edge (P1334 moved RX to the other edge, 2026-11-28), and no "row side not verified" in the note, seen in a render on 2026-11-20.
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
                          "d11159f4f865be6058de7e9569a0e5217a05058aee5f25ee8a0c68cf443dcdf6")  # P1334: the FireBeetle's 14-pin row and BAT on one edge, D10 farthest from USB-C, RX on the other, seen in Chrome on 2026-11-28. Before it, P1240: the 6 mm button over the gap in e30, e32, f30, f32, seen in Chrome on 2026-11-27. Before it, P953: the wires around the parts; ground through the - rail; PR 4a: a pill on each wire and the palette's hex; PR 4b: the pads in the steps' words read bottom to top, a caption per part and its note line, seen in a render on 2026-11-20
 
