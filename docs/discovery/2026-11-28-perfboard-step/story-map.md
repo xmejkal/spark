@@ -5,13 +5,14 @@ map file. -->
 
 ## Backbone
 <!-- The activities, left to right, as the user does them. -->
-Share the layout parts → Describe the board → Plan the perfboard → Read the plan (text, JSON) → See both faces → Solder step by step → Test the joints → Change the plan (Claude, drag) <!-- REQUIRED:backbone -->
+Share the layout parts → Describe the board → Plan the perfboard → Read the plan (text, JSON) → See both faces → Solder step by step → Test the joints → Change the plan (Claude, drag) → rough, later: Order a PCB → Model and case <!-- REQUIRED:backbone -->
 
 ```mermaid
 flowchart LR
   A["Share the layout parts"] --> B["Describe the board"] --> C["Plan the perfboard"] --> D["Read the plan"]
   D --> E["See both faces"] --> F["Solder step by step"] --> G["Test the joints"] --> H["Change the plan"]
   H -. a fresh plan, same pins .-> C
+  H -.-> I["later, rough: Order a PCB"] -.-> J["later, rough: Model and case"]
 ```
 
 ## Slices
@@ -29,6 +30,15 @@ flowchart LR
 | 2 | Change the plan | `edit-layout` on the perfboard: a dry run, then `--apply`, kept in .spark/layout-edits.json | J4 | E D-f, the move-hold pattern | Claude changes button-light's plan through `--json` |
 | 3 | Change the plan | drag on the page (both editors): after a drag that changes the wiring, one sentence for Claude with Copy, from one Operation | J5 | E D2 | the sentence on the page and the same from the CLI with `--json` |
 | 3 | Solder step by step | the page's perfboard station with its step player | J2 | E the canvas artboard Perfboard | the page compared with the canvas in Chrome |
+
+### Rough: the whole around it (D17, tags rough)
+| slice | activity | story | job | tag | proof |
+| --- | --- | --- | --- | --- | --- |
+| after the MVP (rough) | Share the layout parts | the breadboard's own layout JSON and `edit-layout` (P1237 #1790) | J4, J6 | E P1199 D4 | — |
+| after the MVP (rough) | Change the plan | the settings layer gives `perfboard.board_mount` and the router's weights a layer (P1194 #1740) | J6 | E D8, D-h | — |
+| later (rough) | Check the joints | a photo of the soldered board read back into the plan (P1164 #1700) | J3 | H | — |
+| later (rough) | Order a PCB | the tested perfboard's places in mm start the PCB draft (P79 #16) | J1 | H ARCH D5 | — |
+| later (rough) | Model and case | the soldered board's size and part heights feed the CAD model and the enclosure (P203 #163) | J1 | H | — |
 
 ## Delta to the product's map <!-- REQUIRED:spark-process:map-delta -->
 <!-- The rows to add or change in the repository's own story map file, in that file's table shape. -->

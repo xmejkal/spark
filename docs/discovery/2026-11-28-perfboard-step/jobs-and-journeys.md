@@ -53,6 +53,9 @@ flowchart LR
   s8 --> s9["9 beep, then power"]
   s9 -. change .-> s10["10 ask Claude or drag"]
   s10 -. a fresh plan, same pins .-> s4
+  s9 -. later, rough (D17) .-> s11["11 a photo of the board checks it (P1164)"]
+  s9 -. later, rough (D17) .-> s12["12 a PCB from the tested places (P79)"]
+  s12 -.-> s13["13 a case from the board's size (P203)"]
 ```
 
 ### Claude: changes a perfboard plan for the person
