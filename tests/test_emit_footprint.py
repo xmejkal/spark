@@ -8,9 +8,9 @@ a board that has already been paid for.
 
 So there are two kinds of test here, and both are load-bearing:
 
-  * the geometry is compared against a footprint that was produced independently — by a separate
-    script, from DFRobot's own dimension drawing, and hand-checked — so "it matches itself" is
-    not available as a way to pass;
+  * the geometry is checked against the record's own numbers (the pitch, the row spacing, the flush edge); the
+    independent witness is the picture's anchors in tests/test_feature_check.py (P1334; the test that read a private
+    footprint beside the repository is gone);
   * every fact the generator cannot derive has a test that it REFUSES rather than invents.
 
     python3 -m unittest discover -s tests
