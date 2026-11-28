@@ -8,7 +8,7 @@ the remaining risk (D rows). An extension may tighten these. Next: design, or a 
 Stands on: the assumptions not retired in risks-and-tests.md; of which those the decider rated high, or — while any
 is unrated. check computes both. -->
 **Ready for:** collecting evidence <!-- REQUIRED:ready -->
-**Stands on:** 11 H, — of which would change the decision <!-- REQUIRED:debt -->
+**Stands on:** 11 H, 1 of which would change the decision <!-- REQUIRED:debt -->
 **Decision needed:** Q1 (the ratings and pass lines), then Q2 (the order against P1199 D3), then Q3 to Q9, one at a time <!-- REQUIRED:decision-needed -->
 
 ## Frame
@@ -99,8 +99,8 @@ and caveat cells. e.g. `- Q2 what first · fix delivery · two weeks · whether 
 - Proposed no-gos and rabbit holes (proposals until the decider confirms): no-go: build nothing before his Ready order; no change to wire_routing.py before P1350 merges; no Wokwi diagram for a perfboard; no stripboard (D-a); no setting layer before P1194, the weights are code defaults (this meets D-h, not yet D-j, MF3); no page logic of its own for the drag. Rabbit holes: an optimal route (good enough within the budget is the line); the cut and mounting holes in exact mm before the calipers (P1238); a height order from records (a table by kind first); spark judging whether a joint is soldered (it stays "spark cannot see it") · H the facilitator, from the lenses · caveat: proposals until he confirms <!-- REQUIRED:nogos -->
 
 ## Riskiest assumption and its test
-- Riskiest: A1, he solders a perfboard within about three months of this design, before the code it describes moves. It decides how deep the design goes · proposed — the facilitator's opinion, from PA-9, pending Q1 <!-- REQUIRED:riskiest -->
-- Test · kind · pass line, dated before any result · proposed | D<n>: Q6, one question to the decider (a one-question survey, n = 1) · pass: he names one gadget and one board he plans to solder, set 2026-11-28 · proposed — the facilitator's opinion, pending Q1 <!-- REQUIRED:test -->
+- Riskiest: A1, he solders a perfboard within about three months of this design, before the code it describes moves. It decides how deep the design goes · proposed — the facilitator's opinion, from PA-9, pending Q1, rated high D3, its risk accepted for the design D4 <!-- REQUIRED:riskiest -->
+- Test · kind · pass line, dated before any result · proposed | D<n>: Q6, one question to the decider (a one-question survey, n = 1) · pass: he names one gadget and one board he plans to solder, set 2026-11-28 · proposed — the facilitator's opinion, then dropped by D4: no test, the design goes on <!-- REQUIRED:test -->
 
 ## Questions
 <!-- A queue; the first open question is asked alone. Each: Q<n> · question · decides: … · options · unblocks ·
@@ -108,12 +108,12 @@ opinion (whose) · kind: decision | account (a past-tense question about the dec
 account, n = 1) · status: queued | asked <date> | answered D<n>.
 If the decider cannot be asked, the queue stays here, and whatever rests on it stays H. -->
 - Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: answered D1 <!-- REQUIRED:q0 -->
-- Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: queued <!-- REQUIRED:q1 -->
+- Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: answered D3 (importance) and D4 (no test, go on) <!-- REQUIRED:q1 -->
 - Q2 · Your words "feel free to refactor anytime": may the byte-neutral refactor of the breadboard code start before the MVP walk, against P1199 D3? And D-a puts the perfboard after the editor that keeps moves: is that P1237's `edit-layout`, built first? · decides: D-q6, D-a's reading · options: (a) no, D3 stands, refactor only inside a card that touches the code · (b) yes for moves 1 to 3 inside the breadboard area, the rest after the MVP · (c) yes for the whole shared area · unblocks: the three refactor items · opinion (the PO assistant (a), the architecture lens (b)) · kind: decision · status: queued
 - Q3 · What is the first perfboard result you call done? · decides: D-q1 · options: (a) the plan in text and JSON on the CLI · (b) with the drawing of both faces · (c) with the page's station · unblocks: the walking skeleton's scope · opinion (the PO assistant, the facilitator: (a)) · kind: decision · status: queued
 - Q4 · How does the dev board sit on the perfboard by default? · decides: D-q4 · options: (a) female headers, a setting with that default · (b) soldered straight in · (c) off the perfboard by a pin header · unblocks: the parts table, the first steps, the antenna rule · opinion (split: the PO assistant (a); the tech lead a setting with headers as default; the user lens's sketch solders the XIAO straight in) · kind: decision · status: queued
 - Q5 · Which comes first, the plan's size or the board? · decides: D-q5 · options: (a) roomy at a fixed spacing, then the smallest owned board, then the cut · (b) the smallest owned board, then spread · (c) the person picks each time · unblocks: the board line and the cut · opinion (the user lens: (a)) · kind: decision · status: queued
-- Q6 · Which gadget do you solder on a perfboard first, and on which board? · decides: D-q5, D-q4, D-q6 (A1) · options: (a) the e-paper clock on a FIT0193 cut down · (b) the clock on the DFR0481 cover · (c) another, named · (d) none planned, button-light is a test · unblocks: the riskiest test · opinion (none: his plan) · kind: decision · status: queued
+- Q6 · Which gadget do you solder on a perfboard first, and on which board? · decides: D-q5, D-q4, D-q6 (A1) · options: (a) the e-paper clock on a FIT0193 cut down · (b) the clock on the DFR0481 cover · (c) another, named · (d) none planned, button-light is a test · unblocks: D-q4 and D-q5 (no longer a test, D4) · opinion (none: his plan) · kind: decision · status: queued
 - Q7 · Does the drag's first slice start on the breadboard, before the perfboard exists? · decides: D-q7 · options: (a) yes, on the breadboard first, after the breadboard's layout JSON · (b) both together, after the perfboard's walking skeleton · unblocks: the drag item's order · opinion (the facilitator: (a)) · kind: decision · status: queued
 - Q8 · Does spike P1239 read Perfboard Designer's licence and router first? · decides: D-q3 (c) · options: (a) yes · (b) go on without it · unblocks: the spike's start · opinion (the tech lead: (a)) · kind: decision · status: queued
 - Q9 · When you last soldered a board, how did you turn it over, and does your FIT0193 print row and column labels? · decides: the sheet's mirror and hole names (A3) · options: like a page · top to bottom · not yet soldered a perfboard · unblocks: A3 · opinion (none) · kind: account · status: queued
@@ -124,6 +124,8 @@ A yes covers only the actions and choices it names. A standing yes names its kin
 Name what a D confirms in its words: the frame, the jobs, a direction, the remaining risk, a test, items.md. -->
 - D1 · Q0: the frame as written (the decisions D-q1 to D-q6, the scope and what is out of it, the extensions electronics-firmware and spark-process, the depth TRIO on Opus plus the architecture lens, then the refuter and the architect). His answer: "Yes, frame is right" · the PO · 2026-11-28, about 10:57 CET · this session's question dialog · options: yes, narrow it to the architecture and the canvas, let the council of three answer. It confirms the frame
 - D2 · the frame widens by his own words: the drag editors for the breadboard and the perfboard come into scope as the step after the perfboard design, in the same architecture (one editor surface and one drag model for both). Verbatim: "And then lets make both the breadboard and perfobrad eidtors drag and dropable, so we can move parts around, wiring, etc." and "and for now it can for example based on it generate a prompt, or something, when the wiring changes, to copy and say to claude. And as with everything, remember want it to be implemented at least for the CLI interface and the agents and skills, etc, also for ai, and the page interface too". So the first drag slice is a sentence for Claude with Copy after a drag that changes the wiring, through one Operation that the CLI, spark's commands, skills, agents and the page all reach · the PO · 2026-11-28, typed in spark-artifact's session, relayed to this session · options: none, his direction. The out-of-scope line "the drag editors" no longer holds; building still waits for his Ready order. A new decision D-q7: the drag model and its first slice
+- D3 · Q1, the importance of the assumptions: A1 (he solders a perfboard within a few months) is high; A2 to A11 are low by his rule "each one you leave unticked is rated low" · the PO · 2026-11-28, between 11:27 and 11:41 CET · this session's question dialog · options: A1, A2, A3, A5 offered as high, the rest low unless ticked. It rates the assumptions; the pass line is asked next
+- D4 · Q1, the pass line of A1: "No test, go on", that is "Skip the test: design the full perfboard step anyway, because the shared parts serve the breadboard too" · the PO · 2026-11-28, between 11:41 and 12:09 CET · this session's question dialog · options: pass on a named gadget and board, plus a month, no test. He accepts A1's risk for the design: the design covers the full perfboard step. Q6 stays, for D-q4 and D-q5 only
 
 ## Found on the way <!-- CLAIMS -->
 <!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
@@ -135,9 +137,7 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 ## Board actions <!-- REQUIRED:spark-process:board-actions -->
 <!-- Each action on the board or the issue (stage, waiting flag, comment, filing): taken, with its D, or pending.
 None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
-- #1939 stays in Discovery while the questions run · no action
-- file items.md's six items through spark-main · pending, needs a D that names items.md
-- a comment on P275 #311 that links this discovery · pending, needs a D
+- #1939 stays in Discovery while the questions run · no action. Filing items.md's six items through spark-main, and a comment on P275 #311 that links this discovery · pending, each needs a D
 <!-- EXTEND:brief-sections -->
 
 ## Hand-off
