@@ -454,6 +454,11 @@ def board_only(record):
     return BUILD.name in skipped_stages(record)
 
 
+def is_built(record):
+    """Whether the build `record` (None: no build yet) built more than the board: it takes a record, unlike `is_board_only`."""
+    return record is not None and not board_only(record)
+
+
 class BuildReader(PhaseReader):
     """Strategy: the record of the last build (`.spark/build.json`): its status, or stale when the requirements file it was
     built from changed after it. A skipped stage is no pass (P878): an ok build on the board alone, or one whose simulation
@@ -466,7 +471,7 @@ class BuildReader(PhaseReader):
 
     def read(self, project):
         record = BuildRecordStore(project).read()
-        built = record is not None and not board_only(record)
+        built = is_built(record)
         checked = [line for line in [checks_reading.design_line(project, built)] if line]  # P1255: the Design checks' line
         phase = self.read_record(project, record)
         return phase._replace(says=list(phase.says) + checked)

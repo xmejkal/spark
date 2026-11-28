@@ -1,0 +1,26 @@
+[
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "P1341: a current record of problems still gives NOW's text (test_checks_reading.TheDesignNowLineTest.test_a_current_record_is_no_text_at_any_status)",
+  "find": "    if not built or check.state == RECORDED and check.current:\n",
+  "replace": "    if not built:\n"
+ },
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "P1341: a project with no build gets NOW's text (test_checks_reading.TheDesignNowLineTest.test_no_build_is_no_text)",
+  "find": "    if not built or check.state",
+  "replace": "    if check.state"
+ },
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "P1341: an older record says not run (test_checks_reading.TheDesignNowLineTest.test_an_older_record_says_so_and_names_no_input)",
+  "find": "        head = DESIGN_OLDER_NOW\n",
+  "replace": "        head = DESIGN_NOT_RUN_NOW\n"
+ },
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "P1341: a record that cannot be read says not run (test_checks_reading.TheDesignNowLineTest.test_a_record_that_cannot_be_read_says_why)",
+  "find": "        head = DESIGN_NOT_READ_NOW % (DESIGN_CHECKS_LABEL, check.why)\n",
+  "replace": "        head = DESIGN_NOT_RUN_NOW\n"
+ }
+]
