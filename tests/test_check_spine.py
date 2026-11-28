@@ -536,8 +536,8 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertEqual(lines[-1], shown.getvalue().splitlines()[0])
         self.assertTrue(lines[-1].startswith("  NOW (firmware): "), lines[-1])
         # P1341: no check-design record, so the build's last line ends with NOW's text of the design checks
-        self.assertTrue(lines[-1].endswith(" The design checks have not run yet. They compare the circuit with the facts of the board "
-                                           "and its parts. Ask Claude to run the design checks."), lines[-1])
+        self.assertTrue(lines[-1].endswith(" The design checks have not run yet. They compare the circuit with the facts of the board, "
+                                           "its parts and the project's rules. Ask Claude to run the design checks."), lines[-1])
 
     def test_every_command_the_build_prints_passes_the_copyable_rule(self):
         # P1256: a home folder with a space, so the rule has a space to find; the line quotes the whole path

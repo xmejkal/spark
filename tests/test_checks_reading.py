@@ -229,12 +229,12 @@ class TheDesignNowLineTest(unittest.TestCase):
     record's state, the gloss and one ask. A current record says nothing here, at any status: the build row says it."""
 
     INPUTS, a_project, kept = TheDesignLineTest.INPUTS, TheDesignLineTest.a_project, TheDesignLineTest.kept
-    NOT_RUN = ("The design checks have not run yet. They compare the circuit with the facts of the board and its parts. "
-               "Ask Claude to run the design checks.")
-    OLDER = ("The design checks ran before their files changed. They compare the circuit with the facts of the board and "
-             "its parts. Ask Claude to run the design checks.")
-    UNREAD = ("Design checks: the check record is no JSON. They compare the circuit with the facts of the board and its "
-              "parts. Ask Claude to run the design checks.")
+    NOT_RUN = ("The design checks have not run yet. They compare the circuit with the facts of the board, its parts and the "
+               "project's rules. Ask Claude to run the design checks.")
+    OLDER = ("The design checks ran before their files changed. They compare the circuit with the facts of the board, its "
+             "parts and the project's rules. Ask Claude to run the design checks.")
+    UNREAD = ("Design checks: the check record is no JSON. They compare the circuit with the facts of the board, its parts "
+              "and the project's rules. Ask Claude to run the design checks.")
 
     def unreadable(self):
         project = self.a_project()

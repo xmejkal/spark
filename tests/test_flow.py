@@ -722,8 +722,8 @@ class TheDesignChecksLineTest(FlowTest):
 
 
 #: P1341: NOW's text of the design checks while no check-design record is current.
-DESIGN_NOW = ("The design checks have not run yet. They compare the circuit with the facts of the board and its parts. "
-              "Ask Claude to run the design checks.")
+DESIGN_NOW = ("The design checks have not run yet. They compare the circuit with the facts of the board, its parts and the "
+              "project's rules. Ask Claude to run the design checks.")
 
 
 def design_checks(project):

@@ -38,7 +38,7 @@ LINES_JOIN, INPUTS_JOIN = "; ", " or "
 DESIGN_NOT_RUN_NOW = "The design checks have not run yet."
 DESIGN_OLDER_NOW = "The design checks ran before their files changed."
 DESIGN_NOT_READ_NOW = "%s: %s."
-DESIGN_GLOSS_NOW = "They compare the circuit with the facts of the board and its parts."
+DESIGN_GLOSS_NOW = "They compare the circuit with the facts of the board, its parts and the project's rules."
 DESIGN_ASK_NOW = "Ask Claude to run the design checks."
 
 
