@@ -60,14 +60,14 @@ and caveat cells. e.g. `- Q2 what first · fix delivery · two weeks · whether 
 opinion (whose) · kind: decision | account (a past-tense question about the decider's own use; the answer is E,
 account, n = 1) · status: queued | asked <date> | answered D<n>.
 If the decider cannot be asked, the queue stays here, and whatever rests on it stays H. -->
-- Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: ⟨fill⟩ <!-- REQUIRED:q0 -->
+- Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: answered D1 <!-- REQUIRED:q0 -->
 - Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: ⟨fill⟩ <!-- REQUIRED:q1 -->
 
 ## Decisions
 <!-- D<n> · what · who · when · where recorded · options considered.
 A yes covers only the actions and choices it names. A standing yes names its kind of action and its source.
 Name what a D confirms in its words: the frame, the jobs, a direction, the remaining risk, a test, items.md. -->
-- D1 · Q0: the frame as written (the decisions D-q1 to D-q6, the scope and what is out of it, the extensions electronics-firmware and spark-process, the depth TRIO on Opus plus the architecture lens, then the refuter and the architect). His answer: "Yes, frame is right" · the PO · 2026-11-28, about 11:20 CET · this session's question dialog · options: yes, narrow it to the architecture and the canvas, let the council of three answer. It confirms the frame
+- D1 · Q0: the frame as written (the decisions D-q1 to D-q6, the scope and what is out of it, the extensions electronics-firmware and spark-process, the depth TRIO on Opus plus the architecture lens, then the refuter and the architect). His answer: "Yes, frame is right" · the PO · 2026-11-28, about 10:57 CET · this session's question dialog · options: yes, narrow it to the architecture and the canvas, let the council of three answer. It confirms the frame
 
 ## Found on the way <!-- CLAIMS -->
 <!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
