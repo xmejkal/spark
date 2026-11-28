@@ -1,0 +1,42 @@
+# The perfboard step: discovery, the short version
+
+Card P1352 [#1939](https://github.com/xmejkal/spark/issues/1939), a sub-issue of P1199 [#1747](https://github.com/xmejkal/spark/issues/1747). The brief is [brief.md](brief.md). This page sums it up.
+
+## Where it stands
+
+The discovery is ready for design. The design comes after the MVP walk and the clock spike P1074 [#1575](https://github.com/xmejkal/spark/issues/1575). The PO confirmed the frame (D1), the jobs, the direction and the remaining risk (D14). No design and no refactor is written before the spike's finding (D5, D6).
+
+```mermaid
+flowchart LR
+  MVP["MVP walk"] --> SP["clock spike P1074:<br/>where spark stops"]
+  SP --> DS["design: the shared layout parts<br/>and the drag model"]
+  DS --> SK["first done: a text plan<br/>on the CLI for button-light (D7)"]
+  SK --> DR["both faces drawn,<br/>then the page station"]
+  SK --> DG["drag for both editors at once,<br/>a sentence for Claude with Copy (D11)"]
+```
+
+## What the PO decided
+
+| D | Decision |
+| --- | --- |
+| D3, D4 | Only A1 ("you solder soon") rates high. He accepts its risk: no test, the design covers the whole step. |
+| D5, D6 | The clock spike runs first, after the MVP walk. The refactor is decided after its finding. |
+| D7 | The first done result is a text and JSON plan on the CLI, with the same-pins check passing. |
+| D8 | The dev board goes on female headers by default, through a setting `perfboard.board_mount`. |
+| D9 | The person picks the board each time, and spark spreads the parts over it. |
+| D10 | No gadget is planned for a perfboard yet. Button-light is the example. |
+| D11 | The drag comes for the breadboard and the perfboard editors at once. |
+| D12 | Spike P1239 reads Perfboard Designer's licence and router first. |
+| D13 | He turns a board over like a page, so the back view mirrors left to right. |
+
+## What the code shows
+
+- The same-pins check joins only the two ends of a jumper. A perfboard bare wire joins every pad it lies on, so the check must read each join as a set of holes (★C15).
+- The router's search loop is generic, but its start legs, state and goal are breadboard rules, so the worth of sharing it is still a guess (★C13). Its penalties are class attributes and become one named value per surface (★C14, D-h).
+- First fit refuses parts on single pads because of the free-hole rule of P412, in one in-memory trial (★C10). Three pieces fail with no row letters (★C11).
+- drawing.py has 599 of 600 lines (★C19). The breadboard area has no Operation (★C21).
+
+## What comes next
+
+- The six proposed cards are in [items.md](items.md). Filing needs the PO's yes.
+- The canvas artboards Perfboard and LayoutPerfboard are redrawn to D8 to D13. The drag screens for both editors come with them, and each gets its row on the Built board.
