@@ -49,6 +49,7 @@
 ## Results
 | date | source and pointer | what was seen | pass line met or missed | what it changes |
 | --- | --- | --- | --- | --- |
+| 2026-11-28 | brief.md D18 (his two photos) | both boards print "2.54MM" or a size whose holes fit 2.54 mm, with round single pads on both faces | met for these two boards, not yet for the FIT0193 (A7) | A7 holds for the boards he named; the FIT0193 still waits for P1238 |
 | 2026-11-28 | brief.md D7 (the question dialog) | he picked "Text plan on the CLI" as the first done | met: A2's pass line (he picks the text plan) | slice 0 stays the text plan; A2 retired |
 
 ## Budgets <!-- REQUIRED:electronics-firmware:budgets -->
