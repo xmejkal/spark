@@ -44,6 +44,9 @@ from spark.flow.flow_codes import effect_lines, picked_sentence  # noqa: E402
 from spark.flow import flow_codes  # noqa: E402
 from spark.flow import flow_page, run_request  # noqa: E402
 from spark.flow import checks_reading, deploy_reading  # noqa: E402
+from spark.breadboard import bench_changes, sheet as sheet_module  # noqa: E402
+from spark.design import pin_assigner  # noqa: E402
+import golden_breadboard  # noqa: E402
 from spark.bench import board_log  # noqa: E402
 from spark.flow.deploy_reading import DeployState  # noqa: E402
 from spark.flow.guide import NO_IMAGE_FACT, ImageFact, chat_offer_of, guide_of, job_offer, names_at, requirements_now  # noqa: E402
@@ -926,7 +929,7 @@ class TheGuideTest(FlowTest):
         # P977 PR 2: now holds `steps`, the wiring's step count while the wiring is part of now, else None.
         self.assertEqual(said["data"]["guide"], {
             "now": {"phase": "firmware", "by": ["you", "claude"], "offer": None, "chat_offer": "write-firmware", "needs": [], "steps": 10,
-                    "with_wiring": True, "command": None, "no_command": None, "design_checks": DESIGN_NOW,
+                    "changes": None, "with_wiring": True, "command": None, "no_command": None, "design_checks": DESIGN_NOW,
                     "says": "Two jobs, in any order: wire the breadboard (10 steps, power off), and ask Claude to write the "
                             "firmware. Spark cannot see your wiring. Keep main.py thin, with the code in modules it calls, so "
                             "the free checks can import them."},
@@ -989,7 +992,7 @@ class TheGuideTest(FlowTest):
         said, _ = show(project)
         self.assertEqual(said["data"]["guide"], {
             "now": {"phase": "deploy", "by": ["your terminal"], "offer": None, "chat_offer": "look-at-board", "needs": [], "steps": None,
-                    "with_wiring": True, "command": None, "no_command": NO_LINE_TO_TYPE_SAYS, "design_checks": DESIGN_NOW,
+                    "changes": None, "with_wiring": True, "command": None, "no_command": NO_LINE_TO_TYPE_SAYS, "design_checks": DESIGN_NOW,
                     "says": "When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then "
                             "run the deploy in your terminal."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)", "breadboard (spark cannot see it)", "firmware"],
@@ -1085,7 +1088,7 @@ class TheGuideTest(FlowTest):
         project = Path(tempfile.mkdtemp()) / "plant-alarm"
         project.mkdir()
         self.assertEqual(show(project)[0]["data"]["guide"], {
-            "now": {"phase": "idea", "by": ["you"], "offer": None, "chat_offer": None, "needs": [], "steps": None, "with_wiring": False, "command": None, "no_command": None, "design_checks": None,
+            "now": {"phase": "idea", "by": ["you"], "offer": None, "chat_offer": None, "needs": [], "steps": None, "changes": None, "with_wiring": False, "command": None, "no_command": None, "design_checks": None,
                     "says": "Tell Claude your goal in the chat, in your own words."},
             "done": [], "later": ["needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"],
             "set_aside": [], "no_simulation": None, "no_open_phase": None, "wired": None,  # P1044: no sheet and no board log
@@ -1155,7 +1158,7 @@ class TheGuideTest(FlowTest):
             {"id": "wet", "does": "sense", "what": "soil-moisture", "aside": True}])
         guide = show(project)[0]["data"]["guide"]
         self.assertEqual(guide["now"], {
-            "phase": "parts", "by": ["you"], "offer": None, "chat_offer": None, "needs": [], "steps": None, "with_wiring": False, "command": None, "no_command": None, "design_checks": None,
+            "phase": "parts", "by": ["you"], "offer": None, "chat_offer": None, "needs": [], "steps": None, "changes": None, "with_wiring": False, "command": None, "no_command": None, "design_checks": None,
             "says": "Every need is set aside, so no pick can make the parts list. Tell Claude which need to bring back, "
                     "then pick a part."})
         self.assertEqual((guide["done"], guide["later"], guide["set_aside"]), (
@@ -2413,7 +2416,7 @@ class TheNextOnlyStepTest(FlowTest):
         said, _ = show(project)
         whole = str(project.absolute())
         self.assertEqual(said["data"]["guide"]["now"], {"phase": "simulate", "by": ["claude"], "says": SIM_FILES_NOW, "offer": None,
-                                                        "chat_offer": None, "needs": [], "steps": None, "with_wiring": False, "command": None, "no_command": None,
+                                                        "chat_offer": None, "needs": [], "steps": None, "changes": None, "with_wiring": False, "command": None, "no_command": None,
                                                         "design_checks": DESIGN_NOW})
         self.assertEqual(said["next"], [{"op": "build-board", "argv": [str(project.absolute() / "requirements.json"), "--keep", whole],
                                          "why": "Build the board", "effects": ["reads", "runs", "writes"], "needs_yes": False,
@@ -3415,7 +3418,7 @@ class TheDeployNowTest(FlowTest):
             with self.subTest(name=name):
                 said, _ = show(a_board_log(a_deploy_project(), verdict, sentence, reason=reason))
                 self.assertEqual(self.now(said), {"phase": "deploy", "by": ["your terminal"], "says": now, "offer": None,
-                                                  "chat_offer": chat, "needs": [], "steps": None, "with_wiring": True,
+                                                  "chat_offer": chat, "needs": [], "steps": None, "changes": None, "with_wiring": True,
                                                   "command": None, "no_command": NO_LINE_TO_TYPE_SAYS, "design_checks": DESIGN_NOW})
                 self.assertEqual([step["op"] for step in said["next"]], ["look"])
                 self.assertIsNone(said["data"]["guide"]["no_open_phase"])
@@ -3638,6 +3641,150 @@ class TheStalePinNamesTest(FlowTest):
         project = ThePinMapTest.checked(self, "JOY_SW = 4\n")
         (project / "firmware" / "pins.py").write_text("JOY_SW = 5\n")
         self.assertIsNone(statuses(show(project)[0])["firmware"])
+
+
+class TheRewireTest(FlowTest):
+    """P1270 (#1829): after a rebuild that changes the wiring, NOW says to rewire with the count of the changes the sheet lists,
+    until a check or a board log comes after the sheet. It is a fact that opens the breadboard, which keeps no status."""
+
+    THEN = datetime.datetime(2026, 11, 20, 9, 0).timestamp()  # before LOGGED_AT, so a board log is later than the sheet
+
+    def a_rebuilt_project(self):
+        """A project with firmware and a check record of the button-only design, then rebuilt as button-light: its sheet lists
+        changes and its pins.py gained LED. The record is older than the sheet or in its second, and the build is current."""
+        project = a_firmware(a_built_project())
+        golden_breadboard.rebuild_as(project, "button-only-xiao")
+        (project / "firmware" / "pins.py").write_text(pin_assigner.pin_module_for(str(project / "requirements.json")).module)
+        sheet_module.write(project / "requirements.json", project / "breadboard.md")
+        with contextlib.redirect_stdout(io.StringIO()):
+            check_firmware.main(["--project", str(project)])
+        golden_breadboard.rebuild_as(project, "button-light-xiao")
+        sheet_module.write(project / "requirements.json", project / "breadboard.md")
+        (project / "firmware" / "pins.py").write_text(pin_assigner.pin_module_for(str(project / "requirements.json")).module)
+        record = BuildRecordStore(project).read()  # the helper writes the record again after the last rebuild: else the sheet reads stale
+        BuildRecordStore(project, clock=FakeClock()).write({key: value for key, value in dict(
+            record, requirements_sha256=sha256_of(project / "requirements.json")).items() if key not in ("schema", "at")})
+        return project
+
+    def listing(self, project, *lines):
+        """breadboard.md with a change section of `lines`, its time kept: what the sheet says is what the guide reads."""
+        text = "\n".join(["## Wiring", "", "### Changes since the sheet spark wrote on 2026-11-21 10:00", "", "Use this list only if.", ""]
+                         + ["- " + line for line in lines] + ["", "### Steps", "", "1. Put the board in."])
+        stat = (project / "breadboard.md").stat()
+        (project / "breadboard.md").write_text(text)
+        os.utime(project / "breadboard.md", ns=(stat.st_atime_ns, stat.st_mtime_ns))
+        return project
+
+    @staticmethod
+    def record_at(project, moment):
+        """The check-firmware record of `project` as if it was saved at `moment`."""
+        path = project / ".spark" / "check-firmware.json"
+        path.write_text(json.dumps(dict(json.loads(path.read_text()), at=moment)))
+
+    def guide(self, project):
+        return show(project)[0]["data"]["guide"]
+
+    def test_a_rebuild_with_a_new_pin_moves_now_off_the_simulation(self):
+        project = self.a_rebuilt_project()
+        said, _ = show(project)
+        now = said["data"]["guide"]["now"]
+        self.assertEqual((now["phase"], now["by"]), ("breadboard", ["you", "claude"]))
+        self.assertEqual(now["changes"], bench_changes.listed_count((project / "breadboard.md").read_text()))
+        self.assertGreater(now["changes"], 0)
+        self.assertEqual(statuses(said)["firmware"], "stale")
+
+    def test_a_moved_pin_says_rewire_and_the_firmware_is_not_stale(self):
+        project = self.a_rebuilt_project()
+        self.listing(project, "Move the green jumper from board D10: it now goes to the row of TactileButton A (it went to B).")
+        kept = json.loads((project / ".spark" / "check-firmware.json").read_text())["data"]["pin_map"]["names"]
+        (project / "firmware" / "pins.py").write_text("".join("%s = %d\n" % (name, 30 + index) for index, name in enumerate(kept)))
+        said, _ = show(project)  # the record read the same names on other numbers: it is older, and its names are pins.py's
+        self.assertIsNone(statuses(said)["firmware"])
+        self.assertEqual((said["data"]["guide"]["now"]["phase"], said["data"]["guide"]["now"]["changes"]), ("breadboard", 1))
+
+    def test_the_count_is_the_sheet_s_own(self):
+        project = self.a_rebuilt_project()
+        three = self.guide(self.listing(project, "Take out R1.", "Take out R2.", "Take out R3."))["now"]
+        self.assertEqual((three["changes"], three["says"].startswith("breadboard.md lists 3 changes under")), (3, True))
+        one = self.guide(self.listing(project, "Take out R1."))["now"]
+        self.assertEqual((one["changes"], one["says"].startswith("breadboard.md lists 1 change under")), (1, True))
+
+    def test_the_sentence_states_only_the_sheet(self):
+        says_now = self.guide(self.a_rebuilt_project())["now"]["says"]
+        self.assertTrue(says_now.startswith("breadboard.md lists "), says_now)
+        self.assertIn("If you have not made them yet", says_now)
+        self.assertNotIn("changed the wiring", says_now)
+
+    def test_a_check_after_the_sheet_closes_the_rewire(self):
+        project = self.a_rebuilt_project()
+        os.utime(project / "breadboard.md", (self.THEN, self.THEN))  # the check below is stamped with the real clock: the same second closes nothing
+        check_firmware_main(project)
+        guide = self.guide(project)
+        self.assertNotEqual(guide["now"]["phase"], "breadboard")
+        self.assertEqual(next(row for row in guide["stations"] if row["phase"] == "breadboard")["place"], "done")
+        self.assertEqual(next(row for row in guide["stations"] if row["phase"] == "breadboard")["note"], "unseen")
+        self.assertIsNone(statuses(show(project)[0])["firmware"])
+
+    def test_a_board_log_after_the_sheet_closes_the_rewire(self):
+        project = self.a_rebuilt_project()
+        os.utime(project / "breadboard.md", (self.THEN, self.THEN))  # a board log of LOGGED_AT (23 Nov) is later
+        self.record_at(project, "2026-11-19T09:00:00+01:00")  # and the check is earlier
+        self.assertEqual(self.guide(project)["now"]["phase"], "breadboard")
+        a_board_log(project, "ready seen", SEEN_SENTENCE)
+        self.assertNotEqual(self.guide(project)["now"]["phase"], "breadboard")
+
+    def test_no_firmware_keeps_the_two_jobs(self):
+        project = self.a_rebuilt_project()
+        (project / "firmware" / "main.py").unlink()
+        now = self.guide(project)["now"]
+        self.assertEqual((now["phase"], now["changes"], now["says"]), ("firmware", None, flow_codes.TWO_JOBS_NOW % now["steps"]))
+        self.assertEqual(next(row for row in self.guide(project)["stations"] if row["phase"] == "breadboard")["place"], "now")
+
+    def test_a_stale_sheet_asks_for_the_build_not_the_rewire(self):
+        project = self.a_rebuilt_project()
+        (project / "dist" / "board" / "built-from.json").write_text(json.dumps({"requirements": {"board": "another"}}))
+        now = self.guide(project)["now"]
+        self.assertEqual(now["says"], flow_codes.SHEET_STALE_NOW)
+        self.assertIsNone(now["changes"])
+
+    def test_changes_is_null_on_every_other_now(self):
+        for project in (a_built_project(), a_firmware(a_built_project()), a_project_built_with_no_simulation_now()):
+            with self.subTest(project=project):
+                self.assertIsNone(self.guide(project)["now"]["changes"])
+                self.assertIn("changes", self.guide(project)["now"])
+
+    def test_the_text_view_says_now_breadboard(self):
+        project = self.a_rebuilt_project()
+        count = self.guide(project)["now"]["changes"]
+        self.assertTrue([row for row in lines_of(project) if row.strip().startswith("NOW (breadboard)") and "lists %d change" % count in row],
+                        lines_of(project))
+
+    def test_the_json_says_it(self):
+        project = self.a_rebuilt_project()
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            flow.main(["show", "--project", str(project), "--json"])
+        self.assertGreater(json.loads(out.getvalue())["data"]["guide"]["now"]["changes"], 0)
+
+    def test_the_page_shows_the_rewire_sentence_and_opens_the_wiring_fold(self):
+        project = self.a_rebuilt_project()
+        write_page(project)
+        page = (project / "page.html").read_text()
+        self.assertIn("</strong> %s</p>" % html.escape(self.guide(project)["now"]["says"]), page)  # NEXT's paragraph
+        self.assertIn('data-fold="wiring" open', page)
+
+    def test_show_reads_the_check_record_twice(self):
+        project = self.a_rebuilt_project()
+        counted, real = [], checks_reading.read_check
+        checks_reading.read_check = lambda folder, name: counted.append(name) or real(folder, name)  # no mock.patch (T2)
+        self.addCleanup(setattr, checks_reading, "read_check", real)
+        run_operation(ShowFlow(), {"project": str(project)}, FakeOutsideWorld(clock=FakeClock()))
+        self.assertEqual(counted.count("check-firmware"), 2)
+
+
+def check_firmware_main(project):
+    """The free checks run on `project`, as the CLI runs them: the record is stamped with the real clock."""
+    with contextlib.redirect_stdout(io.StringIO()):
+        check_firmware.main(["--project", str(project)])
 
 
 #: The bench's sentence in a board log of a flash that did not finish (P1092), and the flow's words for it.
@@ -4261,7 +4408,7 @@ class TheIdeaGoalTest(FlowTest):
         said, _ = show(a_project_with_a_brief(json.dumps({"goal": GOAL})))
         guide = said["data"]["guide"]
         self.assertEqual(guide["now"], {"phase": "needs", "by": ["claude"], "says": "Ask Claude in the chat to write the needs from your goal.",
-                                        "offer": None, "chat_offer": None, "needs": [], "steps": None, "with_wiring": False, "command": None, "no_command": None,
+                                        "offer": None, "chat_offer": None, "needs": [], "steps": None, "changes": None, "with_wiring": False, "command": None, "no_command": None,
                                         "design_checks": None})
         self.assertEqual(([each["place"] for each in guide["stations"] if each["phase"] == "idea"], said["next"], said["data"]["stands_at"]),
                          (["done"], [], "needs"))

@@ -171,6 +171,6 @@
   "file": "scripts/spark/flow/guide.py",
   "name": "a sheet whose steps cannot be counted drops the breadboard from every list (P977 second refuter, 3)",
   "find": "    two_jobs = count is not None",
-  "replace": "    two_jobs = bool(beside_sheet)"
+  "replace": "    two_jobs = bool(now and now.phase == flow_codes.FIRMWARE and now.status == flow_codes.NOT_STARTED and is_sheet_current(project, by_name))"
  }
 ]
