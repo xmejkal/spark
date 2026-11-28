@@ -14,3 +14,4 @@ Card: [P1270 #1829](https://github.com/xmejkal/spark/issues/1829). This file hol
 | 8 | a check in the same second as the sheet closes nothing, so a test would flake | the second round | acted | the tests set the sheet's mtime back with `os.utime`, or the record's `at` |
 | 9 | `now.changes` joins the JSON, so 14 expected `now` dicts gain `"changes": None` | the build | acted | amendment A1: each keeps its full-dict assertion |
 | 10 | the p977 `two_jobs` mutation row named `beside_sheet`, which step 4a moved into a helper | the build | acted | amendment A2: the row mutates the same condition where it lives now; its mutant is caught by the same test |
+| 11 | the PO's cap of 50 critical mutation rows is full (52 with rows 1 and 7) | the hook | acted | the two p1270 rows lose their critical mark (amendment A3); new rows run in every sweep anyway |

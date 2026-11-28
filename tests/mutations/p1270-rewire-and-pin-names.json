@@ -3,8 +3,7 @@
   "file": "scripts/spark/breadboard/bench_changes.py",
   "name": "listed_count counts nothing (ListedCountTest.test_the_rebuild_golden_lists_four_changes)",
   "find": "            count += 1",
-  "replace": "            count += 0",
-  "tier": "critical"
+  "replace": "            count += 0"
  },
  {
   "file": "scripts/spark/breadboard/bench_changes.py",
@@ -40,8 +39,7 @@
   "file": "scripts/spark/flow/phase_readers.py",
   "name": "the names line gives no status (TheStalePinNamesTest.test_the_firmware_is_out_of_date_with_the_names_first)",
   "find": "return self.phase(flow_codes.STALE, [names_line, written])",
-  "replace": "return self.phase(None, [names_line, written])",
-  "tier": "critical"
+  "replace": "return self.phase(None, [names_line, written])"
  },
  {
   "file": "scripts/spark/flow/wired_board.py",
