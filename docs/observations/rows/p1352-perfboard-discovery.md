@@ -22,3 +22,10 @@ Card: [P1352 #1939](https://github.com/xmejkal/spark/issues/1939). Four lenses o
 | 16 | D17, D21 and D22 say more than his words; D18's photos are not kept | refuter 3 | acted | each D marks the team's reading as H; D18 says its details cannot be checked here |
 | 17 | the D18 Results row marks A7 met without a measurement | refuter 3 | acted | the row says partly, nothing measured; A7 stays open |
 | 18 | the Riskiest line, the board actions and the Hand-off's Outcome are stale; A1 still counts | refuter 3 | acted | each updated; A1 retired as accepted, not tested, with a Results row |
+| 19 | D24 says more than his answer ("the perfboard reuses its layout core") and its "first" does not say before what | refuter 4 (PR #1954) | acted | the extra clause dropped; D24 says the spike runs before the perfboard design and that no decision orders it against P1237 |
+| 20 | C30 names the wrong board range: Table I has five boards, from 10x6 to 12x18 holes | refuter 4 (PR #1954) | acted | C30 says five boards from 10x6 to 12x18 holes, reproduced from the paper's Table I |
+| 21 | C30 says jumpers are future work, but the paper draws them, and "C29's plan stands" is drawn from finding nothing | refuter 4 (PR #1954) | acted | C30 says only the optimization of jumper routing is future work, and marks the conclusion H with the caveat that the paper covers placement only |
+| 22 | the new lines use semicolons | refuter 4 (PR #1954) | acted | commas and full stops in D24 and C30 |
+| 23 | items.md's P1359 line and P1359 #1949 on GitHub do not name P1237 | refuter 4 (PR #1954) | acted | items.md's depends-on line names P1237 #1790 through P275 #311. No link on #1949: it is a sub-issue of P275, which spark-main set as blocked by P1237 (D24) |
+| 24 | risks-and-tests.md still points at Q2 as open | refuter 4 (PR #1954) | acted | both lines name D5 and D24 |
+| 25 | brief.md has 163 lines, over the guide's 150 | refuter 4 (PR #1954) | dropped because the check warns and passes, and the brief holds 24 decisions that the design reads |
