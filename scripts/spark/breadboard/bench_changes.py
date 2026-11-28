@@ -290,14 +290,34 @@ def _article(word):
     return "an" if word[:1].lower() in "aeiou" else "a"
 
 
+SINCE_SHEET_HEADING = "Changes since the sheet spark wrote on "
+EARLIER_SHEET_HEADING = "Changes since an earlier sheet spark wrote (spark did not note when)"
+NOTHING_TO_CHANGE = "Nothing to change on the bench."
+SECTION_MARK, LINE_MARK = "### ", "- "
+
+
+def listed_count(text):
+    """The count of change lines that a sheet's text lists under its "Changes since" heading (P1270): the "- " lines up to
+    the next "### " heading, without the nothing line. 0 for a first build, for a build compared with the last build, and
+    for text with no such heading. It reads the lines the writer wrote, with the writer's own constants, and never raises."""
+    count, inside = 0, False
+    for line in str(text).splitlines():
+        if line.startswith(SECTION_MARK):
+            heading = line[len(SECTION_MARK):]
+            inside = heading.startswith(SINCE_SHEET_HEADING) or heading == EARLIER_SHEET_HEADING
+        elif inside and line.startswith(LINE_MARK) and line != LINE_MARK + NOTHING_TO_CHANGE:
+            count += 1
+    return count
+
+
 class ChangeList:
     """Renderer: one bench action per change, the words a person reads."""
 
     def heading(self, since):
         """The heading of the list: it names the time of the sheet it counts from, else says none is known."""
         if since is None:
-            return "Changes since an earlier sheet spark wrote (spark did not note when)"
-        return "Changes since the sheet spark wrote on " + _said(since)
+            return EARLIER_SHEET_HEADING
+        return SINCE_SHEET_HEADING + _said(since)
 
     def note(self, since):
         """The line under the heading: spark cannot know that the person wired that sheet."""

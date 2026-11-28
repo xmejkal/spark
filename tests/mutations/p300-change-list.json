@@ -32,7 +32,7 @@
 {
 "file": "scripts/spark/breadboard/sheet.py",
 "name": "no-nothing-line",
-"find": " or [\"- Nothing to change on the bench.\"]",
+"find": " or [\"- \" + bench_changes.NOTHING_TO_CHANGE]",
 "replace": " or []"},
 {
 "file": "scripts/spark/breadboard/sheet.py",

@@ -441,7 +441,7 @@ def _change_lines(record, new_record, changes):
     if record.why_unread:
         return ["### " + LAST_BUILD_HEADING, "", "- Changes cannot be compared with the last build: %s %s. The steps below are the whole wiring."
                 % (bench_changes.WiringLog.FILE_NAME, record.why_unread)]
-    lines = ["- " + line for line in CHANGE_LIST.render(changes)] or ["- Nothing to change on the bench."]
+    lines = ["- " + line for line in CHANGE_LIST.render(changes)] or ["- " + bench_changes.NOTHING_TO_CHANGE]
     if not new_record.base:
         return ["### " + LAST_BUILD_HEADING, ""] + lines
     since = new_record.base.at
