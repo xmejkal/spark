@@ -1,0 +1,80 @@
+[
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "P1341: a current record of problems still gives NOW's text (test_checks_reading.TheDesignNowLineTest.test_a_current_record_is_no_text_at_any_status)",
+  "find": "    if not built or check.state == RECORDED and check.current:\n",
+  "replace": "    if not built:\n"
+ },
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "P1341: a project with no build gets NOW's text (test_checks_reading.TheDesignNowLineTest.test_no_build_is_no_text)",
+  "find": "    if not built or check.state",
+  "replace": "    if check.state"
+ },
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "P1341: an older record says not run (test_checks_reading.TheDesignNowLineTest.test_an_older_record_says_so_and_names_no_input)",
+  "find": "        head = DESIGN_OLDER_NOW\n",
+  "replace": "        head = DESIGN_NOT_RUN_NOW\n"
+ },
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "P1341: a record that cannot be read says not run (test_checks_reading.TheDesignNowLineTest.test_a_record_that_cannot_be_read_says_why)",
+  "find": "        head = DESIGN_NOT_READ_NOW % (DESIGN_CHECKS_LABEL, check.why)\n",
+  "replace": "        head = DESIGN_NOT_RUN_NOW\n"
+ },
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "P1341: NOW's text reads check-firmware's record (test_checks_reading.TheDesignNowLineTest.test_a_current_record_is_no_text_at_any_status)",
+  "find": "    check = read_check(project, CheckDesign.name)\n    if not built or",
+  "replace": "    check = read_check(project, CheckFirmware.name)\n    if not built or"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "P1341: a build now and a breadboard now of a built board get the text (test_flow.TheNowSaysTheDesignChecksTest.test_a_build_now_and_a_breadboard_now_of_a_built_board_get_null)",
+  "find": "    if now.phase not in NOWS_WITH_DESIGN_CHECKS:\n",
+  "replace": "    if False:\n"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "P1341: the guide holds no text (test_flow.TheNowSaysTheDesignChecksTest.test_an_ok_build_with_no_record_names_the_design_checks_on_the_firmware_now)",
+  "find": "design_checks=design_checks_of(project, now)",
+  "replace": "design_checks=None"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "P1341: a board-only build gets the text (test_flow.TheNowSaysTheDesignChecksTest.test_a_board_only_build_gets_null)",
+  "find": "is_built(readable(BuildRecordStore(project).read, None))",
+  "replace": "True"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "P1341: a deploy now and a simulate now get no text (test_flow.TheNowSaysTheDesignChecksTest.test_a_simulate_now_and_a_deploy_now_get_the_text)",
+  "find": "NOWS_WITH_DESIGN_CHECKS = (flow_codes.FIRMWARE, flow_codes.SIMULATE, flow_codes.DEPLOY)",
+  "replace": "NOWS_WITH_DESIGN_CHECKS = (flow_codes.FIRMWARE,)"
+ },
+ {
+  "file": "scripts/spark/flow/show_flow.py",
+  "name": "P1341: the NOW line drops the text (test_flow.TheNowSaysTheDesignChecksTest.test_on_a_firmware_now_with_no_tag_the_now_line_ends_with_the_text_and_no_line_repeats_it)",
+  "find": "\" \".join([now[\"says\"] + tag] + joined)",
+  "replace": "now[\"says\"] + tag"
+ },
+ {
+  "file": "scripts/spark/flow/show_flow.py",
+  "name": "P1341: a tagged now prints no line of the text (test_flow.TheNowSaysTheDesignChecksTest.test_on_a_tagged_now_the_tag_stays_last_and_the_text_is_its_own_line_under_now)",
+  "find": "    lines += [\"  \" + now[\"design_checks\"]] if now and now.get(\"design_checks\") and not joins_now_line(now_tag(now, steps)) else []\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/flow/show_flow.py",
+  "name": "P1341: the text joins a tagged NOW line (test_flow.TheNowSaysTheDesignChecksTest.test_on_a_tagged_now_the_tag_stays_last_and_the_text_is_its_own_line_under_now)",
+  "find": "    return not tag\n",
+  "replace": "    return True\n"
+ },
+ {
+  "file": "scripts/spark/flow/page_sections.py",
+  "name": "P1341: the page draws no line of the text (test_flow.TheNowSaysTheDesignChecksTest.test_the_page_draws_the_text_last_in_the_now_box_after_the_ask_block)",
+  "find": " + self._design_checks(now)",
+  "replace": ""
+ }
+]

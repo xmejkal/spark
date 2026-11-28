@@ -332,7 +332,8 @@ class GuideHtmlSection:
     def _now(self, page):
         """The NOW box (P1062): its phase and who acts, ON THE BOARD (`page.deployed`, only after a deploy), NEXT, the guide's
         sentence (over a tell, `next_words`' words, P1290), with the step link and the hooks of the sendable offer the now names
-        (`sendable_now`), that offer's notes (P1180, `_note_line`), the deploy's line to type (`_run`, P1286) and the chat offer's block (`_ask`). Gate A's row
+        (`sendable_now`), that offer's notes (P1180, `_note_line`), the deploy's line to type (`_run`, P1286), the chat offer's block (`_ask`)
+        and last the design checks text (`_design_checks`, P1341). Gate A's row
         stands after ON THE BOARD (`_tested`, P1220). With no now, the line that says nothing is open (P1043, read with
         `.get`) and the row, or nothing."""
         now = page.guide["now"]
@@ -349,7 +350,7 @@ class GuideHtmlSection:
         lines.append('<p class="next"%s><strong>%s</strong> %s%s</p>' % (
             hooks, _text(flow_codes.NEXT_ACT_LABEL), _text(next_words.next_words(now)), self._step_link(page)))
         lines += [_note_line(offer)] if offer and offer.get("notes") else []
-        return "\n".join(['<div class="now">'] + lines + self._run(now) + self._ask(now) + ["</div>"])
+        return "\n".join(['<div class="now">'] + lines + self._run(now) + self._ask(now) + self._design_checks(now) + ["</div>"])
 
     @staticmethod
     def _tested(page):
@@ -378,6 +379,12 @@ class GuideHtmlSection:
             return []
         return ['<div class="ask" data-key="%s"><strong>%s</strong> <code>%s</code></div>' % (
             _text(now["chat_offer"]), _text(flow_codes.ASK_CLAUDE), _text(tell))]
+
+    @staticmethod
+    def _design_checks(now):
+        """NOW's design checks text (P1341, `now.design_checks`, read with `.get`), plain, the last line of the box: after the
+        chat offer's block, so NEXT stays right over its tell. Nothing while the guide holds null."""
+        return ['<p class="design-checks">%s</p>' % _text(now["design_checks"])] if now.get("design_checks") else []
 
     @staticmethod
     def _step_link(page):

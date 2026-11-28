@@ -39,7 +39,7 @@ Words for a check's kept answer ([P1209](https://github.com/xmejkal/spark/issues
 |---|---|---|---|
 | check record | the file `.spark/<op>.json` that a check Operation keeps of its last answer (`check-firmware` and `check-design`), written and read through `CheckRecordStore` | "kept check": *kept* is `--keep`'s, the kept step's and the kept document's | `scripts/spark/records/check_record.py` |
 | free checks | the import check and the own tests together, the line's label "Free checks" | the paid scenario run | `flow/checks_reading.FREE_CHECKS_LABEL` |
-| Design checks | the line of check-design's record (P1255), which the build phase says; the journey step is "Checks", and the page names the build phase "Board files" | "Free checks", check-firmware's | `flow/checks_reading.DESIGN_CHECKS_LABEL` |
+| Design checks | the line of check-design's record (P1255), which the build phase says, and NOW, in full as "the design checks", while no record is current (P1341); the journey step is "Checks", and the page names the build phase "Board files" | "Free checks", check-firmware's | `flow/checks_reading.DESIGN_CHECKS_LABEL` |
 | root input | an input that a check record names as `spark:<path>` (in spark's folder) or `store:<path>` (in the store), never a whole path | an input in the project | `check_record.ROOTS`, `input_name` |
 | current, older | the record's inputs hash to its kept sha256, or they do not | "stale", a phase status word | `CheckRecord.current` |
 | pin map, use | the pin map is `firmware/pins.py`; a use is one pin name at one file and line, compared by `PinMapUses` (`pin_map_uses.py`), whose kept data `checks_reading.missing_pin_line` reads | "pin name" (a part's pin), "unseen" | `PinMapUses`, `data.pin_map` |

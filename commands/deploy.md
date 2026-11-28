@@ -11,6 +11,8 @@ This page was a section of `/spark:build` until P213 ([#192](https://github.com/
 
 Before a deploy of firmware that no simulation tested (`--no-simulation`), run the free check `${CLAUDE_PLUGIN_ROOT}/scripts/check_firmware.py --project .` ([P1208](https://github.com/xmejkal/spark/issues/1757)): it shows a module that does not import, a pin name that `firmware/pins.py` lacks, or an own test that fails, before the board gets the image.
 
+Before the look, read `${CLAUDE_PLUGIN_ROOT}/scripts/flow.py show --project . --json`. While it gives `data.guide.now.design_checks` a text, offer the design checks, `${CLAUDE_PLUGIN_ROOT}/scripts/check_all.py --project .`, to the person first, then go on: they block nothing ([P1341](https://github.com/xmejkal/spark/issues/1924)).
+
 
 Before you propose a flash, and when the person asks whether the right board is plugged in, run the look:
 

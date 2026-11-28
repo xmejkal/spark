@@ -6,6 +6,7 @@ from `.spark/check-firmware.json` alone, and whether the page draws it grey: onl
 """
 
 import ast
+import re
 import sys
 import tempfile
 import unittest
@@ -221,6 +222,60 @@ class TheDesignLineTest(unittest.TestCase):
     def test_the_line_reads_check_design_s_record_not_check_firmware_s(self):
         project = with_record(a_project())
         self.assertEqual(checks_reading.design_line(project, True), "Design checks: not run yet. Ask Claude to run them, for free.")
+
+
+class TheDesignNowLineTest(unittest.TestCase):
+    """P1341: `design_now_line` is NOW's text of the design checks while no check-design record is current: a head by the
+    record's state, the gloss and one ask. A current record says nothing here, at any status: the build row says it."""
+
+    INPUTS, a_project, kept = TheDesignLineTest.INPUTS, TheDesignLineTest.a_project, TheDesignLineTest.kept
+    NOT_RUN = ("The design checks have not run yet. They compare the circuit with the facts of the board, its parts and the "
+               "project's rules. Ask Claude to run the design checks.")
+    OLDER = ("The design checks ran before their files changed. They compare the circuit with the facts of the board, its "
+             "parts and the project's rules. Ask Claude to run the design checks.")
+    UNREAD = ("Design checks: the check record is no JSON. They compare the circuit with the facts of the board, its parts "
+              "and the project's rules. Ask Claude to run the design checks.")
+
+    def unreadable(self):
+        project = self.a_project()
+        (project / ".spark").mkdir()
+        (project / ".spark" / "check-design.json").write_text("{not json")
+        return project
+
+    def older(self):
+        project = self.kept(self.a_project(), "ok", ["2 check(s) found nothing"])
+        (project / "requirements.json").write_text('{"board": "firebeetle2-esp32s3"}\n')
+        return project
+
+    def test_a_build_and_no_record_says_the_design_checks_have_not_run(self):
+        self.assertEqual(checks_reading.design_now_line(self.a_project(), True), self.NOT_RUN)
+
+    def test_no_build_is_no_text(self):
+        self.assertIsNone(checks_reading.design_now_line(self.a_project(), False))
+        self.assertIsNone(checks_reading.design_now_line(self.unreadable(), False))
+
+    def test_a_current_record_is_no_text_at_any_status(self):
+        for status in ("ok", "problems", "could-not-run"):
+            with self.subTest(status=status):
+                self.assertIsNone(checks_reading.design_now_line(self.kept(self.a_project(), status, ["1 line"]), True))
+
+    def test_an_older_record_says_so_and_names_no_input(self):
+        said = checks_reading.design_now_line(self.older(), True)
+        self.assertEqual(said, self.OLDER)
+        self.assertNotIn("requirements.json", said)
+
+    def test_a_record_that_cannot_be_read_says_why(self):
+        self.assertEqual(checks_reading.design_now_line(self.unreadable(), True), self.UNREAD)
+
+    def test_no_text_says_them_or_free(self):
+        for project in (self.a_project(), self.older(), self.unreadable()):
+            said = checks_reading.design_now_line(project, True)
+            with self.subTest(said=said):
+                self.assertTrue(said)
+                self.assertEqual(re.findall(r"\b(them|free)\b", said.lower()), [])
+
+    def test_the_text_reads_check_design_s_record_not_check_firmware_s(self):
+        self.assertEqual(checks_reading.design_now_line(with_record(a_project()), True), self.NOT_RUN)
 
 
 if __name__ == "__main__":

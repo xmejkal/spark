@@ -721,6 +721,97 @@ class TheDesignChecksLineTest(FlowTest):
         self.assertIn("<p>Design checks, ", (project / "page.html").read_text())
 
 
+#: P1341: NOW's text of the design checks while no check-design record is current.
+DESIGN_NOW = ("The design checks have not run yet. They compare the circuit with the facts of the board, its parts and the "
+              "project's rules. Ask Claude to run the design checks.")
+
+
+def design_checks(project):
+    """The guide's `now`: (its phase, its `design_checks`) in `flow.py show --json`."""
+    now = show(project)[0]["data"]["guide"]["now"]
+    return now["phase"], now["design_checks"]
+
+
+class TheNowSaysTheDesignChecksTest(FlowTest):
+    """P1341: after an ok build, NOW stays on the firmware (or the simulate or the deploy) and, while no check-design record
+    is current, the guide's `now.design_checks` says that the design checks have not run. A current record of any status
+    keeps it null: the build row says the status."""
+
+    AT, kept = TheDesignChecksLineTest.AT, TheDesignChecksLineTest.kept
+
+    def test_an_ok_build_with_no_record_names_the_design_checks_on_the_firmware_now(self):
+        self.assertEqual(design_checks(a_built_project()), ("firmware", DESIGN_NOW))
+
+    def test_after_check_all_the_key_is_null(self):
+        project = a_built_project()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            check_all.main(["--project", str(project)], outside=FakeOutsideWorld())
+        self.assertEqual(design_checks(project), ("firmware", None))
+
+    def test_a_current_record_of_problems_gives_null_and_the_build_row_still_says_it(self):
+        project = self.kept(a_built_project())
+        self.assertEqual(design_checks(project), ("firmware", None))
+        self.assertTrue(says(show(project)[0], "build")[-1].startswith("Design checks, "))
+
+    def test_a_build_that_skipped_the_simulation_and_a_board_wokwi_has_no_model_of_get_the_text(self):
+        for name, project in (("every part skipped", a_built_project(stages={"board": "ok", "build": "ok", "simulation": "skipped"})),
+                              ("no model", a_project_built_with_no_simulation_now())):
+            with self.subTest(build=name):
+                self.assertEqual(design_checks(project), ("firmware", DESIGN_NOW))
+
+    def test_a_board_only_build_gets_null(self):
+        self.assertEqual(design_checks(a_board_only_project()), ("firmware", None))
+        self.assertEqual(design_checks(a_firmware(a_board_only_project())), ("simulate", None))
+
+    def test_a_simulate_now_and_a_deploy_now_get_the_text(self):
+        for name, project, phase in (("simulate", a_simulate_now(a_built_project()), "simulate"),
+                                     ("deploy", a_run(an_image(a_firmware(a_built_project())), "passed"), "deploy")):
+            with self.subTest(now=name):
+                self.assertEqual(design_checks(project), (phase, DESIGN_NOW))
+
+    def test_a_build_now_and_a_breadboard_now_of_a_built_board_get_null(self):
+        stale, no_sheet = a_built_project(), a_built_project()
+        (stale / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": []}))
+        (no_sheet / "breadboard.md").unlink()
+        for project, phase in ((stale, "build"), (no_sheet, "breadboard")):
+            with self.subTest(now=phase):
+                self.assertEqual(design_checks(project), (phase, None))
+
+    def test_says_stays_the_sentence_of_the_phase(self):
+        project = a_built_project()
+        before = show(project)[0]["data"]["guide"]["now"]["says"]
+        self.assertEqual(show(self.kept(project, "ok"))[0]["data"]["guide"]["now"]["says"], before)
+        self.assertNotIn("design checks", before)
+
+    def test_on_a_firmware_now_with_no_tag_the_now_line_ends_with_the_text_and_no_line_repeats_it(self):
+        project = a_built_project()
+        self.assertTrue(now_line(project).startswith("  NOW (firmware): Two jobs, in any order: "), now_line(project))
+        self.assertTrue(now_line(project).endswith(" the free checks can import them. " + DESIGN_NOW), now_line(project))
+        self.assertEqual([line for line in lines_of(project) if DESIGN_NOW in line], [now_line(project)])
+
+    def test_on_a_tagged_now_the_tag_stays_last_and_the_text_is_its_own_line_under_now(self):
+        project = a_run(an_image(a_firmware(a_built_project())), "passed")
+        lines = lines_of(project)
+        self.assertTrue(now_line(project).endswith(" [next: look, needs you]"), now_line(project))
+        self.assertNotIn(DESIGN_NOW, now_line(project))
+        own = lines.index("  " + DESIGN_NOW)
+        self.assertLess(lines.index(now_line(project)), own)
+        self.assertEqual([line for line in lines[:own] if line.startswith(("  DONE", "  LATER", "  TESTED"))], [], lines)
+
+    def test_the_page_draws_the_text_last_in_the_now_box_after_the_ask_block(self):
+        project = a_built_project()
+        write_page(project)
+        text = (project / "page.html").read_text()
+        self.assertIn('</code></div>\n<p class="design-checks">%s</p>\n</div>' % html.escape(DESIGN_NOW), text)
+        self.assertEqual(text.count(html.escape(DESIGN_NOW)), 1)
+        self.assertIn("Two jobs, in any order: wire the breadboard (10 steps, power off), and get the firmware from Claude.", text)
+
+    def test_a_current_record_draws_no_line_on_the_page(self):
+        project = self.kept(a_built_project(), "ok", ["2 check(s) found nothing"])
+        write_page(project)
+        self.assertNotIn('class="design-checks"', (project / "page.html").read_text())
+
+
 class TheBuildRecordStoreTest(unittest.TestCase):
     def test_a_write_holds_the_schema_the_record_and_the_time_in_the_machine_s_zone(self):
         writer, project = FakeTextFileWriter(), Path(tempfile.mkdtemp())
@@ -835,7 +926,7 @@ class TheGuideTest(FlowTest):
         # P977 PR 2: now holds `steps`, the wiring's step count while the wiring is part of now, else None.
         self.assertEqual(said["data"]["guide"], {
             "now": {"phase": "firmware", "by": ["you", "claude"], "offer": None, "chat_offer": "write-firmware", "needs": [], "steps": 10,
-                    "with_wiring": True, "command": None, "no_command": None,
+                    "with_wiring": True, "command": None, "no_command": None, "design_checks": DESIGN_NOW,
                     "says": "Two jobs, in any order: wire the breadboard (10 steps, power off), and ask Claude to write the "
                             "firmware. Spark cannot see your wiring. Keep main.py thin, with the code in modules it calls, so "
                             "the free checks can import them."},
@@ -898,7 +989,7 @@ class TheGuideTest(FlowTest):
         said, _ = show(project)
         self.assertEqual(said["data"]["guide"], {
             "now": {"phase": "deploy", "by": ["your terminal"], "offer": None, "chat_offer": "look-at-board", "needs": [], "steps": None,
-                    "with_wiring": True, "command": None, "no_command": NO_LINE_TO_TYPE_SAYS,
+                    "with_wiring": True, "command": None, "no_command": NO_LINE_TO_TYPE_SAYS, "design_checks": DESIGN_NOW,
                     "says": "When the breadboard is wired, plug the board into USB. Ask Claude to look at it first, then "
                             "run the deploy in your terminal."},
             "done": ["idea", "requirements (no needs or picks behind it)", "build (no simulation)", "breadboard (spark cannot see it)", "firmware"],
@@ -994,7 +1085,7 @@ class TheGuideTest(FlowTest):
         project = Path(tempfile.mkdtemp()) / "plant-alarm"
         project.mkdir()
         self.assertEqual(show(project)[0]["data"]["guide"], {
-            "now": {"phase": "idea", "by": ["you"], "offer": None, "chat_offer": None, "needs": [], "steps": None, "with_wiring": False, "command": None, "no_command": None,
+            "now": {"phase": "idea", "by": ["you"], "offer": None, "chat_offer": None, "needs": [], "steps": None, "with_wiring": False, "command": None, "no_command": None, "design_checks": None,
                     "says": "Tell Claude your goal in the chat, in your own words."},
             "done": [], "later": ["needs", "parts", "requirements", "build", "breadboard", "firmware", "simulate", "deploy"],
             "set_aside": [], "no_simulation": None, "no_open_phase": None, "wired": None,  # P1044: no sheet and no board log
@@ -1064,7 +1155,7 @@ class TheGuideTest(FlowTest):
             {"id": "wet", "does": "sense", "what": "soil-moisture", "aside": True}])
         guide = show(project)[0]["data"]["guide"]
         self.assertEqual(guide["now"], {
-            "phase": "parts", "by": ["you"], "offer": None, "chat_offer": None, "needs": [], "steps": None, "with_wiring": False, "command": None, "no_command": None,
+            "phase": "parts", "by": ["you"], "offer": None, "chat_offer": None, "needs": [], "steps": None, "with_wiring": False, "command": None, "no_command": None, "design_checks": None,
             "says": "Every need is set aside, so no pick can make the parts list. Tell Claude which need to bring back, "
                     "then pick a part."})
         self.assertEqual((guide["done"], guide["later"], guide["set_aside"]), (
@@ -2322,7 +2413,8 @@ class TheNextOnlyStepTest(FlowTest):
         said, _ = show(project)
         whole = str(project.absolute())
         self.assertEqual(said["data"]["guide"]["now"], {"phase": "simulate", "by": ["claude"], "says": SIM_FILES_NOW, "offer": None,
-                                                        "chat_offer": None, "needs": [], "steps": None, "with_wiring": False, "command": None, "no_command": None})
+                                                        "chat_offer": None, "needs": [], "steps": None, "with_wiring": False, "command": None, "no_command": None,
+                                                        "design_checks": DESIGN_NOW})
         self.assertEqual(said["next"], [{"op": "build-board", "argv": [str(project.absolute() / "requirements.json"), "--keep", whole],
                                          "why": "Build the board", "effects": ["reads", "runs", "writes"], "needs_yes": False,
                                          "env": self.env()}])
@@ -3324,7 +3416,7 @@ class TheDeployNowTest(FlowTest):
                 said, _ = show(a_board_log(a_deploy_project(), verdict, sentence, reason=reason))
                 self.assertEqual(self.now(said), {"phase": "deploy", "by": ["your terminal"], "says": now, "offer": None,
                                                   "chat_offer": chat, "needs": [], "steps": None, "with_wiring": True,
-                                                  "command": None, "no_command": NO_LINE_TO_TYPE_SAYS})
+                                                  "command": None, "no_command": NO_LINE_TO_TYPE_SAYS, "design_checks": DESIGN_NOW})
                 self.assertEqual([step["op"] for step in said["next"]], ["look"])
                 self.assertIsNone(said["data"]["guide"]["no_open_phase"])
 
@@ -4123,7 +4215,8 @@ class TheIdeaGoalTest(FlowTest):
         said, _ = show(a_project_with_a_brief(json.dumps({"goal": GOAL})))
         guide = said["data"]["guide"]
         self.assertEqual(guide["now"], {"phase": "needs", "by": ["claude"], "says": "Ask Claude in the chat to write the needs from your goal.",
-                                        "offer": None, "chat_offer": None, "needs": [], "steps": None, "with_wiring": False, "command": None, "no_command": None})
+                                        "offer": None, "chat_offer": None, "needs": [], "steps": None, "with_wiring": False, "command": None, "no_command": None,
+                                        "design_checks": None})
         self.assertEqual(([each["place"] for each in guide["stations"] if each["phase"] == "idea"], said["next"], said["data"]["stands_at"]),
                          (["done"], [], "needs"))
 

@@ -4,7 +4,8 @@ sentence from the record alone, beside the deploy's reading (`deploy_reading`). 
 and runs nothing: `flow.py show` never runs a check. The guide's `simulation` entry (`simulation_of`) is the free checks'
 sentence, then why there is no simulation, and whether the page draws it grey: only where nothing more runs. A check
 record whose files changed since reads as older, never as current. check-design (P1255) reuses `read_check` and `said_of`
-with its own name and label: `design_line` is the Design checks' line, which the build phase says.
+with its own name and label: `design_line` is the Design checks' line, which the build phase says, and `design_now_line`
+is NOW's text of the design checks while no record is current (P1341).
 """
 
 from spark.checks.check_design import CheckDesign
@@ -31,6 +32,14 @@ CURRENT = "%s, %s: %s."
 CURRENT_NOT_OK = "%s, %s, %s: %s. Ask Claude to go through them with you."
 #: How the result lines of a current record, and the inputs of an older one, are joined.
 LINES_JOIN, INPUTS_JOIN = "; ", " or "
+#: NOW's text of the design checks (P1341), while no check-design record is current: a head by the record's state (none,
+#: older, or unread with its why, in the shape of NOT_READ), the gloss and one ask. "The design checks" in full, never
+#: "them" or "free": on the firmware's NOW the free checks are named just before it (THIN_MAIN_RULE).
+DESIGN_NOT_RUN_NOW = "The design checks have not run yet."
+DESIGN_OLDER_NOW = "The design checks ran before their files changed."
+DESIGN_NOT_READ_NOW = "%s: %s."
+DESIGN_GLOSS_NOW = "They compare the circuit with the facts of the board, its parts and the project's rules."
+DESIGN_ASK_NOW = "Ask Claude to run the design checks."
 
 
 def read_check(project, name):
@@ -62,6 +71,22 @@ def design_line(project, built):
     if not built and check.state == NONE_RECORDED:
         return None
     return said_of(check, DESIGN_CHECKS_LABEL)
+
+
+def design_now_line(project, built):
+    """NOW's text of the design checks (P1341): the head of the check-design record of `project` by its state (none, older
+    or unread), the gloss and the ask. None when `built` is False, or for a current record at any status: the build row
+    says its status (`design_line`). It reads the record and runs nothing."""
+    check = read_check(project, CheckDesign.name)
+    if not built or check.state == RECORDED and check.current:
+        return None
+    if check.state == NONE_RECORDED:
+        head = DESIGN_NOT_RUN_NOW
+    elif check.state == NOT_CHECKED:
+        head = DESIGN_NOT_READ_NOW % (DESIGN_CHECKS_LABEL, check.why)
+    else:
+        head = DESIGN_OLDER_NOW
+    return " ".join((head, DESIGN_GLOSS_NOW, DESIGN_ASK_NOW))
 
 
 def is_current_ok(check):

@@ -15,7 +15,7 @@ from spark.firmware import firmware_codes
 from spark.firmware.project_image import DeployError, ProjectImage
 from spark.flow import checks_reading, deploy_reading, flow_codes, wired_board
 from spark.flow.no_model import stops_only_for_no_model
-from spark.flow.phase_readers import REQUIREMENTS_FILE, counted, read_requirements, set_aside
+from spark.flow.phase_readers import REQUIREMENTS_FILE, counted, is_built, read_requirements, set_aside
 from spark.core.errors import CodedMessageError
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 
@@ -30,6 +30,8 @@ NO_IMAGE_FACT = ImageFact(None, None)
 UNREADABLE_FACT = ImageFact(None, firmware_codes.LOG_UNREADABLE)
 #: What the image's runs say that leaves the simulate open: a run failed on it, firmware changed after it, or none ran.
 OPEN_IMAGE_FACTS = (flow_codes.RUN_FAILED, flow_codes.IMAGE_OLDER, flow_codes.IMAGE_UNTESTED)
+#: The now phases after the wiring sheet, where NOW says the design checks' text while no check-design record is current (P1341).
+NOWS_WITH_DESIGN_CHECKS = (flow_codes.FIRMWARE, flow_codes.SIMULATE, flow_codes.DEPLOY)
 
 
 def readable(read, default):
@@ -49,6 +51,15 @@ def no_model_phases(project, by_name):
     if not build or build.status not in (COULD_NOT_RUN, None) or not stops_only_for_no_model(readable(BuildRecordStore(project).read, None)):
         return set()
     return {flow_codes.BUILD} | ({flow_codes.SIMULATE} if simulate and simulate.status in (flow_codes.NOT_STARTED, None) else set())
+
+
+def design_checks_of(project, now):
+    """The guide's `now.design_checks` (P1341): NOW's text of the design checks (`checks_reading.design_now_line`) on a now
+    phase of NOWS_WITH_DESIGN_CHECKS, from the last build's record (`is_built`), else None. A breadboard or build now asks
+    for a build first. It reads .spark/build.json once more, as `no_model_phases` does, and only on those now phases."""
+    if now.phase not in NOWS_WITH_DESIGN_CHECKS:
+        return None
+    return checks_reading.design_now_line(project, is_built(readable(BuildRecordStore(project).read, None)))
 
 
 def image_fact(project, default_without_toml=False):
@@ -311,7 +322,7 @@ def gate_a_of(fact, reached, no_model):
 
 def guide_of(project, phases, steps=count_steps, deploy=None, board=None):
     """What the person does now, what is done, what comes later and what they set aside, from the Phases of `project`:
-    `{"now": {phase, by, says, offer, chat_offer, needs, steps, with_wiring}, "stations", "done", "later", "set_aside", "no_simulation", "simulation", "no_open_phase", "wired", "gate_a"}`.
+    `{"now": {phase, by, says, offer, chat_offer, needs, steps, with_wiring, design_checks}, "stations", "done", "later", "set_aside", "no_simulation", "simulation", "no_open_phase", "wired", "gate_a"}`.
     `no_simulation` is the flag's sentence and `simulation` the line show and the page draw (`checks_reading.simulation_of`).
     `stations` places each phase beside the now (`stations_of`, P1119), and `done` and `later` are built from it. `steps` counts the wiring
     sheet's steps. The needs are read once more, by the parts phase's own rule (`counted`, `set_aside`). `deploy` is the
@@ -337,7 +348,7 @@ def guide_of(project, phases, steps=count_steps, deploy=None, board=None):
     written = not (now and now.phase == flow_codes.SIMULATE) or bool(scenario_names(project))
     sentence = with_requirements_now(project, with_deploy_now(now_sentence(now, open_needs, fact, count, written), now, deploy), now) \
         if now else None
-    said = dict(now_of(now, sentence, open_needs, count), with_wiring=with_wiring(project, now, by_name, count)) if now else None
+    said = dict(now_of(now, sentence, open_needs, count), with_wiring=with_wiring(project, now, by_name, count), design_checks=design_checks_of(project, now)) if now else None
     # beside the firmware, the wiring is part of now
     breadboard_place = flow_codes.NOW_PLACE if two_jobs else flow_codes.DONE_PLACE if is_sheet_current(project, by_name) else None
     stations = with_start_not_seen(stations_of(phases, at, no_model, breadboard_place, has_no_picks(by_name)), deploy_reading.is_start_not_seen(deploy))

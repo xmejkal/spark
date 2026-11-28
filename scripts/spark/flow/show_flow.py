@@ -101,16 +101,28 @@ def now_tag(now, steps):
     return NOW_STEP % (steps[0].op, NEEDS_YOU if needs_you(steps[0]) else "") if steps else ""
 
 
+def joins_now_line(tag):
+    """Whether NOW's design checks text (P1341, `now.design_checks`) joins the NOW line: only with no tag (`now_tag`), so a
+    tag stays last and never reads as the design checks' step. With a tag, `guide_lines` prints the text as its own line."""
+    return not tag
+
+
 def guide_now_line(guide, steps=()):
     """The NOW line of `guide`, with the key of its offer or the op of its next-only step (`now_tag`), or None when it has
-    no now: `guide_lines`' first line, and the line a kept build ends with when show names no step (P1292)."""
+    no now: `guide_lines`' first line, and the line a kept build ends with when show names no step (P1292). With no tag,
+    the design checks text (P1341, read with `.get`) ends it (`joins_now_line`)."""
     now = guide["now"]
-    return printable(GUIDE_LINE % (flow_codes.GUIDE_NOW % now["phase"], now["says"] + now_tag(now, steps))) if now else None
+    if not now:
+        return None
+    tag = now_tag(now, steps)
+    joined = [now["design_checks"]] if now.get("design_checks") and joins_now_line(tag) else []  # P1341
+    return printable(GUIDE_LINE % (flow_codes.GUIDE_NOW % now["phase"], " ".join([now["says"] + tag] + joined)))
 
 
 def guide_lines(guide, steps=()):
     """The guide as a person reads it in a terminal (P1030): NOW with the key of its offer or the op of its next-only step
-    (`now_tag`), the deploy's line to type or why there is none (P1286, `with_command`), gate A's row (P1220), DONE,
+    (`now_tag`), the deploy's line to type or why there is none (P1286, `with_command`), the design checks text on a
+    tagged now (P1341, `joins_now_line`), gate A's row (P1220), DONE,
     LATER, the simulation line (the free checks' state and why there is no simulation, P1209, read with `guide.get`), SET
     ASIDE. A list with no item draws no line. The page draws its
     station line in place of DONE and LATER (P1119); the CLI keeps them. The line that says nothing is open (P1043,
@@ -119,6 +131,7 @@ def guide_lines(guide, steps=()):
     lines = [guide_now_line(guide, steps)] if now else []
     lines += [GUIDE_LINE % (flow_codes.LINE_TO_TYPE_LABEL, now["command"])] if now and now.get("command") else []  # P1286
     lines += ["  " + now["no_command"]] if now and now.get("no_command") else []
+    lines += ["  " + now["design_checks"]] if now and now.get("design_checks") and not joins_now_line(now_tag(now, steps)) else []
     lines += ["  " + guide["no_open_phase"]] if guide.get("no_open_phase") else []
     lines += [GUIDE_LINE % (flow_codes.TESTED_LABEL, guide["gate_a"]["says"])] if guide.get("gate_a") else []  # P1220: gate A's row
     lines += [GUIDE_LINE % (flow_codes.GUIDE_DONE, ", ".join(guide["done"]))] if guide["done"] else []
