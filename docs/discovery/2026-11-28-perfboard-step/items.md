@@ -47,7 +47,7 @@ The proposals below are cards for spark-main to file after the PO's yes. P275 #3
 - type: story
 - needed by: "the perfboard step, it should actually maybe not be so much different from the breadboard" (the PO, 2026-11-28)
 - value proven by: one CLI run on the small handheld game console made during the MVP walk (P1361 #1951, D20, D21) writes each part's holes, each join with its kind and every hole, and the cut, and the same-pins check passes. Its `--json` has `board`, `parts`, `joins`, `weights` and `pins_kept`
-- depends on: the two refactor stories above, spike P1239 #1792, the drawer story (D7, D10)
+- depends on: the two refactor stories above, spike P1239 #1792, the drawer story (D7, D10), P1237 #1790's `edit-layout` through its parent P275 #311 (D24)
 - status: filed D15 as P1359 [#1949](https://github.com/xmejkal/spark/issues/1949), label story (the repository has no refactor or feature label)
 - label (the repository's type label): feature
 - parent (the epic, as a sub-issue): P275 #311
