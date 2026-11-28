@@ -94,5 +94,23 @@
   "name": "the breadboard's step list is empty (TheRewireTest.test_next_is_the_check_firmware_step)",
   "find": "    return [check_step(project, REWIRE_WHY)] if guide[\"now\"].get(\"changes\") else []",
   "replace": "    return []"
+ },
+ {
+  "file": "scripts/spark/flow/phase_steps.py",
+  "name": "the stale firmware's step list is empty (TheStalePinNamesTest.test_next_is_the_check_firmware_step)",
+  "find": "    return [check_step(project, PIN_NAMES_WHY)] if phase.status == flow_codes.STALE else []",
+  "replace": "    return []"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "the (firmware, stale) NOW sentence is the table's (TheStalePinNamesTest.test_now_on_a_stale_firmware_asks_claude_to_check_the_pin_names)",
+  "find": "    if (now.phase, now.status) == (flow_codes.FIRMWARE, flow_codes.STALE):",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/spark/flow/wired_board.py",
+  "name": "the same second is a follow-up (TheRewireCountTest.test_the_same_second_is_no_follow_up)",
+  "find": "> datetime.datetime.fromisoformat(since)",
+  "replace": ">= datetime.datetime.fromisoformat(since)"
  }
 ]
