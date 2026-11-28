@@ -195,11 +195,8 @@ is, each part alone on an empty ledger.
 
 ## Searches
 
-1. Fetch https://docs.espressif.com/projects/esp-hardware-design-guidelines/en/latest/esp32s3/pcb-layout-design.html
-   · served: the antenna end (TL2-8) · used.
-2. Fetch https://www.digikey.com/en/maker/blogs/2022/start-building-cleaner-perfboard-projects-using-these-simple-tips
-   · served: the joins · not used, a Cloudflare challenge came back.
-3. Search, verbatim: "perfboard soldering tips lowest components first female headers bare tinned wire jumper"
-   (DuckDuckGo HTML) · served: the joins, the order and the headers · used for TL2-7's snippet and to find 4.
+1. Fetch https://docs.espressif.com/projects/esp-hardware-design-guidelines/en/latest/esp32s3/pcb-layout-design.html · served: the antenna end (TL2-8) · used.
+2. Fetch https://www.digikey.com/en/maker/blogs/2022/start-building-cleaner-perfboard-projects-using-these-simple-tips · served: the joins · not used, a Cloudflare challenge came back.
+3. Search, verbatim: "perfboard soldering tips lowest components first female headers bare tinned wire jumper" (DuckDuckGo HTML) · served: the joins, the order and the headers · used for TL2-7's snippet and to find 4.
 4. Fetch https://perfboarddesigner.com/learn/perfboard-wiring/ · served: the joins, the wire sizes, the copper-side
    order · used (TL2-1 to TL2-6).

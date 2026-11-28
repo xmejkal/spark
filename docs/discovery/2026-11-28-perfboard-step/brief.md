@@ -7,9 +7,9 @@ the remaining risk (D rows). An extension may tighten these. Next: design, or a 
 → the design skill the facts name, with this file; otherwise none, and the collection plan says who runs it.
 Stands on: the assumptions not retired in risks-and-tests.md; of which those the decider rated high, or — while any
 is unrated. check computes both. -->
-**Ready for:** ⟨fill⟩ <!-- REQUIRED:ready -->
-**Stands on:** ⟨fill⟩ H, ⟨fill⟩ of which would change the decision <!-- REQUIRED:debt -->
-**Decision needed:** ⟨fill⟩ <!-- REQUIRED:decision-needed -->
+**Ready for:** collecting evidence <!-- REQUIRED:ready -->
+**Stands on:** 10 H, — of which would change the decision <!-- REQUIRED:debt -->
+**Decision needed:** Q1 (the ratings and pass lines), then Q2 (the order against P1199 D3), then Q3 to Q9, one at a time <!-- REQUIRED:decision-needed -->
 
 ## Frame
 - Request, verbatim (corrections marked): the PO, 2026-11-28, about 10:55 CET, relayed by spark-artifact: "I'd actually like you to start refining and planning and designing etc. the perfboard step, it should actually maybe not be so much different from the breadboard, they will definitely share some modules or strategies and interfaces if you will, like routable, etc. etc. Make sure the architecture is good as usual, reusable, feel free to refactor anytime you think something could be dried out (that works in general, if it kinda makes sense, we don't want to have multiple places in the codebase implementing almost the same, remember this), so yeah, lets do that, including the designs, etc." And on P1350 #1937, the same morning: "lets just leave the penalties for turning and crossing and such configurable or at least as constants in the code, so that we can later play around with it." <!-- REQUIRED:request -->
@@ -43,17 +43,63 @@ Say what the evidence can support: an account (what happened to one person), dat
 period), a document (what was specified), the product (what exists, not whether anyone needs it), a benchmark (a
 comparison). Model knowledge is H until a source is read. Elsewhere cite a ★ claim as ★C<n>, with its keep: words.
 e.g. `- [★C2] 13 of 526 tickets ask for recurring tasks · E tickets.csv:2-14 · caveat: picked by Lena; shows that, not how often` -->
-- ⟨fill⟩ <!-- REQUIRED:findings -->
+- [★C1] His perfboard words repeat two wants six weeks apart: one code base shared with the breadboard (2026-10-16) and a plan that spark makes (2026-11-26). No word gives a soldering date · E docs/discovery/2026-10-16-p269-views-and-editors/brief.md:15, #311 notes 1 to 3, council/po-assistant.md PA-1 · caveat: what he said he wants, not how soon he uses it <!-- REQUIRED:findings -->
+- [★C2] The request of 2026-11-28 asks for paper ("refining and planning and designing", "including the designs") and gives leave to refactor ("feel free to refactor anytime"). P1199 D3 builds the layout core after the MVP, in the first slice that needs it. Two readings fit · E docs/discovery/2026-11-26-p1199-layout-core/brief.md:124 (D3), the request in this brief's Frame · H the two readings (council/po-assistant.md:32, council/architecture.md:197) · caveat: an open question with a direct MVP cost (Q2)
+- [★C3] On the MVP bar the perfboard scores zero: it starts after "it works" on the breadboard, and scrum/VISION.md has 0 lines with "perfboard", "solder" or "permanent" · E `grep -c -i -E "perfboard|solder|permanent" scrum/VISION.md` gave 0 (2026-11-28), the store's councils/past-breadboard/architect.md:9 · caveat: the vision names the perfboard only through "a PCB to order"; the bar does not forbid paper
+- [★C4] No file shows that he soldered a perfboard. The only solder traces are on modules · E council/po-assistant.md:53 (a grep of bench-2026-11-20.md, bench-2026-11-25.md, bench-layout-log.md, the handoffs and the 15 walk projects) · caveat: a soldering session leaves no trace in spark's files; "I am not sure what the best practices are actually" is his own word, an H for little practice
+- [★C5] His drawer holds 2 FIT0193 "ProtoBoard Pro - Double Sided (100x75mm)" and 1 DFR0481 "Proto Board - FireBeetle Covers". Neither entry holds holes across, holes down or pitch · E the store's drawer/dfrobot-fit0193.json:3, drawer/dfrobot-dfr0481.json:3 (read 2026-11-28) · caveat: from his DFRobot order history, which says "bought is not the same as still in the drawer"; 100 x 75 mm is the seller's label, not a measurement
+- [★C6] The two canvas artboards disagree twice. Perfboard plans a fixed size ("The plan needs 26 × 18 holes") and picks the smallest owned board, with the FireBeetle on the perfboard. LayoutPerfboard plans roomy on the FIT0193, then cuts it, with the dev board off the perfboard "wired to the board by a 3-pin header" · E Perfboard.dc.html:58, :189, LayoutPerfboard.dc.html:23, :39 (council/user.md UL-1, council/po-assistant.md PA-7) · caveat: both are examples spark did not make
+- [★C7] The canvas's bare wire step names only its two ends ("from the board's D3 (C5) to the display's CS (I26)"); its corners live only in the picture · E Perfboard.dc.html:186-187 (UL-3) · caveat: none
+- [★C8] Both artboards mirror the back left to right only, and no step says how to turn the board · E Perfboard.dc.html:164, LayoutPerfboard.dc.html:121 (UL-4) · H that a top-to-bottom turn puts each joint in the wrong row (geometry) · caveat: how he turns a board is unknown (Q9)
+- [★C9] The breadboard's `--json` holds no layout: holes and steps are in breadboard.md, the positions in Wokwi px. So Claude has no plan to change · E docs/guide/agents/json.md:150-152 (UL-5), P1199 US-5 · caveat: none
+- [★C10] First fit refuses the resistor and the XIAO on a single-pad surface, after 1.38 s and 4.21 s, because the free-hole rule of P412 asks each pin's group for a free hole. With that rule off, both are placed · E council/tech-lead.md TL2-11 (an in-memory trial on a 40 by 30 surface, removed after), drawing.py:290, :313-317 (re-read 2026-11-28) · caveat: one trial on an empty ledger, not a test in the tree
+- [★C11] Two breadboard pieces crash with no row letters: `tall_module_row` (IndexError, spacing.py:102) and `TrackGrid.__init__` (`min(surface.letters_y.values())`, wire_routing.py:120) · E spacing.py:102, wire_routing.py:120 (re-read 2026-11-28) · caveat: the TrackGrid crash is read, not run
+- [★C12] The plan already has a seam for joins, and it runs before the same-pins check: `BreadboardPlanner.plan` ends with `jumper_placement.place_jumpers`, and `_plan_once` checks that layout before any scene · E drawing.py:240-246, :371-372, sheet.py:312-314 (council/architecture.md ARCH-P1) · caveat: none
+- [★C13] The router's A* loop with its budget names no breadboard word. Its moves, estimate and goal test are the breadboard's picture rules · E wire_routing.py:232-259 against :261-330 (ARCH-P2, TL2-14) · caveat: the heap's tie order pins `cut_short`, so a lift must keep the tuples and the push order
+- [★C14] The router's penalties are class attributes (`CELL, OUTSIDE, BESIDE_A_LINE, BEND, CROSS = 1, 2, 2, 4, 6`), and `TRIES` is built from `MAX_BENDS` when the class body runs, so a later change of `MAX_BENDS` leaves `TRIES` as it was · E wire_routing.py:198-207 (re-read 2026-11-28), TL2-15 · caveat: P1350 #1937 changes this file now; line numbers are before P1350
+- [★C15] The same-pins check joins only the two groups of each jumper (`self._join(jumper.one.group, jumper.other.group)`). A perfboard bare wire joins every pad it lies on, so the check must read each join as a set of holes, or it misses a wire over another net's pad · E drawing_match.py:44-45 (re-read 2026-11-28), the guide's "The lead touches every pad it passes over" (TL2-3, TL2-13) · caveat: none
+- [★C16] Perfboard practice, from one guide: bare joins (bent leads, solder bridges, bare wire) lie on the copper side and "can't cross anything"; insulated wire crosses; a bridge only for neighbouring pads; "Leave a free hole between different connections" · E https://perfboarddesigner.com/learn/perfboard-wiring/ (updated 2026-11-09, read 2026-11-28 about 11:05 CET) · caveat: one hobby guide, not a standard; the bridge limit of one pitch is the tech lead's stricter proposal
+- [★C17] Espressif asks for the antenna outside the base board or at its edge, and no board record names its antenna end · E https://docs.espressif.com/projects/esp-hardware-design-guidelines/en/latest/esp32s3/pcb-layout-design.html (read 2026-11-28 about 11:00 CET), a grep of boards/xiao-esp32-c6.json and boards/firebeetle2-esp32s3.json · caveat: the advice is for a module on a base PCB; a dev board on headers is a weaker case (H)
+- [★C18] Spark repeats itself in five places: two half-pitch grids, three readings of which groups join, two header-pad placers, three body models and two Wokwi readers · E council/architecture.md:81 (D1 to D7, each with its pointers) · caveat: the two pad placers are "almost the same" only as an H until one test runs both on one record
+- [★C19] drawing.py has 599 lines against the limit of 600, so every move into a shared area starts by taking the Wokwi renderer out of it · E wc -l (599, reproduced 2026-11-28), tools/measure.py:242 · caveat: none
+- [★C20] Two package cycles: breadboard and build import each other, and breadboard and sourcing import each other. A shared area under both must import neither · E council/architecture.md:201 (MF2, bench_changes.py:26, kept_files.py:16, sheet.py:20) · caveat: none
+- [★C21] The breadboard area has no Operation: the drawing is written only through `build-board --keep` · E operation_catalogue.py:27-28, kept_files.py:267 (MF4) · caveat: P1199 G1 named it before
+- [★C22] The page's Ask Claude sentence with Copy exists for the next step (P1290), so the drag's first slice reuses it · E git 3b7e6d09 (P1290 merged), scripts/spark/flow/next_words.py:33, flow_codes.py:364 · caveat: it words the next step, not a layout change; no drag exists
+- [★C23] No record holds a lead span or pin positions in mm for the LED, the button or the resistor; the boards hold their header in mm. The drawer holds no pin header and no female socket · E council/user.md:66, council/tech-lead.md:56 (greps) · caveat: none
 
 ## Options <!-- CLAIMS -->
 <!-- Two or three per open decision: decision · option · cost · what it would prove · opinion (whose), then the tag
 and caveat cells. e.g. `- Q2 what first · fix delivery · two weeks · whether seen tasks get done · opinion (the facilitator's) · H ★C2 · caveat: none` -->
-- ⟨fill⟩ <!-- REQUIRED:options -->
-- Proposed no-gos and rabbit holes (proposals until the decider confirms): ⟨fill⟩ <!-- REQUIRED:nogos -->
+- D-q1 the first done · (a) a plan in text and JSON on the CLI for button-light, the same-pins check passing · S to M after the shared parts · whether the plan is right before any picture · opinion (the PO assistant, the facilitator) · H PA-6, ★C9 · caveat: his acceptance is open (Q3) <!-- REQUIRED:options -->
+- D-q1 · (b) (a) with the drawing of both faces from the breadboard's part pictures without pins · M · whether he can read a plan he would solder · opinion (none) · E #311 (D-e, the comment of 2026-11-20) · caveat: the scene's per-surface parts are H
+- D-q1 · (c) (b) with the page's station and its step player · L · the whole journey · opinion (none) · E Perfboard.dc.html:58 (the canvas artboard) · caveat: the page lane's capacity
+- D-q2 what is shared · (a) the byte-neutral dry-outs inside the breadboard area first (moves 1 to 3), the shared spark/layout area with the perfboard's walking skeleton (moves 4 to 8), the sheet Service with the perfboard's first sheet (moves 9 and 10) · each move S, the total L · that each shared part has two callers · opinion (the architecture lens) · E council/architecture.md:160 (the moves), ★C12, ★C19 · caveat: moves 2 to 4 wait for P1350
+- D-q2 · (b) the whole spark/layout area first, then the perfboard on top · L before any perfboard result · a clean area · opinion (none) · H · caveat: a part with one caller is a guess at its shape (AGENTS.md "build no layer for an interface that does not exist yet")
+- D-q2 · (c) a perfboard area beside the breadboard that shares only the search · M · speed · opinion (none) · H · caveat: against D-i, near-duplicates of the check and the sheet
+- D-q3 the joins and their router · (a) one `GridSearch`, pad-lattice rules on two faces, the insulated jumper as one more edge, `JoinWeights` as a named Value · S for the search, M to L for the rules · that one A* picks bridge, bare wire and jumper by cost · opinion (the tech lead, the architecture lens) · H TL2-16, TL2-17, E ★C13, ★C16 · caveat: spike P1239 first (A5)
+- D-q3 · (b) two passes: bare wires first, then insulated jumpers for what fails · M · simpler rules · opinion (none) · H · caveat: more jumpers than needed (H)
+- D-q3 · (c) reuse an outside router, Perfboard Designer · — · less code · opinion (none) · E https://perfboarddesigner.com/learn/perfboard-wiring/ read 2026-11-28, which names "open source" and an MCP server · caveat: licence and code not read (Q8)
+- D-q4 the dev board's mount · (a) female headers by default, a setting `perfboard.board_mount` with the default in code · S · reusable board, no heat on the module · opinion (the tech lead, the PO assistant) · H TL2-7, TL2-20 · caveat: the headers are not in the drawer (★C23)
+- D-q4 · (b) soldered straight in · S · a lower board · opinion (none) · H · caveat: heat next to the module, no reflash board
+- D-q4 · (c) off the perfboard, joined by a pin header and wires (the LayoutPerfboard artboard) · S · a small perfboard · opinion (none) · E LayoutPerfboard.dc.html:23 (★C6) · caveat: wires to come loose (H)
+- D-q4 lead spans · (a) a table by kind (a 1/4 W resistor 4 pitches), marked assumed on the sheet · S · a plan before records hold spans · opinion (the tech lead) · H TL2-9 · caveat: model knowledge, not read
+- D-q4 · (b) the Wokwi picture's span (6 pitches) · none · no new data · opinion (none) · E council/tech-lead.md:56 (measured) · caveat: a drawing convention, not a bend
+- D-q5 where the board's holes live · (a) the drawer entry grows holes across, holes down and pitch, each with its origin · S · the person's own board · opinion (the user lens) · E council/user.md:17, #311 (D-c) · caveat: every owner of a FIT0193 counts again
+- D-q5 · (b) a part record for the FIT0193 holds the product's facts once, and the drawer entry points at it · S · records grow by need, one fact in one place · opinion (the facilitator) · H from AGENTS.md "Records grow by need" · caveat: a cover kind (DFR0481) needs its own shape
+- D-q5 size or board first · (a) plan roomy at a fixed spacing (a named value), then the smallest owned board that holds it, then the cut · S · no loop between plan and board · opinion (the user lens) · H UL-1, ★C6 · caveat: none
+- D-q5 · (b) the smallest owned board first, then spread the parts over it · S · a full board · opinion (none) · E #1747 ("take up the whole perfobard") · caveat: the plan moves when he picks another board
+- D-q5 · (c) the person picks the board each time, and spark spreads over it · S · his control · opinion (none) · H · caveat: one more question each time
+- D-q6 the order · (a) P1199 D3 stands: refactor only inside a card that touches the code anyway (P1350 now), the rest after the MVP · none now · nothing moves before the MVP · opinion (the PO assistant) · E docs/discovery/2026-11-26-p1199-layout-core/brief.md:124 (★C2, ★C3) · caveat: the dry-outs wait
+- D-q6 · (b) the byte-neutral moves 1 to 3 inside the breadboard area may run beside the MVP cards, moves 4 to 10 after the MVP · S each, one PR each · that the dry-outs change no byte · opinion (the architecture lens) · E council/architecture.md:197 (MF1), ★C19 · caveat: one lane slot (A10)
+- D-q6 · (c) the whole shared area now, beside the MVP · L · speed to the perfboard · opinion (none) · H · caveat: against the MVP bar (★C3)
+- D-q7 the drag model and its first slice · (a) the page sends the dragged holes through its RequestChannel; one Operation compares them with the plan and writes one sentence for Claude with Copy; Claude then runs `edit-layout` (dry run, then `--apply`). The breadboard first, the perfboard on the same model · M · that a drag reaches Claude through the core · opinion (the facilitator) · E #1699 (D2), scripts/spark/flow/next_words.py:33 (★C22), #311 (D-b) · caveat: `edit-layout` is not built (P1237)
+- D-q7 · (b) the drag applies the edit straight away, and the sentence follows · M · a faster loop · opinion (none) · H · caveat: against "Spark plans, Claude changes" (D-b) and his "for now"
+- D-q7 · (c) the page's script writes the sentence alone · S · a quick page feature · opinion (none) · H · caveat: no CLI path, so not done by AGENTS.md (one core, many interfaces)
+- Proposed no-gos and rabbit holes (proposals until the decider confirms): no-go: build nothing before his Ready order; no change to wire_routing.py before P1350 merges; no Wokwi diagram for a perfboard; no stripboard (D-a); no setting layer before P1194, the weights are code defaults (D-h, D-j); no page logic of its own for the drag. Rabbit holes: an optimal route (good enough within the budget is the line); the cut and mounting holes in exact mm before the calipers (P1238); a height order from records (a table by kind first); spark judging whether a joint is soldered (it stays "spark cannot see it") · H the facilitator, from the lenses · caveat: proposals until he confirms <!-- REQUIRED:nogos -->
 
 ## Riskiest assumption and its test
-- Riskiest: ⟨fill⟩ · proposed — ⟨whose opinion⟩, pending Q1 | D<n> <!-- REQUIRED:riskiest -->
-- Test · kind · pass line, dated before any result · proposed | D<n>: ⟨fill⟩ <!-- REQUIRED:test -->
+- Riskiest: A1, he solders a perfboard within about three months of this design, before the code it describes moves. It decides how deep the design goes · proposed — the facilitator's opinion, from PA-9, pending Q1 <!-- REQUIRED:riskiest -->
+- Test · kind · pass line, dated before any result · proposed | D<n>: Q6, one question to the decider (a one-question survey, n = 1) · pass: he names one gadget and one board he plans to solder, set 2026-11-28 · proposed — the facilitator's opinion, pending Q1 <!-- REQUIRED:test -->
 
 ## Questions
 <!-- A queue; the first open question is asked alone. Each: Q<n> · question · decides: … · options · unblocks ·
@@ -61,7 +107,15 @@ opinion (whose) · kind: decision | account (a past-tense question about the dec
 account, n = 1) · status: queued | asked <date> | answered D<n>.
 If the decider cannot be asked, the queue stays here, and whatever rests on it stays H. -->
 - Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: answered D1 <!-- REQUIRED:q0 -->
-- Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: ⟨fill⟩ <!-- REQUIRED:q1 -->
+- Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: queued <!-- REQUIRED:q1 -->
+- Q2 · Your words "feel free to refactor anytime": may the byte-neutral refactor of the breadboard code start before the MVP walk, against P1199 D3? · decides: D-q6 · options: (a) no, D3 stands, refactor only inside a card that touches the code · (b) yes for moves 1 to 3 inside the breadboard area, the rest after the MVP · (c) yes for the whole shared area · unblocks: the three refactor items · opinion (the PO assistant (a), the architecture lens (b)) · kind: decision · status: queued
+- Q3 · What is the first perfboard result you call done? · decides: D-q1 · options: (a) the plan in text and JSON on the CLI · (b) with the drawing of both faces · (c) with the page's station · unblocks: the walking skeleton's scope · opinion (the PO assistant, the facilitator: (a)) · kind: decision · status: queued
+- Q4 · How does the dev board sit on the perfboard by default? · decides: D-q4 · options: (a) female headers, a setting with that default · (b) soldered straight in · (c) off the perfboard by a pin header · unblocks: the parts table, the first steps, the antenna rule · opinion (the tech lead, the PO assistant: (a)) · kind: decision · status: queued
+- Q5 · Which comes first, the plan's size or the board? · decides: D-q5 · options: (a) roomy at a fixed spacing, then the smallest owned board, then the cut · (b) the smallest owned board, then spread · (c) the person picks each time · unblocks: the board line and the cut · opinion (the user lens: (a)) · kind: decision · status: queued
+- Q6 · Which gadget do you solder on a perfboard first, and on which board? · decides: D-q5, D-q4, D-q6 (A1) · options: (a) the e-paper clock on a FIT0193 cut down · (b) the clock on the DFR0481 cover · (c) another, named · (d) none planned, button-light is a test · unblocks: the riskiest test · opinion (none: his plan) · kind: decision · status: queued
+- Q7 · Does the drag's first slice start on the breadboard, before the perfboard exists? · decides: D-q7 · options: (a) yes, on the breadboard first, after the breadboard's layout JSON · (b) both together, after the perfboard's walking skeleton · unblocks: the drag item's order · opinion (the facilitator: (a)) · kind: decision · status: queued
+- Q8 · Does spike P1239 read Perfboard Designer's licence and router first? · decides: D-q3 (c) · options: (a) yes · (b) go on without it · unblocks: the spike's start · opinion (the tech lead: (a)) · kind: decision · status: queued
+- Q9 · When you last soldered a board, how did you turn it over, and does your FIT0193 print row and column labels? · decides: the sheet's mirror and hole names (A3) · options: like a page · top to bottom · not yet soldered a perfboard · unblocks: A3 · opinion (none) · kind: account · status: queued
 
 ## Decisions
 <!-- D<n> · what · who · when · where recorded · options considered.
@@ -72,19 +126,23 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 
 ## Found on the way <!-- CLAIMS -->
 <!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
-- ⟨fill⟩ | none <!-- REQUIRED:found -->
+- [C24] Perfboard Designer, an open-source browser tool, lays out perfboards, checks connections and lists an MCP server and a page for AI agents. P1199's research did not list it · E https://perfboarddesigner.com/learn/perfboard-wiring/ (read 2026-11-28) · caveat: licence not read; a proposal for spike P1239 (Q8) <!-- REQUIRED:found -->
+- [C25] The canvas state "No perfboard: Your drawer holds no perfboard" is false for the PO, who owns three. The state he meets is "a perfboard without its holes" · E Perfboard.dc.html:256, ★C5 · caveat: a canvas fix, in this discovery's canvas step
+- [C26] The layout log of P1199 has an empty day table on day 3 of 14 · E the store's bench-layout-log.md:14 (PA-8) · caveat: for spark-main, not this card
 
 ## Board actions <!-- REQUIRED:spark-process:board-actions -->
 <!-- Each action on the board or the issue (stage, waiting flag, comment, filing): taken, with its D, or pending.
 None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
-⟨fill⟩
+- #1939 stays in Discovery while the questions run · no action
+- file items.md's six items through spark-main · pending, needs a D that names items.md
+- a comment on P275 #311 that links this discovery · pending, needs a D
 <!-- EXTEND:brief-sections -->
 
 ## Hand-off
 <!-- Written only after the decider confirms the understanding (a D); copies only confirmed constraints. Holds: outcome ·
 who · success and its proof · constraints (appetite, confirmed no-gos, rabbit holes) · what they said (D) against what
 we assume (H) · links to the journeys and the map · riskiest assumptions and their tests · options considered. -->
-⟨the hand-off | not yet: what is unconfirmed⟩ <!-- REQUIRED:handoff -->
+not yet: the jobs, a direction and the remaining risk are unconfirmed, and Q1 to Q9 are queued <!-- REQUIRED:handoff -->
 
 ## Files
 [Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · council/
