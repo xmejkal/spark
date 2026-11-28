@@ -15,5 +15,5 @@ Card: [P1352 #1939](https://github.com/xmejkal/spark/issues/1939). Four lenses o
 | 9 | D4, D5, D6, D12 and D3 say more than the options he picked | refuter 2 | acted | each D narrowed to his option; D16 later settled D4's scope |
 | 10 | A2 is met by D7 but still open; items.md's depends-on lines are stale | refuter 2 | acted | A2 retired with a Results row; items.md updated |
 | 11 | D13 answers half of Q9, and "like a page" has a rival reading | refuter 2 | acted | Q9 marked half answered; ★C8 carries both readings |
-| 12 | the 2.0 mm JST PH speaker terminal does not fit a 2.54 mm grid | spark-artifact's canvas round | raised | brief.md C28, for the design (the plan refuses it or offers a 2.54 mm terminal) |
-| 13 | the free hole between nets cannot hold where a wire leaves a header pin | spark-artifact's canvas round | raised | brief.md C28, for the design and its council |
+| 12 | the 2.0 mm JST PH speaker terminal does not fit a 2.54 mm grid | spark-artifact's canvas round | raised | P1359 [#1949](https://github.com/xmejkal/spark/issues/1949), the text plan refuses it or offers a 2.54 mm terminal (brief.md C28) |
+| 13 | the free hole between nets cannot hold where a wire leaves a header pin | spark-artifact's canvas round | raised | P1239 [#1792](https://github.com/xmejkal/spark/issues/1792), the join router spike (brief.md C28) |
