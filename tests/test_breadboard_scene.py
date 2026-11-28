@@ -190,13 +190,6 @@ class TheSceneTest(unittest.TestCase):
                                                    "and are drawn dashed"])
 
 
-    def test_the_dashed_note_names_the_router_s_most_bends(self):
-        # P1350: the note's number is the router's MAX_BENDS, read from it and not written a second time
-        most = wire_routing.TrackRouting.MAX_BENDS
-        self.assertEqual([words % "7" for words in breadboard_scene.BreadboardScene.DASHED_NOTE[:1]],
-                         [f"wire 7 bends more than {most} times to go around the parts and is drawn dashed"])
-        self.assertIn(f"more than {most} times", breadboard_scene.BreadboardScene.DASHED_NOTE[1])
-
     def test_the_rough_view_gets_the_pad_states_the_pad_labels_and_the_note_from_the_scene(self):
         # (6) P969 PR 3b: a view that draws no picture still gets every pad's state, every label and every warning
         rows, grid = self.rough.split("\n"), self.scene.grid

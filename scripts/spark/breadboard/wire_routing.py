@@ -188,7 +188,8 @@ class TrackJumperRouter(JumperRouter):
 
 
 #: Value: one search's jumper, its holes' cells, the cells next to them along their column (`legs`), its most bends, and
-#: `close`: True for a last try, drawn dashed, which may pass within END_CLEARANCE_PX of another jumper's end or run half a pitch from a wire.
+#: `close`: True for a last try, drawn dashed, which may pass within END_CLEARANCE_PX of another jumper's end or run
+#: half a pitch from a wire.
 Search = collections.namedtuple("Search", "step start goal legs most close")
 
 
@@ -223,11 +224,8 @@ class TrackRouting:
         self.axes, self.near, self.no_cross, self.rings = {}, {}, set(), {}
         for jumper in layout.jumpers:
             for hole in (jumper.one, jumper.other):
-                u, v = self.grid.cell(hole.x, hole.y)
-                centre = self.grid.point((u, v))  # the end's cell, as the search sees it (P1350)
-                for cell in [(u + du, v + dv) for du in (-1, 0, 1) for dv in (-1, 0, 1) if du or dv]:
-                    if is_beside_an_end((self.grid.point(cell),) * 2, centre):
-                        self.rings.setdefault(cell, set()).add(jumper.step)
+                for cell in self._ring(hole):
+                    self.rings.setdefault(cell, set()).add(jumper.step)
         self.expanded, self.cut_short, self.paths = 0, 0, {}
         order = sorted(layout.jumpers, key=lambda one: (abs(one.one.x - one.other.x), one.step))
         for most, fallback, close in self.TRIES:
@@ -237,6 +235,14 @@ class TrackRouting:
                     self.paths[jumper.step] = self._taken(jumper, cells, fallback)
         for jumper in order:
             self.paths.setdefault(jumper.step, JumperPath((), 0, NO_WAY))
+
+    def _ring(self, hole):
+        """The cells beside an end hole that only its own jumper may take: each neighbour cell that is_beside_an_end
+        of the end's cell (P1350)."""
+        u, v = self.grid.cell(hole.x, hole.y)
+        centre = self.grid.point((u, v))  # the end's cell, as the search sees it (P1350)
+        return [cell for cell in ((u + du, v + dv) for du in (-1, 0, 1) for dv in (-1, 0, 1) if du or dv)
+                if is_beside_an_end((self.grid.point(cell),) * 2, centre)]
 
     def _of(self, jumper, most, close):
         start, goal = self.grid.cell(jumper.one.x, jumper.one.y), self.grid.cell(jumper.other.x, jumper.other.y)
