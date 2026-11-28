@@ -1,0 +1,6 @@
+[
+ {"file": "scripts/spark/breadboard/wire_routing.py", "name": "the clearance takes the diagonals (B)", "find": "    END_CLEARANCE_PX = 5.8  # the drawn dot's 3.4 and half the wire's white edge, 2.0, are 5.4; +0.4 for the full ring", "replace": "    END_CLEARANCE_PX = 6.8  # the drawn dot's 3.4 and half the wire's white edge, 2.0, are 5.4; +0.4 for the full ring"},
+ {"file": "scripts/spark/breadboard/wire_routing.py", "name": "the clearance is under the drawn reach", "find": "    END_CLEARANCE_PX = 5.8  # the drawn dot's 3.4 and half the wire's white edge, 2.0, are 5.4; +0.4 for the full ring", "replace": "    END_CLEARANCE_PX = 5.0  # the drawn dot's 3.4 and half the wire's white edge, 2.0, are 5.4; +0.4 for the full ring"},
+ {"file": "scripts/spark/breadboard/wire_routing.py", "name": "a piece is measured on its whole line", "find": "    share = min(1, max(0, ((end[0] - x1) * (x2 - x1) + (end[1] - y1) * (y2 - y1)) / length)) if length else 0", "replace": "    share = (((end[0] - x1) * (x2 - x1) + (end[1] - y1) * (y2 - y1)) / length) if length else 0"},
+ {"file": "scripts/spark/breadboard/wire_routing.py", "name": "the ring is measured from the hole", "find": "                centre = self.grid.point((u, v))  # the end's cell, as the search sees it (P1350)", "replace": "                centre = (hole.x, hole.y)"}
+]

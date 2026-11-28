@@ -10,12 +10,13 @@ the top numbers and below the bottom ones), so a wire can go round a part that r
 half a pitch of a part's body or of a printed letter or number is blocked, and a run never lies within half a pitch of a
 rail's line.
 
-`TrackJumperRouter` finds each path with A* (cost 1 a cell, 2 outside the board, 4 a bend, 6 a crossing), the
-jumpers in the order of the lanes (shortest span first, then step), so runs nest. A wire leaves its hole half a pitch
-along its column to a track, runs on tracks only, and comes into its other hole the same way; it has at most 4 bends,
-shares no piece of a track with another wire, crosses another only at a right angle and at least a pitch from a bend
-or an end of either, and lies in a band of at most 4 wires side by side. A jumper with no such path gets one with up to
-8 bends, drawn dashed; one with none at all is not drawn, and the picture's note says so. `LaneJumperRouter` is the
+`TrackJumperRouter` finds each path with A* (the costs CELL, OUTSIDE, BESIDE_A_LINE, BEND and CROSS of `TrackRouting`),
+the jumpers in the order of the lanes (shortest span first, then step), so runs nest. A wire leaves its hole half a
+pitch along its column to a track, runs on tracks only, and comes into its other hole the same way; it has at most
+MAX_BENDS bends, shares no piece of a track with another wire, crosses another only at a right angle and at least a
+pitch from a bend or an end of either, keeps END_CLEARANCE_PX from another wire's end (`is_beside_an_end`), and lies in
+a band of at most BAND wires side by side. A jumper with no such path gets one with up to FALLBACK_BENDS bends, drawn
+dashed; one with none at all is not drawn, and the picture's note says so. `LaneJumperRouter` is the
 older way (P947), one lane per jumper across, which may cross a part.
 """
 
@@ -187,7 +188,7 @@ class TrackJumperRouter(JumperRouter):
 
 
 #: Value: one search's jumper, its holes' cells, the cells next to them along their column (`legs`), its most bends, and
-#: `close`: True for a last try, drawn dashed, which may pass beside another jumper's end or run half a pitch from a wire.
+#: `close`: True for a last try, drawn dashed, which may pass within END_CLEARANCE_PX of another jumper's end or run half a pitch from a wire.
 Search = collections.namedtuple("Search", "step start goal legs most close")
 
 
@@ -196,10 +197,11 @@ class TrackRouting:
     Value: one drawing's routing, worked out once when it is made: the grid, the cells each wire holds (`axes`, by
     axis), the cells a run along an axis may not enter (`near`: next to a run along that axis, end to end or side by
     side, so two runs keep a pitch apart), the cells a crossing may not take (`no_cross`, within a pitch of a bend or an
-    end), and the cells beside each end hole (`rings`, which only its own jumper may take, as a wire there would touch
-    the end's dot). `paths` is {step: JumperPath}; `expanded` counts the states the searches took, the budget a test
-    pins in place of seconds; `cut_short` counts the searches BUDGET stopped before they found a way or ran out of
-    states, since such a stop is no proof that there is no way.
+    end), and the cells beside each end hole (`rings`: the cells closer than END_CLEARANCE_PX to the end's cell, which
+    only its own jumper may take, as a wire there would touch the end's dot). `paths` is {step: JumperPath};
+    `expanded` counts the states the searches took, the budget a test pins in place of seconds; `cut_short` counts the
+    searches BUDGET stopped before they found a way or ran out of states, since such a stop is no proof that there is
+    no way.
     """
 
     #: The costs of the search: a cell on the board, a cell off it, a cell of a run beside a rail's line, a bend, a
