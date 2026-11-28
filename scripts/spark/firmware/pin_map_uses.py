@@ -109,8 +109,17 @@ class PinMapUses(collections.namedtuple("PinMapUses", "state why where has_map u
             return {"state": self.state, "why": self.why}
         data = {"state": self.state, "used": self.used,
                 "missing": [{"name": each.name, "file": each.file, "line": each.line} for each in self.missing],
-                "not_compared": [place._asdict() for place in self.places]}
+                "not_compared": [place._asdict() for place in self.places], "names": list(self.names)}
         return data if self.has_map else dict(data, has_map=False)
+
+    def changed_since(self, kept):
+        """(gained, lost), the map's names now against `kept`, the `pin_map` data of an earlier record, each a sorted tuple
+        (P1270). None when this Value is not recorded or has no map, and when `kept` holds no list of strings at `names`
+        (a record from before the key, never guessed). It compares names only, so a pin that moved keeps its name."""
+        before = kept.get("names") if isinstance(kept, dict) else None
+        if self.state != RECORDED or not self.has_map or not isinstance(before, list) or not all(isinstance(one, str) for one in before):
+            return None
+        return tuple(sorted(set(self.names) - set(before))), tuple(sorted(set(before) - set(self.names)))
 
     def assumptions(self):
         """One `not checked: ...` sentence for each place the check could not compare."""

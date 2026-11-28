@@ -36,7 +36,9 @@ from test_run_request import BUTTON_LIGHT, ID, FakeStep  # noqa: E402
 from spark.core import zone_time  # noqa: E402
 from spark.core.cli import HelpText, run_cli  # noqa: E402
 from spark.core.outside import build_bare_outside_world  # noqa: E402
-from spark.flow import phase_readers, wired_board  # noqa: E402
+from spark.flow import checks_reading, phase_readers, wired_board  # noqa: E402
+from spark.firmware.firmware_check import INPUTS  # noqa: E402
+from spark.records.check_record import CheckRecordStore  # noqa: E402
 from spark.flow.fingerprint import fingerprint_of  # noqa: E402
 from spark.flow.flow_codes import (BOARD_ONLY_BUILD_EFFECT, WIRED_BUILD_MESSAGE, WIRED_DEPLOY_MESSAGE, WIRED_PICK_MESSAGE,  # noqa: E402
                                    WIRED_SHEET_MESSAGE, WIRED_STEP_MESSAGE)
@@ -286,6 +288,70 @@ class TheBoardOnlyBuildTest(WiredTest):
         self.assertFalse([line for line in says(said, "parts") if WIRED_STEP_MESSAGE in line], says(said, "parts"))
         self.assertFalse([effect for phase in said["data"]["phases"] for effect in (offer["effect"] for offer in phase["offers"])
                           if effect.startswith(("If you wired",))])
+
+
+SHEET_ISO = zone_time.stamp(datetime.datetime.fromtimestamp(SHEET_AT))
+LATER_ISO = zone_time.stamp(datetime.datetime.fromtimestamp(SHEET_AT + 60))
+EARLIER_ISO = zone_time.stamp(datetime.datetime.fromtimestamp(SHEET_AT - 60))
+LISTED = "\n".join(["## Wiring", "", "### Changes since the sheet spark wrote on 2026-11-21 10:00", "", "Use this list only if.", "",
+                     "- Take out LedRed5mm.", "- Take out R1.", "", "### Steps", "", "1. Put the board in."])
+
+
+class TheRewireCountTest(WiredTest):
+    """P1270: `rewire_count` is the count of the changes breadboard.md lists while no follow-up came after the sheet."""
+
+    def sheet(self, text=LISTED):
+        project = a_sheet_at(a_built_project(), SHEET_AT)
+        (project / "breadboard.md").write_text(text)
+        os.utime(project / "breadboard.md", (SHEET_AT, SHEET_AT))
+        return project
+
+    @staticmethod
+    def checked(project, at):
+        """A check-firmware record of `project` saved with the time `at`."""
+        CheckRecordStore(project, "check-firmware").save(INPUTS, at, {"status": "ok", "data": {}, "lines": ["imports: 1 of 1"]})
+        return checks_reading.read_firmware_check(project)
+
+    def count(self, project, deploy_at=None, check_at=None):
+        check = self.checked(project, check_at) if check_at else checks_reading.read_firmware_check(project)
+        return wired_board.rewire_count(project, wired_board.WiredBoard(SHEET_ISO, deploy_at), check)
+
+    def test_a_sheet_with_listed_changes_gives_their_count(self):
+        self.assertEqual(self.count(self.sheet()), 2)
+
+    def test_a_check_after_the_sheet_is_a_follow_up(self):
+        self.assertIsNone(self.count(self.sheet(), check_at=LATER_ISO))
+
+    def test_a_board_log_after_the_sheet_is_a_follow_up(self):
+        self.assertIsNone(self.count(self.sheet(), deploy_at=LATER_ISO))
+
+    def test_a_check_before_the_sheet_leaves_it_open(self):
+        self.assertEqual(self.count(self.sheet(), check_at=EARLIER_ISO, deploy_at=EARLIER_ISO), 2)
+
+    def test_a_time_that_does_not_parse_is_no_follow_up(self):
+        self.assertEqual(self.count(self.sheet(), check_at="yesterday", deploy_at="never"), 2)
+
+    def test_the_same_second_is_no_follow_up(self):
+        self.assertEqual(self.count(self.sheet(), check_at=SHEET_ISO, deploy_at=SHEET_ISO), 2)
+
+    def test_a_sheet_with_nothing_to_change_gives_none(self):
+        text = LISTED.replace("- Take out LedRed5mm.\n- Take out R1.", "- Nothing to change on the bench.")
+        self.assertIsNone(self.count(self.sheet(text)))
+
+    def test_no_sheet_or_no_time_for_it_gives_none(self):
+        project = self.sheet()
+        check = checks_reading.read_firmware_check(project)
+        self.assertIsNone(wired_board.rewire_count(project, wired_board.WiredBoard(None, None), check))
+        (project / "breadboard.md").unlink()
+        self.assertIsNone(wired_board.rewire_count(project, wired_board.WiredBoard(SHEET_ISO, None), check))
+
+    def test_it_reads_no_board_log_of_its_own(self):
+        project = a_board_log(self.sheet(), "ready seen", SEEN_SENTENCE)  # a log the caller did not hand on
+        self.assertEqual(self.count(project), 2)
+
+    def test_the_sentence_says_one_change_or_many(self):
+        self.assertTrue(wired_board.rewire_sentence(1).startswith("breadboard.md lists 1 change under"))
+        self.assertTrue(wired_board.rewire_sentence(3).startswith("breadboard.md lists 3 changes under"))
 
 
 class TheValueTest(WiredTest):

@@ -8,6 +8,7 @@ import datetime
 import json
 import os
 import resource
+import shutil
 import signal
 import sys
 import tempfile
@@ -21,6 +22,8 @@ import suite_temp  # noqa: E402,F401
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 from spark.breadboard import bench_changes as changes  # noqa: E402
+from spark.breadboard import sheet  # noqa: E402
+import golden_breadboard  # noqa: E402
 from spark.build import build_record  # noqa: E402
 from spark.breadboard.wiring_steps import BOARD, PART, RESISTOR, BreadboardSteps, End, StepPoint  # noqa: E402
 
@@ -494,3 +497,49 @@ class RecordTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+REBUILD_GOLDEN = Path(__file__).resolve().parent / "golden-breadboard" / "breadboard-ok-rebuild.txt"
+NOTHING = "- " + changes.NOTHING_TO_CHANGE
+
+
+def section(heading, *lines):
+    return "\n".join(["## Wiring", "", "### " + heading, "", "Use this list only if you wired it.", ""] + list(lines)
+                      + ["", "### Steps", "", "- not a change", "1. Put the board in."])
+
+
+class ListedCountTest(unittest.TestCase):
+    """The count of the change lines that a sheet's own text lists (P1270)."""
+
+    def test_the_rebuild_golden_lists_four_changes(self):
+        self.assertEqual(changes.listed_count(REBUILD_GOLDEN.read_text()), 4)
+
+    def test_a_sheet_with_no_change_section_lists_none(self):
+        self.assertEqual(changes.listed_count("## Wiring\n\n### Steps\n\n- one\n- two\n"), 0)
+
+    def test_the_last_build_heading_lists_none(self):
+        self.assertEqual(changes.listed_count(section("Changes since the last build", NOTHING)), 0)
+
+    def test_nothing_to_change_under_a_since_heading_lists_none(self):
+        self.assertEqual(changes.listed_count(section(changes.SINCE_SHEET_HEADING + "2026-11-28 10:00", NOTHING)), 0)
+
+    def test_an_unknown_time_heading_counts_too(self):
+        self.assertEqual(changes.listed_count(section(changes.EARLIER_SHEET_HEADING, "- Take out R1.", "- Take out R2.")), 2)
+
+    def test_the_count_stops_at_the_next_heading(self):
+        self.assertEqual(changes.listed_count(section(changes.SINCE_SHEET_HEADING + "x", "- Take out R1.")), 1)
+
+    def test_text_that_is_no_text_never_raises(self):
+        self.assertEqual((changes.listed_count(""), changes.listed_count(None)), (0, 0))
+
+    def test_a_sheet_written_by_write_lists_its_changes(self):
+        folder = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, folder, True)
+        project = folder / "button-light-xiao"
+        shutil.copytree(golden_breadboard.DATA / "button-light-xiao", project)
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(folder / "store")}):
+            sheet.write(project / "requirements.json", project / "breadboard.md")
+            golden_breadboard.rebuild_as(project, "button-only-xiao")
+            result = sheet.write(project / "requirements.json", project / "breadboard.md")
+        self.assertGreater(len(result.changes), 0)
+        self.assertEqual(changes.listed_count((project / "breadboard.md").read_text()), len(result.changes))

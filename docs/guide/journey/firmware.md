@@ -41,7 +41,7 @@ or a driver works, or that a device answers. A bus finds no device, so a module-
 gives `time` MicroPython's `sleep_ms`, `sleep_us`, `ticks_ms`, `ticks_us`, `ticks_add` and `ticks_diff` with fixed values
 (a sleep returns at once, `ticks_ms` is always 0), and `micropython.alloc_emergency_exception_buf` does nothing. A driver's `hasattr(machine, "X")` probe is False, and `from machine import X` is an ImportError with the action. Because `ticks_ms` never moves, a driver's wait loop on it times out.
 
-The command leaves `main.py` unrun, because `main.py` starts the loop. Keep it to two lines that call a module. The
+After a rebuild that lists changes in `breadboard.md`, make them on the bench, then run the free checks again ([P1270](https://github.com/xmejkal/spark/issues/1829)): until then `flow.py show` marks the firmware out of date after a change of pin names, not after a pin that only moved. The command leaves `main.py` unrun, because `main.py` starts the loop. Keep it to two lines that call a module. The
 button-and-LED firmware does that (`import light`, then `light.run()`). You write your own, or Claude does. To try the
 command first, copy spark's example from `tests/data/breadboard/button-light/firmware/` into your `firmware/`.
 

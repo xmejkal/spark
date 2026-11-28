@@ -30,7 +30,8 @@ from spark.core.result import Refusal  # noqa: E402
 from spark.core.operation import READS, RUNS, WRITES  # noqa: E402
 from spark.core.zone_time import stamp  # noqa: E402
 from spark.firmware import own_tests  # noqa: E402
-from spark.firmware.firmware_check import CheckFirmware  # noqa: E402
+from spark.core.renderers import SCRIPTS, script_of, step_command  # noqa: E402
+from spark.firmware.firmware_check import CheckFirmware, check_step  # noqa: E402
 from spark.records.check_record import CheckRecordStore  # noqa: E402
 from fakes import FakeClock  # noqa: E402
 
@@ -173,7 +174,8 @@ class TheFreeChecksTogetherTest(unittest.TestCase):
                          [("problems", "firmware/main.py:3", "firmware/main.py:3 uses pins.JOY_SW, and firmware/pins.py has no JOY_SW")])
         self.assertIn("Do not edit pins.py by hand", problems[0].fix)
         self.assertEqual(result.data["pin_map"], {"state": "recorded", "used": 1, "not_compared": [],
-                                                  "missing": [{"name": "JOY_SW", "file": "firmware/main.py", "line": 3}]})
+                                                  "missing": [{"name": "JOY_SW", "file": "firmware/main.py", "line": 3}],
+                                                  "names": ["LED"]})
         self.assertIn("pin map: 0 of 1 uses found in firmware/pins.py, not found: JOY_SW (firmware/main.py:3)", result.lines)
 
     def test_a_firmware_whose_pin_names_all_exist_gives_no_finding(self):
@@ -339,6 +341,18 @@ class TheCommandTest(unittest.TestCase):
         with contextlib.redirect_stdout(out):
             code = check_firmware.main(["--project", str(project), "--json"], operation=CheckFirmware(tests_timeout_s=0.5))
         self.assertEqual((code, json.loads(out.getvalue())["unchecked"][0]["code"]), (outcomes.EXIT_COULD_NOT_RUN, "own_tests_not_run"))
+
+
+class TheStepTest(unittest.TestCase):
+    """P1270: the flow's step after a rewire or a change of pin names runs the free checks on the whole project."""
+
+    def test_its_step_runs_check_firmware_on_the_whole_project(self):
+        step = check_step(Path("some") / "project", "because")
+        self.assertEqual((step.op, step.why, step.effects, step.needs_yes, bool(step.needs_person)),
+                         ("check-firmware", "because", (READS, RUNS, WRITES), False, False))
+        self.assertEqual(step.argv, ["--project", str((Path("some") / "project").absolute())])
+        self.assertTrue(step_command(step).split(" ")[0].endswith("check_firmware.py"), step_command(step))
+        self.assertTrue((SCRIPTS / script_of(step.op)).is_file())
 
 
 if __name__ == "__main__":

@@ -3,7 +3,8 @@ The step of the phase the guide names now when that phase holds no offer (P1034,
 scenario run (or the build, while sim/wokwi.toml is missing), the deploy's look, the brief step of an idea out of date
 after a need was dropped (P1027, slice 2), and a pick for each open need of a parts phase whose offers are not one
 (P1141). `PHASE_STEPS` holds one step function per phase, so a phase's step changes in one entry. The firmware names
-none: Claude writes firmware/main.py in the chat. Each step is next-only: the page shows no button for it, and
+the free checks only while it is out of date (P1270), and the breadboard while a rewire is open: Claude writes
+firmware/main.py in the chat. Each step is next-only: the page shows no button for it, and
 `flow.py run-request` never runs a scenario run or a look (the build is the build phase's own offer step). The scenario
 run's step is the firmware's own (`firmware_scenario.paid_run_step`, op `run-scenario`, P1078). The image fact is
 read once more here (`guide.image_fact`): `guide_of` keeps its own inside, and exposing it costs more than its value. A
@@ -14,6 +15,7 @@ from spark.bench.board_envelope import look_step
 from spark.bench.image_evidence import evidence_for
 from spark.core.operation import READS, RUNS, WRITES
 from spark.core.result import NextStep
+from spark.firmware.firmware_check import check_step
 from spark.firmware.firmware_scenario import paid_run_step
 from spark.flow import flow_codes
 from spark.flow.guide import image_fact, scenario_names
@@ -21,6 +23,11 @@ from spark.flow.offer_steps import build_step, picks_step, whole
 from spark.records import store
 
 # --- MVP ---
+#: Why the free checks are the step after a rewire or after the pin names changed (P1270).
+REWIRE_WHY = ("breadboard.md lists changes under Changes since. Make them on the bench if you have not yet. Claude runs the free "
+              "checks: the imports, the own tests and the pin names against firmware/pins.py.")
+PIN_NAMES_WHY = ("The pin names changed. Claude runs the free checks: the imports, the own tests and the pin names against "
+                 "firmware/pins.py.")
 #: The scenario a step names while there is none (`guide.scenario_names` finds the scenarios).
 SCENARIO_PLACEHOLDER = "sim/scenarios/<name>.scenario.yaml"
 #: The answers file the brief step names: Claude writes the must lines the person agreed to there, outside any repository.
@@ -62,6 +69,16 @@ def simulate_steps(project, phase, guide=None):
     return []
 
 
+def breadboard_steps(project, phase, guide):
+    """The breadboard's step while a rewire is open (`guide.now.changes`, P1270): the free checks, else none."""
+    return [check_step(project, REWIRE_WHY)] if guide["now"].get("changes") else []
+
+
+def firmware_steps(project, phase, guide):
+    """The firmware's step while it is out of date after a change of pin names (P1270): the free checks, else none."""
+    return [check_step(project, PIN_NAMES_WHY)] if phase.status == flow_codes.STALE else []
+
+
 def idea_steps(project, phase, guide):
     """The idea's step: the brief step while the idea is out of date (P1027), else none."""
     return [brief_step(project)] if phase.status == flow_codes.STALE else []
@@ -81,8 +98,10 @@ def deploy_steps(project, phase, guide):
 
 
 #: The step function of each phase that names one when it holds no offer, each `(project, phase, guide)`: a phase's
-#: step changes in its one entry. The needs and the breadboard name none, and the firmware is written in the chat.
-PHASE_STEPS = {flow_codes.IDEA: idea_steps, flow_codes.PARTS: parts_steps,
+#: step changes in its one entry. The needs name none. The breadboard and the firmware name the free checks, each with its
+#: reason, while a rewire is open or the firmware is out of date; the firmware is written in the chat.
+PHASE_STEPS = {flow_codes.IDEA: idea_steps, flow_codes.PARTS: parts_steps, flow_codes.BREADBOARD: breadboard_steps,
+               flow_codes.FIRMWARE: firmware_steps,
                flow_codes.SIMULATE: simulate_steps, flow_codes.DEPLOY: deploy_steps}
 
 

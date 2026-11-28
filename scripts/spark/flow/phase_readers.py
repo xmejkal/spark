@@ -530,7 +530,8 @@ class BreadboardReader(PhaseReader):
 class FirmwareReader(PhaseReader):
     """Strategy: firmware/main.py, which Claude writes in the chat: not started when it is not there, else when it was last
     written, in the machine's zone. Problems when the current check record names a pin name that the pin map lacks (P882), with
-    that line first. Else no status, because spark cannot judge the firmware."""
+    that line first. Stale when an older check record read other pin names than firmware/pins.py holds now (P1270), with that
+    line first. Else no status, because spark cannot judge the firmware."""
 
     PHASE, BY = flow_codes.FIRMWARE, flow_codes.BY_CLAUDE
 
@@ -539,7 +540,10 @@ class FirmwareReader(PhaseReader):
         if not main.is_file():
             return self.phase(flow_codes.NOT_STARTED, [flow_codes.NO_FIRMWARE_MESSAGE])
         written = flow_codes.FIRMWARE_MESSAGE % stamp(datetime.datetime.fromtimestamp(main.stat().st_mtime))
-        pin_line = checks_reading.missing_pin_line(project)
+        check = checks_reading.read_firmware_check(project)  # one read for both lines (P1270)
+        pin_line, names_line = checks_reading.missing_pin_line(project, check), checks_reading.pin_names_line(project, check)
+        if names_line:
+            return self.phase(flow_codes.STALE, [names_line, written])
         return self.phase(PROBLEMS, [pin_line, written]) if pin_line else self.phase(None, [written])
 
 

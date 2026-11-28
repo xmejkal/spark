@@ -40,6 +40,11 @@ DESIGN_OLDER_NOW = "The design checks ran before their files changed."
 DESIGN_NOT_READ_NOW = "%s: %s."
 DESIGN_GLOSS_NOW = "They compare the circuit with the facts of the board, its parts and the project's rules."
 DESIGN_ASK_NOW = "Ask Claude to run the design checks."
+#: The firmware's out-of-date sentence (P1270): what pins.py gained or lost since the record, the record's day. And NOW's text.
+PIN_NAMES_CHANGED = "firmware/pins.py %s since the free checks read the pin names on %s."
+PIN_NAMES_NOW = ("The pin names changed after the free checks last read them. Ask Claude to check the firmware's pin names "
+                 "against the new pins.py, for free.")
+GAINED_WORD, LOST_WORD, AND_WORD, CHANGES_JOIN = "gained %s", "lost %s", " and ", ", and "
 
 
 def read_check(project, name):
@@ -94,22 +99,47 @@ def is_current_ok(check):
     return check.state == RECORDED and check.current and check.status == OK
 
 
-def missing_pin_line(project):
+def read_firmware_check(project):
+    """The CheckRecord of check-firmware in `project`: the one read per caller, handed on to what needs it (P1270)."""
+    return read_check(project, CheckFirmware.name)
+
+
+def missing_pin_line(project, check=None):
     """The pin map line (`PinMapUses.line_from`) of the current check-firmware record of `project` when it names a pin name that
     firmware/pins.py lacks, else None: no record, an older or unread one, one with no `pin_map` or one of another shape (P882). It
-    reads the record and runs nothing."""
-    check = read_check(project, CheckFirmware.name)
+    reads the record, or takes `check`, the CheckRecord its caller read, and runs nothing."""
+    check = check if check is not None else read_firmware_check(project)
     if check.state != RECORDED or not check.current:
         return None
     return PinMapUses.line_from(check.data.get("pin_map"), missing_only=True)
 
 
-def simulation_of(project, firmware_written, no_model):
+def names_said(names):
+    """`names` as a list in words: "A", "A and B", "A, B and C"."""
+    return AND_WORD.join([", ".join(names[:-1]), names[-1]] if len(names) > 1 else names)
+
+
+def pin_names_line(project, check):
+    """The sentence that firmware/pins.py gained or lost names (P1270), from `check`, the check-firmware CheckRecord: only
+    for a recorded record that is older and whose `pin_map.names` differ from the names pins.py binds now
+    (`PinMapUses.changed_since`). A pin that moved keeps its name, so it says nothing. None for no record, a current or an
+    unread one, one from before `names`, and a firmware that does not parse (the free checks' line says why). It reads
+    the firmware files with `ast` and runs nothing."""
+    if check.state != RECORDED or check.current:
+        return None
+    changed = PinMapUses.read(project).changed_since(check.data.get("pin_map"))
+    if not changed or not any(changed):
+        return None
+    said = [word % names_said(names) for word, names in zip((GAINED_WORD, LOST_WORD), changed) if names]
+    return PIN_NAMES_CHANGED % (CHANGES_JOIN.join(said), day_and_time(check.at))
+
+
+def simulation_of(project, firmware_written, no_model, check=None):
     """The guide's `simulation`: `{line, grey, check}`. `line` is the free checks' sentence, then NO_SIMULATION_NOW when
     `no_model`; with no firmware written and no record there is no free checks' part, and with neither part the line is
     None. `grey` is True only with `no_model` and no free checks' part or a current ok record: a failed, older or unread
     check is never grey. `check` is the record's reading as a dict."""
-    check = read_check(project, CheckFirmware.name)
+    check = check if check is not None else read_firmware_check(project)
     free = said_of(check, FREE_CHECKS_LABEL) if firmware_written or check.state != NONE_RECORDED else None
     line = " ".join(part for part in (free, flow_codes.NO_SIMULATION_NOW if no_model else None) if part) or None
     grey = no_model and (free is None or is_current_ok(check))

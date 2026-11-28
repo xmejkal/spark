@@ -1,0 +1,116 @@
+[
+ {
+  "file": "scripts/spark/breadboard/bench_changes.py",
+  "name": "listed_count counts nothing (ListedCountTest.test_the_rebuild_golden_lists_four_changes)",
+  "find": "            count += 1",
+  "replace": "            count += 0"
+ },
+ {
+  "file": "scripts/spark/breadboard/bench_changes.py",
+  "name": "the nothing line counts (ListedCountTest.test_nothing_to_change_under_a_since_heading_lists_none)",
+  "find": " and line != LINE_MARK + NOTHING_TO_CHANGE",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/breadboard/bench_changes.py",
+  "name": "the count runs on past the next heading (ListedCountTest.test_the_count_stops_at_the_next_heading)",
+  "find": "            inside = heading.startswith(SINCE_SHEET_HEADING) or heading == EARLIER_SHEET_HEADING",
+  "replace": "            inside = inside or heading.startswith(SINCE_SHEET_HEADING) or heading == EARLIER_SHEET_HEADING"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "to_data drops names (test_check_firmware, test_pin_map_uses)",
+  "find": ", \"names\": list(self.names)}",
+  "replace": "}"
+ },
+ {
+  "file": "scripts/spark/firmware/pin_map_uses.py",
+  "name": "changed_since swaps gained and lost (TheNamesSinceTest.test_a_gained_name_is_gained)",
+  "find": "        return tuple(sorted(set(self.names) - set(before))), tuple(sorted(set(before) - set(self.names)))",
+  "replace": "        return tuple(sorted(set(before) - set(self.names))), tuple(sorted(set(self.names) - set(before)))"
+ },
+ {
+  "file": "scripts/spark/flow/checks_reading.py",
+  "name": "a current record says the names changed (ThePinNamesLineTest.test_a_current_record_says_nothing_even_with_other_names)",
+  "find": "    if check.state != RECORDED or check.current:",
+  "replace": "    if check.state != RECORDED:"
+ },
+ {
+  "file": "scripts/spark/flow/phase_readers.py",
+  "name": "the names line gives no status (TheStalePinNamesTest.test_the_firmware_is_out_of_date_with_the_names_first)",
+  "find": "return self.phase(flow_codes.STALE, [names_line, written])",
+  "replace": "return self.phase(None, [names_line, written])"
+ },
+ {
+  "file": "scripts/spark/flow/wired_board.py",
+  "name": "a check after the sheet is no follow-up (TheRewireCountTest.test_a_check_after_the_sheet_is_a_follow_up)",
+  "find": "check.at if check.state == RECORDED else None]",
+  "replace": "None]"
+ },
+ {
+  "file": "scripts/spark/flow/wired_board.py",
+  "name": "a board log is no follow-up (TheRewireCountTest.test_a_board_log_after_the_sheet_is_a_follow_up)",
+  "find": "follow_ups = [board.deploy_at, ",
+  "replace": "follow_ups = [None, "
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "rewire_of drops the firmware-written condition (TheRewireTest.test_no_firmware_keeps_the_two_jobs)",
+  "find": "    if firmware is None or firmware.status == flow_codes.NOT_STARTED or not is_sheet_current(project, by_name):",
+  "replace": "    if not is_sheet_current(project, by_name):"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "is_open ignores the changes (TheRewireTest.test_a_rebuild_with_a_new_pin_moves_now_off_the_simulation)",
+  "find": " or (phase.phase == flow_codes.BREADBOARD and changes is not None)",
+  "replace": " or False"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "with_rewire_now keeps the picker's sentence (TheRewireTest.test_the_count_is_the_sheet_s_own)",
+  "find": "    if not (now and now.phase == flow_codes.BREADBOARD and changes is not None):",
+  "replace": "    if True:"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "with_wiring's new first line is gone (TheRewireTest.test_the_page_shows_the_rewire_sentence_and_opens_the_wiring_fold)",
+  "find": "    if now.phase == flow_codes.BREADBOARD and now.status is None:",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "now_of gives changes on every now (TheRewireTest.test_changes_is_null_on_every_other_now)",
+  "find": "\"changes\": changes if now.phase == flow_codes.BREADBOARD else None,",
+  "replace": "\"changes\": changes,"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "simulation_of reads the record again (TheRewireTest.test_show_reads_the_check_record_twice)",
+  "find": "firmware.status != flow_codes.NOT_STARTED, no_sim, check),",
+  "replace": "firmware.status != flow_codes.NOT_STARTED, no_sim, None),"
+ },
+ {
+  "file": "scripts/spark/flow/phase_steps.py",
+  "name": "the breadboard's step list is empty (TheRewireTest.test_next_is_the_check_firmware_step)",
+  "find": "    return [check_step(project, REWIRE_WHY)] if guide[\"now\"].get(\"changes\") else []",
+  "replace": "    return []"
+ },
+ {
+  "file": "scripts/spark/flow/phase_steps.py",
+  "name": "the stale firmware's step list is empty (TheStalePinNamesTest.test_next_is_the_check_firmware_step)",
+  "find": "    return [check_step(project, PIN_NAMES_WHY)] if phase.status == flow_codes.STALE else []",
+  "replace": "    return []"
+ },
+ {
+  "file": "scripts/spark/flow/guide.py",
+  "name": "the (firmware, stale) NOW sentence is the table's (TheStalePinNamesTest.test_now_on_a_stale_firmware_asks_claude_to_check_the_pin_names)",
+  "find": "    if (now.phase, now.status) == (flow_codes.FIRMWARE, flow_codes.STALE):",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/spark/flow/wired_board.py",
+  "name": "the same second is a follow-up (TheRewireCountTest.test_the_same_second_is_no_follow_up)",
+  "find": "> datetime.datetime.fromisoformat(since)",
+  "replace": ">= datetime.datetime.fromisoformat(since)"
+ }
+]

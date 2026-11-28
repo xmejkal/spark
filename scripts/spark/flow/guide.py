@@ -83,18 +83,20 @@ def image_fact(project, default_without_toml=False):
         return NO_IMAGE_FACT
 
 
-def is_open(phase, fact):
-    """True when the person acts on `phase` before the next: a status that is neither ok nor None, or a simulate with no
-    status whose image `fact` leaves it open."""
-    return phase.status not in (OK, None) or (phase.phase == flow_codes.SIMULATE and fact.fact in OPEN_IMAGE_FACTS)
+def is_open(phase, fact, changes=None):
+    """True when the person acts on `phase` before the next: a status that is neither ok nor None, a simulate with no
+    status whose image `fact` leaves it open, or a breadboard with `changes`, the count of an open rewire (P1270,
+    `rewire_of`): the breadboard keeps no status, so a fact opens it, as the image fact opens the simulate."""
+    return phase.status not in (OK, None) or (phase.phase == flow_codes.SIMULATE and fact.fact in OPEN_IMAGE_FACTS) \
+        or (phase.phase == flow_codes.BREADBOARD and changes is not None)
 
 
-def now_phase(phases, no_model, fact, all_aside=False):
+def now_phase(phases, no_model, fact, all_aside=False, changes=None):
     """The phase to act on now: the first open one not counted as done, or the idea while no need is written, or the parts
     while every need is set aside (P980: there is no pick to write the parts list from). An idea that is ok (the brief holds a goal,
     P1142) gives way to the needs, and a stale one does not. None when no phase is open: a
     deploy that saw ready on the image now (P1043), or a flow of other readers, which a test gives."""
-    now = next((phase for phase in phases if phase.phase not in no_model and is_open(phase, fact)), None)
+    now = next((phase for phase in phases if phase.phase not in no_model and is_open(phase, fact, changes)), None)
     if now and now.phase == flow_codes.REQUIREMENTS and now.status != COULD_NOT_RUN and all_aside:  # a broken file is not hidden
         return next((phase for phase in phases if phase.phase == flow_codes.PARTS), now)
     if now and now.phase == flow_codes.NEEDS and now.status == flow_codes.NOT_STARTED and phases[0].status != OK:
@@ -138,6 +140,8 @@ def who_and_sentence(now, open_needs, fact, written=True):
     if now.phase == flow_codes.SIMULATE and now.status is None:
         by, said = flow_codes.IMAGE_NOW[fact.fact]
         return flow_codes.NowSentence(by, said % fact.log if fact.fact == flow_codes.RUN_FAILED else said, (flow_codes.SIMULATE, fact.fact))
+    if (now.phase, now.status) == (flow_codes.FIRMWARE, flow_codes.STALE):
+        return flow_codes.NowSentence([flow_codes.BY_CLAUDE], checks_reading.PIN_NAMES_NOW, (flow_codes.FIRMWARE, flow_codes.STALE))
     said = flow_codes.NOW_SENTENCES.get((now.phase, now.status))
     if said == flow_codes.PARTS_NOW:
         return flow_codes.NowSentence([now.by], said % (flow_codes.ONE_NEED_HAS if len(open_needs) == 1 else flow_codes.MANY_NEEDS_HAVE % len(open_needs), ", ".join(open_needs)),
@@ -153,6 +157,26 @@ def chat_offer_of(sentence):
     """The key of the chat offer whose job the NowSentence `sentence` asks Claude for (P1122, P1133): the one lookup of its
     `chosen_by` in `flow_codes.CHAT_NOW`, or None."""
     return flow_codes.CHAT_NOW.get(sentence.chosen_by)
+
+
+def with_rewire_now(sentence, now, changes):
+    """The NowSentence of an open rewire (P1270, `rewire_of`) in place of `sentence`, on a breadboard now with `changes`, the
+    count of the changes the sheet lists: the person and Claude, the sheet's own count, chosen by (breadboard, REWIRE), a
+    pair that has no chat offer. Else `sentence`."""
+    if not (now and now.phase == flow_codes.BREADBOARD and changes is not None):
+        return sentence
+    return flow_codes.NowSentence([flow_codes.BY_YOU, flow_codes.BY_CLAUDE], wired_board.rewire_sentence(changes),
+                                  (flow_codes.BREADBOARD, wired_board.REWIRE))
+
+
+def rewire_of(project, by_name, board, check):
+    """The count of the changes breadboard.md lists while the rewire is open (P1270), else None: the firmware is written, the
+    sheet is current, it lists changes and no follow-up came after it (`wired_board.rewire_count`, from the run's WiredBoard
+    `board` and the check-firmware CheckRecord `check`)."""
+    firmware = by_name.get(flow_codes.FIRMWARE)
+    if firmware is None or firmware.status == flow_codes.NOT_STARTED or not is_sheet_current(project, by_name):
+        return None
+    return wired_board.rewire_count(project, board, check)
 
 
 def with_deploy_now(sentence, now, deploy):
@@ -204,11 +228,12 @@ def now_sentence(now, open_needs, fact, count, written=True):
     return who_and_sentence(now, open_needs, fact, written)
 
 
-def now_of(now, sentence, open_needs, count):
-    """`{phase, by, says, offer, chat_offer, needs, steps}` of the phase to act on now, from its last NowSentence `sentence`.
-    `steps` is `count` (two jobs) or None. `chat_offer` is the key of the chat offer the sentence asks Claude for, or None:
+def now_of(now, sentence, open_needs, count, changes=None):
+    """`{phase, by, says, offer, chat_offer, needs, steps, changes}` of the phase to act on now, from its last NowSentence
+    `sentence`. `steps` is `count` (two jobs) or None, and `changes` the count of an open rewire on a breadboard now or None. `chat_offer` is the key of the chat offer the sentence asks Claude for, or None:
     the one `chat_offer_of` of the last sentence (P1122, P1133)."""
     return {"phase": now.phase, "by": sentence.by, "says": sentence.says, "offer": job_offer(now), "chat_offer": chat_offer_of(sentence),
+            "changes": changes if now.phase == flow_codes.BREADBOARD else None,
             "needs": open_needs if now.phase == flow_codes.PARTS else [], "steps": count}
 
 
@@ -294,7 +319,10 @@ def names_at(stations, place):
 
 def with_wiring(project, now, by_name, count):
     """True when the job now holds the wiring (P1062, the review of #1619): the two jobs beside a current sheet (`count`),
-    or the deploy beside a current sheet. The page opens its wiring fold by it. Spark never says the board is wired."""
+    the deploy beside a current sheet, or an open rewire: the breadboard now with no status (P1270). The page opens its wiring
+    fold by it. Spark never says the board is wired."""
+    if now.phase == flow_codes.BREADBOARD and now.status is None:
+        return True
     return count is not None or (now.phase == flow_codes.DEPLOY and is_sheet_current(project, by_name))
 
 
@@ -320,44 +348,58 @@ def gate_a_of(fact, reached, no_model):
     return {"shut_by": [], "fact": code, "says": flow_codes.GATE_A_SAYS[code]}
 
 
+def image_fact_of(project, by_name, no_model):
+    """The ImageFact (`image_fact`) of a simulate that has no status or is not started, else NO_IMAGE_FACT: `no_model` holds
+    the phases counted as done for no Wokwi model."""
+    simulate = by_name.get(flow_codes.SIMULATE)
+    fact = image_fact(project, flow_codes.SIMULATE in no_model) if simulate and simulate.status in (None, flow_codes.NOT_STARTED) \
+        else NO_IMAGE_FACT
+    return fact
+
+
+def count_beside_sheet(project, now, by_name, steps):
+    """The steps of a current wiring sheet (`steps`) when the firmware is now and not started, else None: the two jobs."""
+    beside_sheet = now and now.phase == flow_codes.FIRMWARE and now.status == flow_codes.NOT_STARTED and is_sheet_current(project, by_name)
+    return steps(project) if beside_sheet else None
+
+
 def guide_of(project, phases, steps=count_steps, deploy=None, board=None):
     """What the person does now, what is done, what comes later and what they set aside, from the Phases of `project`:
-    `{"now": {phase, by, says, offer, chat_offer, needs, steps, with_wiring, design_checks}, "stations", "done", "later", "set_aside", "no_simulation", "simulation", "no_open_phase", "wired", "gate_a"}`.
+    `{"now": {phase, by, says, offer, chat_offer, needs, steps, changes, with_wiring, design_checks}, "stations", "done", "later", "set_aside", "no_simulation", "simulation", "no_open_phase", "wired", "gate_a"}`.
     `no_simulation` is the flag's sentence and `simulation` the line show and the page draw (`checks_reading.simulation_of`).
     `stations` places each phase beside the now (`stations_of`, P1119), and `done` and `later` are built from it. `steps` counts the wiring
     sheet's steps. The needs are read once more, by the parts phase's own rule (`counted`, `set_aside`). `deploy` is the
     run's DeployState (P1043), None to read it here once for the now, the firmware's note (P1106) and `wired`. `board` is the run's WiredBoard (P1044), None to read it here:
-    `wired` is `{sheet_at, deploy_at}`, the witnesses of a board that can be wired, or None when spark saw none.
+    `wired` is `{sheet_at, deploy_at}`, the witnesses of a board that can be wired, or None when spark saw none. The open rewire reads `board` too
+    (`rewire_of`): `changes` is the count of the changes the sheet lists, on a breadboard now, and `with_wiring` is true for it (P1270).
     `gate_a` is `gate_a_of`'s row (P1220), None before the deploy has a board log or is now.
     """
     by_name, listed = {phase.phase: phase for phase in phases}, readable(lambda: needs.read(project), [])
     deploy = deploy if deploy is not None else deploy_reading.read_deploy(project)
     no_model = no_model_phases(project, by_name)
-    simulate = by_name.get(flow_codes.SIMULATE)
-    fact = image_fact(project, flow_codes.SIMULATE in no_model) if simulate and simulate.status in (None, flow_codes.NOT_STARTED) \
-        else NO_IMAGE_FACT
-    all_aside = bool(listed) and not counted(listed)
-    now = now_phase(phases, no_model, fact, all_aside)
+    fact = image_fact_of(project, by_name, no_model)
+    all_aside, check = bool(listed) and not counted(listed), checks_reading.read_firmware_check(project)  # the guide's one read
+    board = board if board is not None else wired_board.read_wired(project, deploy)
+    changes = rewire_of(project, by_name, board, check)
+    now = now_phase(phases, no_model, fact, all_aside, changes)
     deployed = by_name.get(flow_codes.DEPLOY)
     reached = bool(deployed) and (deployed.status != flow_codes.NOT_STARTED or bool(now and now.phase == flow_codes.DEPLOY))  # the On the board station
     at = phases.index(now) if now else len(phases)
     open_needs = [need["id"] for need in counted(listed) if not need.get("pick")]
-    beside_sheet = now and now.phase == flow_codes.FIRMWARE and now.status == flow_codes.NOT_STARTED and is_sheet_current(project, by_name)
-    count = steps(project) if beside_sheet else None
+    count = count_beside_sheet(project, now, by_name, steps)
     two_jobs = count is not None  # no count: no two jobs, so the breadboard stays in done
     written = not (now and now.phase == flow_codes.SIMULATE) or bool(scenario_names(project))
-    sentence = with_requirements_now(project, with_deploy_now(now_sentence(now, open_needs, fact, count, written), now, deploy), now) \
+    sentence = with_requirements_now(project, with_rewire_now(with_deploy_now(now_sentence(now, open_needs, fact, count, written), now, deploy), now, changes), now) \
         if now else None
-    said = dict(now_of(now, sentence, open_needs, count), with_wiring=with_wiring(project, now, by_name, count), design_checks=design_checks_of(project, now)) if now else None
+    said = dict(now_of(now, sentence, open_needs, count, changes), with_wiring=with_wiring(project, now, by_name, count), design_checks=design_checks_of(project, now)) if now else None
     # beside the firmware, the wiring is part of now
     breadboard_place = flow_codes.NOW_PLACE if two_jobs else flow_codes.DONE_PLACE if is_sheet_current(project, by_name) else None
     stations = with_start_not_seen(stations_of(phases, at, no_model, breadboard_place, has_no_picks(by_name)), deploy_reading.is_start_not_seen(deploy))
-    board = board if board is not None else wired_board.read_wired(project, deploy)
     no_sim, firmware = flow_codes.BUILD in no_model, by_name.get(flow_codes.FIRMWARE)  # one no-model rule for both keys
     return {"now": said, "stations": stations, "done": names_at(stations, flow_codes.DONE_PLACE),
             "later": names_at(stations, flow_codes.LATER_PLACE), "set_aside": [need["id"] for need in set_aside(listed)],
             "no_simulation": flow_codes.NO_SIMULATION_NOW if no_sim else None,
-            "simulation": checks_reading.simulation_of(project, firmware is not None and firmware.status != flow_codes.NOT_STARTED, no_sim),
+            "simulation": checks_reading.simulation_of(project, firmware is not None and firmware.status != flow_codes.NOT_STARTED, no_sim, check),
             "no_open_phase": no_open_phase(said, by_name), "wired": wired_board.wired_data(board),
             "gate_a": gate_a_of(fact, reached, flow_codes.SIMULATE in no_model)}
 # --- end MVP ---

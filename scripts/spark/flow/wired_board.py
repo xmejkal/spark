@@ -5,13 +5,18 @@ run). Spark never says that the board is wired. With a witness, the parts phase 
 and build offer's effect starts with a fixed sentence that has no date, so a date never changes the fingerprint. A
 board-only project has nothing to wire and gets neither. It reads and never writes. `show_flow.phases_of` applies it, and
 the guide answers `data.guide.wired`.
+
+Two meanings stand apart (P1270): a *witness* (P1044) shows that the board can be wired, and a *follow-up* shows that someone
+acted after the sheet: a check record or a board log later than it (`rewire_count`). A follow-up is never a claim that the
+board is wired.
 """
 
 import datetime
 from collections import namedtuple
 from pathlib import Path
 
-from spark.core.outcomes import COULD_NOT_RUN, PROBLEMS
+from spark.core.outcomes import COULD_NOT_RUN, PROBLEMS, RECORDED
+from spark.breadboard import bench_changes
 from spark.core.zone_time import MONTHS, stamp
 from spark.flow import flow_codes, phase_readers
 
@@ -31,6 +36,44 @@ def read_wired(project, deploy):
     except OSError:
         sheet_at = None
     return WiredBoard(sheet_at, deploy.logged.at if deploy.logged is not None else None)
+
+
+#: The `chosen_by` value of the rewire's NOW sentence (P1270): no status word, the breadboard keeps none.
+REWIRE = "rewire"
+#: What the rewire's NOW sentence says, with the count in words: one change or many.
+REWIRE_NOW = ("breadboard.md lists %s under Changes since, for a breadboard wired from the earlier sheet. If you have not made "
+              "them yet, unplug the USB cable and make them. Ask Claude to check the firmware's pin names against "
+              "pins.py. Spark cannot see your wiring.")
+ONE_CHANGE, MANY_CHANGES = "%d change", "%d changes"
+
+
+def rewire_sentence(count):
+    """The rewire's NOW text for `count` listed changes: "1 change" or "3 changes"."""
+    return REWIRE_NOW % ((ONE_CHANGE if count == 1 else MANY_CHANGES) % count)
+
+
+def is_after(moment, since):
+    """True when the time `moment` is later than `since`, both ISO with their zones; a time that does not parse, or that
+    carries no zone against one that does, is not after."""
+    try:
+        return datetime.datetime.fromisoformat(moment) > datetime.datetime.fromisoformat(since)
+    except (TypeError, ValueError):
+        return False
+
+
+def rewire_count(project, board, check):
+    """The count of the changes breadboard.md lists (`bench_changes.listed_count`) while no follow-up came after the sheet
+    (P1270): None when the sheet cannot be read, lists none, or a follow-up is later than `board.sheet_at`. A follow-up is the
+    newest board log (`board.deploy_at`) or the check-firmware CheckRecord `check`, current or older (its `at`). It reads
+    only breadboard.md, from what it is given, and never a board log of its own."""
+    try:
+        count = bench_changes.listed_count((Path(project) / phase_readers.HELD_FILES[flow_codes.BREADBOARD]).read_text())
+    except (OSError, ValueError):
+        return None
+    follow_ups = [board.deploy_at, check.at if check.state == RECORDED else None]
+    if not count or not board.sheet_at or any(is_after(each, board.sheet_at) for each in follow_ups):
+        return None
+    return count
 
 
 def day_of(iso):
