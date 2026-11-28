@@ -46,7 +46,7 @@ The proposals below are cards for spark-main to file after the PO's yes. P275 #3
 ## The perfboard plan in text and JSON on the CLI (the walking skeleton)
 - type: story
 - needed by: "the perfboard step, it should actually maybe not be so much different from the breadboard" (the PO, 2026-11-28)
-- value proven by: one CLI run on button-light, or the gadget Q6 names, writes each part's holes, each join with its kind and every hole, and the cut, and the same-pins check passes. Its `--json` has `board`, `parts`, `joins`, `weights` and `pins_kept`
+- value proven by: one CLI run on button-light (D10) writes each part's holes, each join with its kind and every hole, and the cut, and the same-pins check passes. Its `--json` has `board`, `parts`, `joins`, `weights` and `pins_kept`
 - depends on: the two refactor stories above, spike P1239 #1792, the drawer story, Q3 and Q6
 - status: proposed
 - label (the repository's type label): feature
@@ -57,7 +57,7 @@ The proposals below are cards for spark-main to file after the PO's yes. P275 #3
 - type: story
 - needed by: "and for now it can for example based on it generate a prompt, or something, when the wiring changes, to copy and say to claude" (the PO, 2026-11-28, #1699)
 - value proven by: one Operation takes a dragged layout and names the wiring change in one sentence, on button-light's breadboard. The CLI with `--json`, spark's commands and skills, and the page's Copy all reach it
-- depends on: the design's drag model (P1352's design), the layout JSON of the walking skeleton
+- depends on: the design's drag model (P1352's design), the perfboard's text plan, because the drag comes for both editors at once (D11)
 - status: proposed
 - label (the repository's type label): feature
 - parent (the epic, as a sub-issue): P1163 #1699
