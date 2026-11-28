@@ -2,7 +2,7 @@
 <title>The spark journey: eight steps from an idea to a working gadget, and how far each works today</title>
 <rect width="1600" height="4016" rx="24" fill="#ffffff"/>
 <text x="48" y="96" font-size="44" font-weight="bold" fill="#1a1a1a" text-anchor="start">From an idea to a working gadget</text>
-<text x="48" y="140" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">The spark journey, and how far each step worked in the runs up to 2026-11-27.</text>
+<text x="48" y="140" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">The spark journey, and how far each step worked in the runs up to 2026-11-28.</text>
 <circle cx="58" cy="180" r="10" fill="#2dc75c"/>
 <text x="78" y="188" font-size="22" font-weight="normal" fill="#595959" text-anchor="start">works: it ran end to end for the docs or in a walk</text>
 <circle cx="690" cy="180" r="10" fill="#ffdc4a"/>
@@ -152,7 +152,10 @@
 <rect x="68" y="2520" width="96" height="36" rx="18" fill="#adf0c7"/>
 <text x="116" y="2545" font-size="20" font-weight="bold" fill="#067429" text-anchor="middle">works</text>
 <text x="68" y="2590" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">A fresh button-and-LED</text>
-<text x="68" y="2624" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">project passes.</text>
+<text x="68" y="2624" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">project passes. On the XIAO</text>
+<text x="68" y="2658" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">C6 the same project ends</text>
+<text x="68" y="2692" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">exit 0, with 3 ? lines,</text>
+<text x="68" y="2726" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-11-28 (P346).</text>
 <circle cx="609" cy="2100" r="36" fill="#ffdc4a"/>
 <text x="609" y="2111" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">6</text>
 <text x="609" y="2182" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Firmware</text>
