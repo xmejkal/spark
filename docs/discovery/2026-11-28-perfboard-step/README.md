@@ -36,6 +36,20 @@ flowchart LR
 - First fit refuses parts on single pads because of the free-hole rule of P412, in one in-memory trial (★C10). Three pieces fail with no row letters (★C11).
 - drawing.py has 599 of 600 lines (★C19). The breadboard area has no Operation (★C21).
 
+## The whole around the perfboard (rough, D17)
+
+A rough pass over the features around this step, each with its slice. The tags are rough and can change.
+
+| Feature | Its card | Rough slice | Link to the perfboard |
+| --- | --- | --- | --- |
+| The breadboard sheet and its layout | P1199 #1747, P1237 #1790 | after the MVP | shares the surface, the placer, the search and the check |
+| The drag editors for both boards | P1163 #1699 | after the perfboard's text plan (D11) | one drag model, one sentence for Claude with Copy |
+| The settings layer | P1194 #1740 | after the MVP | `perfboard.board_mount` and the router's weights get their layer |
+| A photo of the wired or soldered board | P1164 #1700 | later | reads the real board back into the plan |
+| The PCB to order | P79 #16 | later | a tested perfboard's places in mm start the PCB draft (H) |
+| The CAD model and the enclosure | P203 #163, P1197 discovery | later | the soldered board's size and its parts' heights |
+| Stripboard | #310, closed | dropped (D-a) | none |
+
 ## What comes next
 
 - The six proposed cards are in [items.md](items.md). Filing needs the PO's yes.
