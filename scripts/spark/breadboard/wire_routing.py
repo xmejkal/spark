@@ -165,6 +165,15 @@ def _strictly_in(box, point, by):
     return box.left - by < x < box.right + by and box.top - by < y < box.bottom + by
 
 
+def is_beside_an_end(piece, end):
+    """True when a wire's piece, two points in px, comes closer to a jumper's end than TrackRouting.END_CLEARANCE_PX:
+    the 4 cells beside it, never a diagonal (P1350). The router's rings and the tests read this one rule."""
+    (x1, y1), (x2, y2) = piece
+    length = (x2 - x1) ** 2 + (y2 - y1) ** 2
+    share = min(1, max(0, ((end[0] - x1) * (x2 - x1) + (end[1] - y1) * (y2 - y1)) / length)) if length else 0
+    return math.dist((x1 + share * (x2 - x1), y1 + share * (y2 - y1)), end) < TrackRouting.END_CLEARANCE_PX
+
+
 class TrackJumperRouter(JumperRouter):
     """Strategy: each jumper on the tracks of a TrackGrid, around every body (the module's docstring has the rules and
     the costs). `routing(...)` gives the TrackRouting of one drawing, which also counts the states its searches took."""
@@ -203,6 +212,7 @@ class TrackRouting:
     #: How close to a part's body a wire's leg out of its hole may come, in px: more than the white under-stroke's half
     #: width (2, P953's visual spec).
     LEG_CLEARANCE = 2.5
+    END_CLEARANCE_PX = 5.8  # the drawn dot's 3.4 and half the wire's white edge, 2.0, are 5.4; +0.4 for the full ring
     #: The most states one search may take before it gives up.
     BUDGET = 60000
 
@@ -212,8 +222,10 @@ class TrackRouting:
         for jumper in layout.jumpers:
             for hole in (jumper.one, jumper.other):
                 u, v = self.grid.cell(hole.x, hole.y)
-                for du, dv in MOVES:
-                    self.rings.setdefault((u + du, v + dv), set()).add(jumper.step)
+                centre = self.grid.point((u, v))  # the end's cell, as the search sees it (P1350)
+                for cell in [(u + du, v + dv) for du in (-1, 0, 1) for dv in (-1, 0, 1) if du or dv]:
+                    if is_beside_an_end((self.grid.point(cell),) * 2, centre):
+                        self.rings.setdefault(cell, set()).add(jumper.step)
         self.expanded, self.cut_short, self.paths = 0, 0, {}
         order = sorted(layout.jumpers, key=lambda one: (abs(one.one.x - one.other.x), one.step))
         for most, fallback, close in self.TRIES:
