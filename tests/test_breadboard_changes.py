@@ -518,7 +518,7 @@ class ListedCountTest(unittest.TestCase):
         self.assertEqual(changes.listed_count("## Wiring\n\n### Steps\n\n- one\n- two\n"), 0)
 
     def test_the_last_build_heading_lists_none(self):
-        self.assertEqual(changes.listed_count(section(sheet.LAST_BUILD_HEADING, NOTHING)), 0)
+        self.assertEqual(changes.listed_count(section("Changes since the last build", NOTHING)), 0)
 
     def test_nothing_to_change_under_a_since_heading_lists_none(self):
         self.assertEqual(changes.listed_count(section(changes.SINCE_SHEET_HEADING + "2026-11-28 10:00", NOTHING)), 0)

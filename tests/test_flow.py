@@ -3622,7 +3622,7 @@ class TheStalePinNamesTest(FlowTest):
 
     def test_now_on_a_stale_firmware_asks_claude_to_check_the_pin_names(self):
         now = show(self.stale())[0]["data"]["guide"]["now"]
-        self.assertEqual((now["phase"], now["by"], now["says"]), ("firmware", ["claude"], checks_reading.PIN_NAMES_NOW))
+        self.assertEqual((now["phase"], now["by"], now["says"]), ("firmware", ["claude"], "The pin names changed after the free checks last read them. Ask Claude to check the firmware's pin names against the new pins.py, for free."))
 
     def test_the_text_view_marks_the_firmware_out_of_date(self):
         row = next(row for row in lines_of(self.stale()) if " firmware: " in row)
@@ -3749,14 +3749,14 @@ class TheRewireTest(FlowTest):
         project = self.a_rebuilt_project()
         (project / "firmware" / "main.py").unlink()
         now = self.guide(project)["now"]
-        self.assertEqual((now["phase"], now["changes"], now["says"]), ("firmware", None, flow_codes.TWO_JOBS_NOW % now["steps"]))
+        self.assertEqual((now["phase"], now["changes"], now["says"]), ("firmware", None, "Two jobs, in any order: wire the breadboard (%d steps, power off), and ask Claude to write the firmware. Spark cannot see your wiring. Keep main.py thin, with the code in modules it calls, so the free checks can import them." % now["steps"]))
         self.assertEqual(next(row for row in self.guide(project)["stations"] if row["phase"] == "breadboard")["place"], "now")
 
     def test_a_stale_sheet_asks_for_the_build_not_the_rewire(self):
         project = self.a_rebuilt_project()
         (project / "dist" / "board" / "built-from.json").write_text(json.dumps({"requirements": {"board": "another"}}))
         now = self.guide(project)["now"]
-        self.assertEqual(now["says"], flow_codes.SHEET_STALE_NOW)
+        self.assertEqual(now["says"], "The wiring sheet is out of date. Ask Claude to build the board again.")
         self.assertIsNone(now["changes"])
 
     def test_changes_is_null_on_every_other_now(self):
