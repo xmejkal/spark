@@ -217,10 +217,14 @@
   "//pins_functions": "SDA SCL SS MOSI MISO SCK A0 A1 A2 are the vendor's function names for GPIOs this header already carries under D-labels (D4=SDA, D5=SCL, D3=SS, D10=MOSI, D9=MISO, D8=SCK, D0-D2=A0-A2), from XIAO_ESP32C6.pins_arduino.h. Recorded 2026-09-29 so a bus signal can land by name and the bus roles below have something to point at. The silkscreen prints the D-numbers; whether it also prints the function names is not recorded here, and physical.pad_aliases now points each at its D-label.",
   "power": {
     "regulator_3v3_a": {
-      "value": null,
-      "verified": false,
-      "source": "The schematic names the 3.3 V buck (U1 SGM6029CYG/TR, sheet 03) but no current rating. Seeed's wiki gives none. The SGM6029 datasheet was not read.",
-      "why_it_matters": "What everything on 3V3 is summed against, the chip's own radio included."
+      "value": 1.0,
+      "verified": true,
+      "source": "SGM6029 datasheet Rev. A.1 (November 2022), Recommended Operating Conditions (page 3): Output Current, IOUT (MAX), SGM6029A/SGM6029B/SGM6029C: 1A at VIN >= 2.3V, and 0.7A at VIN < 2.3V. U1 is SGM6029CYG/TR (schematic sheet 03, and the datasheet's ordering table, page 2), and R1 249K on VSEL/MODE sets 3.3 V (datasheet page 6, code 16). U1's VIN is +5V: USB VBUS through D1 (600mV at 1A, as sheet 03 prints), or VBAT through Q1. Seeed's wiki gives 5V on Type-C and 3.7V on BAT (documents.xiao-c6-wiki, Specifications, Power), both above 2.3V, so the 1A row applies. A cell below 2.3V gets the 0.7A row. The rating is U1's: Seeed rates no 3V3 pin current.",
+      "why_it_matters": "What everything on 3V3 is summed against, the chip's own radio included.",
+      "cites": {
+        "document": "sgm6029-datasheet-rev-a-1",
+        "at": "Recommended Operating Conditions, page 3"
+      }
     },
     "module_peak_a": {
       "value": 0.354,
@@ -315,6 +319,14 @@
     }
   },
   "documents": {
+    "sgm6029-datasheet-rev-a-1": {
+      "url": "https://www.sg-micro.com/rect/assets/3323f5dc-718f-4b81-b820-398ddb702989/SGM6029.pdf",
+      "sha256": "79d7e25abc3acfd18ab9c394e082663e07dc169151b4bfe0314c13510ced63e0",
+      "file": "SGM6029.pdf",
+      "retrieved": "2026-11-28",
+      "title": "SGM6029 Ultra-Low Quiescent Current, Synchronous Buck Converter",
+      "version": "Rev. A.1, November 2022"
+    },
     "xiao-c6-wiki": {
       "url": "https://wiki.seeedstudio.com/xiao_esp32c6_getting_started/",
       "sha256": "87ab9b8800f2bab3e56f41bcbc6d5ef7391a5570b80115a080d362252e9ef366",
@@ -404,5 +416,5 @@
       "version": "commit 4294fca6"
     }
   },
-  "//power": "Copied from the checked record xiao-esp32-c6-fresh (P229, 2026-10-13) in P278, with its cites and its unverified marks. Every cite names an entry of documents."
+  "//power": "Copied from the checked record xiao-esp32-c6-fresh (P229, 2026-10-13) in P278, with its cites and its unverified marks, but regulator_3v3_a, read from the SGM6029 datasheet in P346 on 28 November 2026. Every cite names an entry of documents."
 }
