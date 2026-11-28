@@ -138,6 +138,7 @@ class TheRegulatorIsRatedFromItsMakersDatasheetTest(unittest.TestCase):
         document = SHIPPED["documents"]["sgm6029-datasheet-rev-a-1"]
         self.assertEqual(document["sha256"], SGM6029_SHA256)
         self.assertEqual(document["version"], "Rev. A.1, November 2022")
+        self.assertEqual(document["file"], "SGM6029.pdf")  # the name the kept file sits under: sources/<sha256>/<file>
         self.assertTrue(document["url"].startswith("https://www.sg-micro.com/"))
         self.assertNotIn("access_token", document["url"])
 
