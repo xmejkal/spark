@@ -138,6 +138,8 @@ def who_and_sentence(now, open_needs, fact, written=True):
     if now.phase == flow_codes.SIMULATE and now.status is None:
         by, said = flow_codes.IMAGE_NOW[fact.fact]
         return flow_codes.NowSentence(by, said % fact.log if fact.fact == flow_codes.RUN_FAILED else said, (flow_codes.SIMULATE, fact.fact))
+    if (now.phase, now.status) == (flow_codes.FIRMWARE, flow_codes.STALE):
+        return flow_codes.NowSentence([flow_codes.BY_CLAUDE], checks_reading.PIN_NAMES_NOW, (flow_codes.FIRMWARE, flow_codes.STALE))
     said = flow_codes.NOW_SENTENCES.get((now.phase, now.status))
     if said == flow_codes.PARTS_NOW:
         return flow_codes.NowSentence([now.by], said % (flow_codes.ONE_NEED_HAS if len(open_needs) == 1 else flow_codes.MANY_NEEDS_HAVE % len(open_needs), ", ".join(open_needs)),

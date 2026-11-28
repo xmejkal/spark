@@ -168,6 +168,81 @@ class ThePinLineTest(unittest.TestCase):
                 self.assertIsNone(checks_reading.missing_pin_line(self.with_pin_map(pin_map)))
 
 
+class ThePinNamesLineTest(unittest.TestCase):
+    """P1270: `pin_names_line` says that pins.py gained or lost names since an older check-firmware record read them."""
+
+    def checked(self, names, before, after=None, project=None, **keywords):
+        """A project whose pins.py binds `before`, a record of check-firmware that kept `names`, then pins.py with `after`."""
+        project = project or a_project()
+        pin_map = {"state": "recorded", "used": 0, "missing": [], "not_compared": []}
+        if names is not None:
+            pin_map["names"] = names
+        (project / "firmware" / "pins.py").write_text("".join("%s = 2\n" % each for each in before))
+        CheckRecordStore(project, "check-firmware").save(INPUTS, AT, {"status": "ok", "lines": OK_LINES, "data": {"pin_map": pin_map}})
+        if after is not None:
+            (project / "firmware" / "pins.py").write_text("".join("%s = %d\n" % (each, 3) for each in after))
+        return project
+
+    def line(self, project):
+        return checks_reading.pin_names_line(project, checks_reading.read_firmware_check(project))
+
+    def test_an_older_record_with_fewer_names_says_the_gained_names(self):
+        project = self.checked(["LED"], ["LED"], ["LED", "JOY_X", "JOY_SW"])
+        self.assertEqual(self.line(project), "firmware/pins.py gained JOY_SW and JOY_X since the free checks read the pin names on %s."
+                         % day_and_time(AT))
+
+    def test_three_gained_names_are_said_with_a_comma_and_and(self):
+        project = self.checked(["LED"], ["LED"], ["LED", "JOY_X", "JOY_SW", "JOY_Y"])
+        self.assertIn("gained JOY_SW, JOY_X and JOY_Y since", self.line(project))
+
+    def test_a_current_record_says_nothing_even_with_other_names(self):
+        project = self.checked(["OLD"], ["LED"])  # the record is saved after pins.py: current, and its names differ
+        self.assertTrue(checks_reading.read_firmware_check(project).current)
+        self.assertIsNone(self.line(project))
+
+    def test_no_record_says_nothing(self):
+        self.assertIsNone(self.line(a_project()))
+
+    def test_a_record_from_before_names_says_nothing(self):
+        self.assertIsNone(self.line(self.checked(None, ["LED"], ["LED", "NEW"])))
+
+    def test_a_lost_name_is_said(self):
+        project = self.checked(["LED", "LED2"], ["LED", "LED2"], ["LED"])
+        self.assertIn("firmware/pins.py lost LED2 since the free checks", self.line(project))
+
+    def test_a_gained_and_a_lost_name_are_joined(self):
+        project = self.checked(["A", "B"], ["A", "B"], ["A", "C"])
+        self.assertIn("gained C, and lost B since", self.line(project))
+
+    def test_a_moved_pin_says_nothing(self):
+        project = self.checked(["LED"], ["LED"], ["LED"])  # the same name on another number: the record is older
+        self.assertFalse(checks_reading.read_firmware_check(project).current)
+        self.assertIsNone(self.line(project))
+
+    def test_a_firmware_file_that_does_not_parse_says_nothing(self):
+        project = self.checked(["LED"], ["LED"], ["LED"])
+        (project / "firmware" / "main.py").write_text("def (:\n")
+        self.assertIsNone(self.line(project))
+
+    def test_it_writes_nothing(self):
+        project = self.checked(["LED"], ["LED"], ["LED", "NEW"])
+        def seen():
+            return sorted((str(one.relative_to(project)), one.stat().st_mtime_ns) for one in project.rglob("*") if one.is_file())
+        before = seen()
+        self.line(project)
+        self.assertEqual(seen(), before)
+
+    def test_the_reader_reads_the_record_once(self):
+        from spark.flow.phase_readers import FirmwareReader
+        project = self.checked(["LED"], ["LED"], ["LED", "NEW"])
+        counted = []
+        real = checks_reading.read_check
+        checks_reading.read_check = lambda *args: counted.append(args) or real(*args)  # the repo's way: no mock.patch (T2)
+        self.addCleanup(setattr, checks_reading, "read_check", real)
+        FirmwareReader().read(project)
+        self.assertEqual(len(counted), 1)
+
+
 class TheDesignLineTest(unittest.TestCase):
     """P1255: the Design checks' line, `design_line`, says the check-design record in one sentence from the record alone
     (`said_of`), and runs nothing (`test_the_reader_runs_nothing` reads this module)."""

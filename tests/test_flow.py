@@ -43,7 +43,7 @@ from spark.breadboard.sheet import have_of  # noqa: E402
 from spark.flow.flow_codes import effect_lines, picked_sentence  # noqa: E402
 from spark.flow import flow_codes  # noqa: E402
 from spark.flow import flow_page, run_request  # noqa: E402
-from spark.flow import deploy_reading  # noqa: E402
+from spark.flow import checks_reading, deploy_reading  # noqa: E402
 from spark.bench import board_log  # noqa: E402
 from spark.flow.deploy_reading import DeployState  # noqa: E402
 from spark.flow.guide import NO_IMAGE_FACT, ImageFact, chat_offer_of, guide_of, job_offer, names_at, requirements_now  # noqa: E402
@@ -3591,6 +3591,52 @@ class ThePinMapTest(FlowTest):
 
     def test_no_check_record_gives_no_status(self):
         project = a_firmware(a_built_project())
+        self.assertIsNone(statuses(show(project)[0])["firmware"])
+
+
+class TheStalePinNamesTest(FlowTest):
+    """P1270 (#1829): the firmware is out of date when an older check record read other pin names than firmware/pins.py binds now."""
+
+    USES_JOY_SW = ThePinMapTest.USES_JOY_SW
+    LINE = "firmware/pins.py gained LED since the free checks read the pin names on "
+
+    def stale(self):
+        """A project checked with pins.py holding JOY_SW, then pins.py with LED too: the record is older, with other names."""
+        project = ThePinMapTest.checked(self, "JOY_SW = 4\n")
+        (project / "firmware" / "pins.py").write_text("JOY_SW = 4\nLED = 2\n")
+        return project
+
+    def test_the_firmware_is_out_of_date_with_the_names_first(self):
+        said, _ = show(self.stale())
+        self.assertEqual((statuses(said)["firmware"], marks(said)["firmware"]), ("stale", "↻"))
+        first, second = says(said, "firmware")
+        self.assertTrue(first.startswith(self.LINE), first)
+        self.assertTrue(second.startswith("firmware/main.py written "), second)
+
+    def test_now_on_a_stale_firmware_asks_claude_to_check_the_pin_names(self):
+        now = show(self.stale())[0]["data"]["guide"]["now"]
+        self.assertEqual((now["phase"], now["by"], now["says"]), ("firmware", ["claude"], checks_reading.PIN_NAMES_NOW))
+
+    def test_the_text_view_marks_the_firmware_out_of_date(self):
+        row = next(row for row in lines_of(self.stale()) if " firmware: " in row)
+        self.assertIn("↻", row)
+        self.assertIn("out of date", row)
+        self.assertIn(self.LINE, row)
+
+    def test_the_page_marks_the_firmware_out_of_date(self):
+        project = self.stale()
+        write_page(project)
+        page = (project / "page.html").read_text()
+        self.assertIn("out of date", page)
+        self.assertIn(html.escape(self.LINE), page)
+
+    def test_a_missing_name_on_a_current_record_stays_problems(self):
+        said, _ = show(ThePinMapTest.checked(self, "LED = 2\n"))
+        self.assertEqual(statuses(said)["firmware"], "problems")
+
+    def test_a_moved_pin_keeps_the_firmware_with_no_status(self):
+        project = ThePinMapTest.checked(self, "JOY_SW = 4\n")
+        (project / "firmware" / "pins.py").write_text("JOY_SW = 5\n")
         self.assertIsNone(statuses(show(project)[0])["firmware"])
 
 
