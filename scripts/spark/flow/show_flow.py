@@ -256,7 +256,8 @@ With listed changes in breadboard.md and no follow-up after the sheet (no board 
 later than it), the breadboard is now, by you and Claude: data.guide.now.changes holds the count of the sheet's own
 "Changes since" lines, and the next step is check-firmware (P1270). After the pin names changed since the free checks last
 read them, the firmware is stale, and the next step is check-firmware. A pin that moved keeps its name, so it does not make
-the firmware stale, and spark still says to rewire.
+the firmware stale, and spark still says to rewire. A rebuild of the same design lists the same changes again with a new
+sheet time, so it names the rewire again until P1363 keeps the time of the list's first sheet.
 flow.py show runs no offer."""
     arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder (default: here)"), COMMON_ARGUMENTS["json"])
     effects = (READS,)

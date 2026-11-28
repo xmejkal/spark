@@ -42,7 +42,7 @@ def read_wired(project, deploy):
 REWIRE = "rewire"
 #: What the rewire's NOW sentence says, with the count in words: one change or many.
 REWIRE_NOW = ("breadboard.md lists %s under Changes since, for a breadboard wired from the earlier sheet. If you have not made "
-              "them yet, unplug the USB cable and make them. Ask Claude to check the firmware's pin names against the new "
+              "them yet, unplug the USB cable and make them. Ask Claude to check the firmware's pin names against "
               "pins.py. Spark cannot see your wiring.")
 ONE_CHANGE, MANY_CHANGES = "%d change", "%d changes"
 

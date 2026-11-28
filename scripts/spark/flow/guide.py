@@ -365,12 +365,13 @@ def count_beside_sheet(project, now, by_name, steps):
 
 def guide_of(project, phases, steps=count_steps, deploy=None, board=None):
     """What the person does now, what is done, what comes later and what they set aside, from the Phases of `project`:
-    `{"now": {phase, by, says, offer, chat_offer, needs, steps, with_wiring, design_checks}, "stations", "done", "later", "set_aside", "no_simulation", "simulation", "no_open_phase", "wired", "gate_a"}`.
+    `{"now": {phase, by, says, offer, chat_offer, needs, steps, changes, with_wiring, design_checks}, "stations", "done", "later", "set_aside", "no_simulation", "simulation", "no_open_phase", "wired", "gate_a"}`.
     `no_simulation` is the flag's sentence and `simulation` the line show and the page draw (`checks_reading.simulation_of`).
     `stations` places each phase beside the now (`stations_of`, P1119), and `done` and `later` are built from it. `steps` counts the wiring
     sheet's steps. The needs are read once more, by the parts phase's own rule (`counted`, `set_aside`). `deploy` is the
     run's DeployState (P1043), None to read it here once for the now, the firmware's note (P1106) and `wired`. `board` is the run's WiredBoard (P1044), None to read it here:
-    `wired` is `{sheet_at, deploy_at}`, the witnesses of a board that can be wired, or None when spark saw none.
+    `wired` is `{sheet_at, deploy_at}`, the witnesses of a board that can be wired, or None when spark saw none. The open rewire reads `board` too
+    (`rewire_of`): `changes` is the count of the changes the sheet lists, on a breadboard now, and `with_wiring` is true for it (P1270).
     `gate_a` is `gate_a_of`'s row (P1220), None before the deploy has a board log or is now.
     """
     by_name, listed = {phase.phase: phase for phase in phases}, readable(lambda: needs.read(project), [])

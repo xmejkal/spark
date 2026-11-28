@@ -299,7 +299,7 @@ SECTION_MARK, LINE_MARK = "### ", "- "
 def listed_count(text):
     """The count of change lines that a sheet's text lists under its "Changes since" heading (P1270): the "- " lines up to
     the next "### " heading, without the nothing line. 0 for a first build, for a build compared with the last build, and
-    for text with no such heading. It reads the lines the writer wrote, with the writer's own constants, and never raises."""
+    for text with no such heading. It reads the lines the writer wrote: the headings and the nothing line are the writer's own constants (`sheet._change_lines`); the "### " and "- " marks are this reader's, since the writer still writes them as literals. It never raises."""
     count, inside = 0, False
     for line in str(text).splitlines():
         if line.startswith(SECTION_MARK):
