@@ -140,7 +140,7 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 ## Board actions <!-- REQUIRED:spark-process:board-actions -->
 <!-- Each action on the board or the issue (stage, waiting flag, comment, filing): taken, with its D, or pending.
 None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
-- #1939 stays in Discovery while the questions run · no action. Filing items.md's six items through spark-main · pending, D15. A comment on P275 #311 that links this discovery · pending, with the filing
+- #1939 stays in Discovery while the questions run · no action. Filing items.md's six items · taken D15: spark-main filed P1355 #1944 to P1360 #1950. A comment on P275 #311 that links this discovery · pending, with the filing
 <!-- EXTEND:brief-sections -->
 
 ## Hand-off

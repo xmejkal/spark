@@ -8,7 +8,7 @@ The proposals below are cards for spark-main to file after the PO's yes. P275 #3
 - needed by: "we don't want to have multiple places in the codebase implementing almost the same, remember this" (the PO, 2026-11-28) <!-- REQUIRED:needed-by -->
 - value proven by: 9 of 9 golden breadboards stay byte for byte (at most 5 of them draw a placement or a route). One test catches a bare wire over another net's pad. A grep finds one union-find in scripts/spark <!-- REQUIRED:value-proven-by -->
 - depends on: the clock spike P1074 #1575's finding (D5, D6), and a perfboard join to test against, so it lands with the walking skeleton <!-- REQUIRED:depends-on -->
-- status: proposed, filing approved D15 <!-- REQUIRED:item-status -->
+- status: filed D15 as P1355 [#1944](https://github.com/xmejkal/spark/issues/1944), label story (the repository has no refactor or feature label) <!-- REQUIRED:item-status -->
 - label (the repository's type label): refactor <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1199 #1747 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): Views and editors <!-- REQUIRED:spark-process:slice -->
@@ -18,7 +18,7 @@ The proposals below are cards for spark-main to file after the PO's yes. P275 #3
 - needed by: "lets just leave the penalties for turning and crossing and such configurable or at least as constants in the code, so that we can later play around with it" (the PO, 2026-11-28, #1937)
 - value proven by: 9 of 9 goldens, tests/test_wire_routing.py with `cut_short` equal, a test that pins each default, and `TRIES` derived from the Value's own numbers
 - depends on: P1350 #1937 merged, and the clock spike P1074 #1575's finding (D5, D6)
-- status: proposed, filing approved D15
+- status: filed D15 as P1356 [#1945](https://github.com/xmejkal/spark/issues/1945), label story (the repository has no refactor or feature label)
 - label (the repository's type label): refactor
 - parent (the epic, as a sub-issue): P1199 #1747
 - slice (one Slice option of the board, or "ask the decider for a new one"): Views and editors
@@ -28,7 +28,7 @@ The proposals below are cards for spark-main to file after the PO's yes. P275 #3
 - needed by: "feel free to refactor anytime you think something could be dried out" (the PO, 2026-11-28)
 - value proven by: drawing.py at about 542 lines (lines 543 to 599 out), 9 of 9 goldens, no private `_round_px` import left (a grep)
 - depends on: the clock spike P1074 #1575's finding (D5, D6)
-- status: proposed, filing approved D15
+- status: filed D15 as P1357 [#1946](https://github.com/xmejkal/spark/issues/1946), label chore (the repository has no refactor or feature label)
 - label (the repository's type label): refactor
 - parent (the epic, as a sub-issue): P1199 #1747
 - slice (one Slice option of the board, or "ask the decider for a new one"): Views and editors
@@ -38,7 +38,7 @@ The proposals below are cards for spark-main to file after the PO's yes. P275 #3
 - needed by: "the person's perfboard sizes come from the drawer, cut smaller, never bigger" (the PO, 2026-11-26, #311 note 2)
 - value proven by: the FIT0193's entry holds holes across, holes down and pitch, each `assumed` or `measured`. One Operation with a dry run writes them, and the CLI's `--json` names it
 - depends on: P1238 #1791 for the measured values (the Operation can write assumed values first)
-- status: proposed, filing approved D15
+- status: filed D15 as P1358 [#1948](https://github.com/xmejkal/spark/issues/1948), label story (the repository has no refactor or feature label)
 - label (the repository's type label): feature
 - parent (the epic, as a sub-issue): P275 #311
 - slice (one Slice option of the board, or "ask the decider for a new one"): Views and editors
@@ -48,7 +48,7 @@ The proposals below are cards for spark-main to file after the PO's yes. P275 #3
 - needed by: "the perfboard step, it should actually maybe not be so much different from the breadboard" (the PO, 2026-11-28)
 - value proven by: one CLI run on button-light (D10) writes each part's holes, each join with its kind and every hole, and the cut, and the same-pins check passes. Its `--json` has `board`, `parts`, `joins`, `weights` and `pins_kept`
 - depends on: the two refactor stories above, spike P1239 #1792, the drawer story (D7, D10)
-- status: proposed, filing approved D15
+- status: filed D15 as P1359 [#1949](https://github.com/xmejkal/spark/issues/1949), label story (the repository has no refactor or feature label)
 - label (the repository's type label): feature
 - parent (the epic, as a sub-issue): P275 #311
 - slice (one Slice option of the board, or "ask the decider for a new one"): Views and editors
@@ -58,10 +58,10 @@ The proposals below are cards for spark-main to file after the PO's yes. P275 #3
 - needed by: "and for now it can for example based on it generate a prompt, or something, when the wiring changes, to copy and say to claude" (the PO, 2026-11-28, #1699)
 - value proven by: one Operation takes a dragged layout and names the wiring change in one sentence, on button-light's breadboard and perfboard at once (D11). The CLI with `--json`, spark's commands and skills, and the page's Copy all reach it
 - depends on: the design's drag model (P1352's design), the perfboard's text plan, because the drag comes for both editors at once (D11)
-- status: proposed, filing approved D15
+- status: filed D15 as P1360 [#1950](https://github.com/xmejkal/spark/issues/1950), label story (the repository has no refactor or feature label)
 - label (the repository's type label): feature
 - parent (the epic, as a sub-issue): P1163 #1699
 - slice (one Slice option of the board, or "ask the decider for a new one"): Views and editors
 
 ## Board actions
-- file the six items above as cards, each with "Needed by" and its slice · pending, approved D15. spark-main files them <!-- REQUIRED:board-actions -->
+- file the six items above as cards, each with "Needed by" and its slice · taken D15: spark-main filed P1355 #1944 to P1360 #1950 on 2026-11-28; the board fields of #1948 to #1950 follow GitHub's limit reset <!-- REQUIRED:board-actions -->
