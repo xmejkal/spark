@@ -92,8 +92,8 @@
  {
   "file": "scripts/spark/flow/checks_reading.py",
   "name": "P1255: the line reads check-firmware's record (test_checks_reading.TheDesignLineTest.test_the_line_reads_check_design_s_record_not_check_firmware_s)",
-  "find": "    check = read_check(project, CheckDesign.name)\n",
-  "replace": "    check = read_check(project, CheckFirmware.name)\n"
+  "find": "    check = read_check(project, CheckDesign.name)\n    if not built and",
+  "replace": "    check = read_check(project, CheckFirmware.name)\n    if not built and"
  },
  {
   "file": "scripts/spark/flow/checks_reading.py",
