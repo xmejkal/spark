@@ -173,7 +173,8 @@ class TheFreeChecksTogetherTest(unittest.TestCase):
                          [("problems", "firmware/main.py:3", "firmware/main.py:3 uses pins.JOY_SW, and firmware/pins.py has no JOY_SW")])
         self.assertIn("Do not edit pins.py by hand", problems[0].fix)
         self.assertEqual(result.data["pin_map"], {"state": "recorded", "used": 1, "not_compared": [],
-                                                  "missing": [{"name": "JOY_SW", "file": "firmware/main.py", "line": 3}]})
+                                                  "missing": [{"name": "JOY_SW", "file": "firmware/main.py", "line": 3}],
+                                                  "names": ["LED"]})
         self.assertIn("pin map: 0 of 1 uses found in firmware/pins.py, not found: JOY_SW (firmware/main.py:3)", result.lines)
 
     def test_a_firmware_whose_pin_names_all_exist_gives_no_finding(self):

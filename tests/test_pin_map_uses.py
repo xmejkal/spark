@@ -216,7 +216,8 @@ class TheDataAndTheLineTest(unittest.TestCase):
         self.assertEqual(uses.to_data(), {"state": "recorded", "used": 1,
                                           "missing": [{"name": "JOY", "file": "firmware/main.py", "line": 2}],
                                           "not_compared": [{"file": "firmware/main.py", "line": 3,
-                                                            "form": "uses the pin map as a value, so the names it reaches are not compared"}]})
+                                                            "form": "uses the pin map as a value, so the names it reaches are not compared"}],
+                                          "names": ["LED"]})
 
     def test_the_data_of_a_map_that_was_not_read_holds_only_why(self):
         uses = read(None)
@@ -287,6 +288,35 @@ class TheDataAndTheLineTest(unittest.TestCase):
                 with self.subTest(data=data, only=only):
                     self.assertIsNone(PinMapUses.line_from(data, missing_only=only))
         self.assertIsNotNone(PinMapUses.line_from(good))
+
+
+class TheNamesSinceTest(unittest.TestCase):
+    """changed_since: the names of the map now against the names an earlier record kept (P1270)."""
+
+    @staticmethod
+    def now(*names):
+        return read({"main.py": "x = 1\n"}, pins="".join("%s = 2\n" % each for each in names))
+
+    def test_a_gained_name_is_gained(self):
+        self.assertEqual(self.now("LED", "JOY_SW").changed_since({"names": ["LED"]}), (("JOY_SW",), ()))
+
+    def test_a_lost_name_is_lost(self):
+        self.assertEqual(self.now("LED").changed_since({"names": ["LED", "LED2"]}), ((), ("LED2",)))
+
+    def test_the_same_names_give_no_change(self):
+        self.assertEqual(self.now("LED", "B").changed_since({"names": ["B", "LED"]}), ((), ()))
+
+    def test_kept_data_with_no_list_of_names_gives_none(self):
+        uses = self.now("LED")
+        for kept in (None, {}, {"names": [1]}, {"names": "LED"}, {"state": "recorded", "used": 1}):
+            self.assertIsNone(uses.changed_since(kept), kept)
+
+    def test_a_value_with_no_map_gives_none(self):
+        self.assertIsNone(read(None).changed_since({"names": ["LED"]}))
+        self.assertIsNone(PinMapUses.read(a_project({"main.py": "x = 1\n"}, pins=None)).changed_since({"names": ["LED"]}))
+
+    def test_the_answer_is_sorted(self):
+        self.assertEqual(self.now("Z", "A", "M").changed_since({"names": ["Q", "B"]}), (("A", "M", "Z"), ("B", "Q")))
 
 
 class TheFindingsSentencesTest(unittest.TestCase):

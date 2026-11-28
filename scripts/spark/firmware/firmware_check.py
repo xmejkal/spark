@@ -71,7 +71,7 @@ after `import pins [as p]`, and each name of `from pins import X`. A name the ma
 with its file and line), and a file or a map that does not parse is could-not-run (`pin_map_not_read`). A use it cannot compare
 (`from pins import *`, the module used as a value, a module name that the file binds another way too) is an assumption,
 counted in the result line, never a pass. It compares names only. It never sees whether the pin is wired, right or used right.
-`data.pin_map` holds `used`, `missing` and `not_compared`, and `has_map`: false, only when firmware/pins.py is not there.
+`data.pin_map` holds `used`, `missing`, `not_compared` and `names` (the names that firmware/pins.py binds, which `flow.py show` compares to say that they changed), and `has_map`: false, only when firmware/pins.py is not there.
 
 The own tests are PROJECT/tests, run with unittest in a process of their own (`own_tests_child.py`), %g s at most.
 The tests' code runs on this machine too, in the project folder, and can write files there: spark writes only its record. The
