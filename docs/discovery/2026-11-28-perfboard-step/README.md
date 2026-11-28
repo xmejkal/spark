@@ -19,7 +19,7 @@ flowchart LR
 
 | D | Decision |
 | --- | --- |
-| D3, D4 | Only A1 ("you solder soon") rates high. No test for it. Whether the design covers the whole step or only the shared parts is open (D10 says no gadget is planned). |
+| D3, D4 | Only A1 ("you solder soon") rates high. No test for it. The design covers the whole step, each part tagged faintly with its slice (D16). |
 | D5, D6 | The clock spike runs first, after the MVP walk. The refactor is decided after its finding. |
 | D7 | The first done result is a text and JSON plan on the CLI, with the same-pins check passing. |
 | D8 | The dev board goes on female headers by default, through a setting `perfboard.board_mount`. |
