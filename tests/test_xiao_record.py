@@ -3,7 +3,7 @@ The library's XIAO ESP32-C6 record builds a button and an LED (P278, #314).
 
 Its power, power pads, Wokwi power pins, documents and physical facts come from the record that was checked at the bench
 (`tests/data/breadboard/button-light-xiao/boards/xiao-esp32-c6-fresh.json`, P229), and the facts both records state
-agree.
+agree, but the regulator's rating and its datasheet, read in P346 (READ_AFTER_THE_BENCH_RECORD).
 
     python3 -m unittest tests.test_xiao_record
 """
@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -23,11 +24,17 @@ from suite_runs import slow  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.records import board_records  # noqa: E402
+from spark.records import board_records, store  # noqa: E402
+from spark.design import loader, power_rails  # noqa: E402
+from spark.checks import physics_check  # noqa: E402
 
 SHIPPED = json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text())
 FRESH = json.loads((ROOT / "tests" / "data" / "breadboard" / "button-light-xiao" / "boards"
                     / "xiao-esp32-c6-fresh.json").read_text())
+
+# The regulator's rating and its datasheet were read in P346, after the P229 bench record, so the fixture lacks them.
+READ_AFTER_THE_BENCH_RECORD = {"power": "regulator_3v3_a", "documents": "sgm6029-datasheet-rev-a-1"}
+SGM6029_SHA256 = "79d7e25abc3acfd18ab9c394e082663e07dc169151b4bfe0314c13510ced63e0"
 
 
 @slow("a real build of the library XIAO with a button and an LED, 3 tests, 5.8 s on 2026-10-26")
@@ -60,8 +67,11 @@ class TheLibraryXiaoBuildsAButtonAndAnLedTest(unittest.TestCase):
 
 class TheCopiedFactsEqualTheCheckedRecordTest(unittest.TestCase):
     def test_power_equals_the_fresh_record_but_for_the_facts_of_the_board_s_own_power_parts(self):
+        self.assertIsNone(FRESH["power"][READ_AFTER_THE_BENCH_RECORD["power"]]["value"])
         own = ("charger", "regulator", "battery_input")
-        self.assertEqual({name: fact for name, fact in SHIPPED["power"].items() if name not in own}, FRESH["power"])
+        read_later = READ_AFTER_THE_BENCH_RECORD["power"]
+        self.assertEqual({name: fact for name, fact in SHIPPED["power"].items() if name not in own + (read_later,)},
+                         {name: fact for name, fact in FRESH["power"].items() if name != read_later})
         self.assertEqual(sorted(set(SHIPPED["power"]) - set(FRESH["power"])), sorted(own))
         self.assertEqual(SHIPPED["power"]["io_volts"]["value"], 3.3)
 
@@ -72,8 +82,11 @@ class TheCopiedFactsEqualTheCheckedRecordTest(unittest.TestCase):
         self.assertEqual(SHIPPED["wokwi_power_pins"], FRESH["wokwi_power_pins"])
         self.assertLessEqual(set(SHIPPED["power_pads"]), set(SHIPPED["wokwi_power_pins"]))
 
-    def test_documents_equal_the_fresh_record_each_with_a_url_and_a_sha256(self):
-        self.assertEqual(SHIPPED["documents"], FRESH["documents"])
+    def test_documents_equal_the_fresh_record_but_the_p346_datasheet_each_with_a_url_and_a_sha256(self):
+        read_later = READ_AFTER_THE_BENCH_RECORD["documents"]
+        self.assertNotIn(read_later, FRESH["documents"])
+        self.assertEqual({name: one for name, one in SHIPPED["documents"].items() if name != read_later},
+                         FRESH["documents"])
         for name, document in SHIPPED["documents"].items():
             self.assertTrue(document["url"].startswith("https://"), name)
             self.assertRegex(document["sha256"], r"^[0-9a-f]{64}$", name)
@@ -111,6 +124,38 @@ class TheCopiedFactsEqualTheCheckedRecordTest(unittest.TestCase):
     def test_fresh_adds_only_tx_and_rx_which_pad_aliases_reach(self):
         self.assertEqual(set(FRESH["pins"]) - set(SHIPPED["pins"]), {"TX", "RX"})
         self.assertEqual((SHIPPED["physical"]["pad_aliases"]["TX"], SHIPPED["physical"]["pad_aliases"]["RX"]), ("D6", "D7"))
+
+
+class TheRegulatorIsRatedFromItsMakersDatasheetTest(unittest.TestCase):
+    def test_the_3v3_rating_is_one_amp_verified_from_the_sgm6029_datasheet(self):
+        fact = SHIPPED["power"]["regulator_3v3_a"]
+        self.assertEqual(fact["value"], 1.0)
+        self.assertIs(fact["verified"], True)
+        self.assertEqual(fact["cites"], {"document": "sgm6029-datasheet-rev-a-1",
+                                         "at": "Recommended Operating Conditions, page 3"})
+        self.assertIn("0.7A", fact["source"])
+        self.assertIn("VIN < 2.3V", fact["source"])
+        document = SHIPPED["documents"]["sgm6029-datasheet-rev-a-1"]
+        self.assertEqual(document["sha256"], SGM6029_SHA256)
+        self.assertEqual(document["version"], "Rev. A.1, November 2022")
+        self.assertTrue(document["url"].startswith("https://www.sg-micro.com/"))
+        self.assertNotIn("access_token", document["url"])
+
+    def test_the_walks_button_and_led_on_the_library_xiao_leave_the_3v3_rail_nothing_to_say(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            folder = Path(scratch) / "project"
+            folder.mkdir()
+            requirements = folder / "requirements.json"
+            requirements.write_text(json.dumps(
+                {"board": "xiao-esp32-c6", "parts": ["tactile-button", "led-red-5mm"]}))
+            with mock.patch.dict(os.environ, {"SPARK_HOME": str(Path(scratch) / "home")}):
+                found = store.records("boards", board_records.LIBRARY, project=folder)
+                self.assertEqual(found["xiao-esp32-c6"][0], "library")
+                made = loader.load(requirements)
+                loads = power_rails.rail_loads(made.parts, made.board)
+        self.assertAlmostEqual(loads["V33"]["amps"], 0.354)
+        self.assertTrue(loads["V33"]["complete"])
+        self.assertEqual(physics_check.check_rail_supply(loads), [])
 
 
 class TheFactsBothRecordsStateAgreeTest(unittest.TestCase):
