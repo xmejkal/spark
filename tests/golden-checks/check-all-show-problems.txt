@@ -1,0 +1,1 @@
+  ✓ build: the last build, <time>: ok, Design checks, <day-time>, problems: rules-vs-netlist found 1 problem(s); physics could not look; 2 check(s) found nothing; not asked for: the-order. Ask Claude to go through them with you. (claude)

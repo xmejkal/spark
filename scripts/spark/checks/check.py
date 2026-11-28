@@ -172,7 +172,7 @@ def placeholder_components_in(project):
     from spark.design import loader
     from spark.design import board_components
     names, notes = set(), []
-    for requirements in sorted(Path(project).glob("*requirements.json")):
+    for requirements in sorted(Path(project).glob(board_records.REQUIREMENTS_GLOB)):
         try:
             # the file's own project, the one the build reads (P319)
             part_list = loader.parts_of(loader.read(requirements), loader.project_for(requirements))
@@ -198,7 +198,7 @@ def rail_loads_in(project, circuit):
     from spark.design import power_rails
     present = {e.get("name") for e in circuit if e.get("type") == "source_component"}
     matched, notes = [], []
-    for requirements in sorted(Path(project).glob("*requirements.json")):
+    for requirements in sorted(Path(project).glob(board_records.REQUIREMENTS_GLOB)):
         try:
             made = loader.load(requirements)  # the file's own project, the one the build reads (P319)
         except loader.DesignError as broken:
@@ -380,7 +380,7 @@ def folder_boards(checked):
     """
     marked = board_records.marked_board(checked.project)[0]
     boards = []
-    for requirements in sorted(Path(checked.folder).glob("*requirements.json")):
+    for requirements in sorted(Path(checked.folder).glob(board_records.REQUIREMENTS_GLOB)):
         named = loader.read(requirements).get("board")
         if named is not None and not isinstance(named, str):
             raise loader.DesignError("%s holds %r where one board id belongs", requirements, named,
@@ -472,16 +472,14 @@ def run(inputs, ambiguous=None):
     return [check.run(inputs, ambiguous) for check in CHECKS]
 
 
-def run_every_check(project=None, boards=(), circuit=None, rules=None, package=None):
-    """
-    The dict `check_all.py --json` prints, for the five inputs as plain values (P804): a refusal (`tool`, `status`
-    could-not-run, `reason`) when `project` names no usable folder, else `tool`, `status`, `unmeasured`, `resolved`,
-    `results` and, when a folder was checked, `project`. `run` is the loop over the checks; this finds their inputs
-    first. Writes nothing.
-    """
+def every_check(project=None, boards=(), circuit=None, rules=None, package=None):
+    """(the dict `check_all.py --json` prints, the inputs the checks were given after the flags' merge, the CheckedFolder),
+    for the five inputs as plain values (P804, P1255): a refusal (`tool`, `status` could-not-run, `reason`), {} and None when
+    `project` names no usable folder, else `tool`, `status`, `unmeasured`, `resolved`, `results` and, when a folder was
+    checked, `project`. `run` is the loop over the checks; this finds their inputs first. Writes nothing."""
     checked, refusal = CheckedFolder.named(project)
     if refusal:
-        return {"tool": "check_all", "status": COULD_NOT_RUN, "reason": refusal}
+        return {"tool": "check_all", "status": COULD_NOT_RUN, "reason": refusal}, {}, None
     values = {"project": project, "boards": [boards] if isinstance(boards, str) else list(boards or ()), "circuit": circuit, "rules": rules, "package": package}
     inputs, resolved, ambiguous = inputs_for(values, checked)
     results = run(inputs, ambiguous)
@@ -491,12 +489,12 @@ def run_every_check(project=None, boards=(), circuit=None, rules=None, package=N
         # the project the build reads (P319), resolved as `loader.project_for` resolves it; null for none, never
         # the plugin's own folder
         result["project"] = None if loader.is_library(checked.project) else str(checked.project.resolve())
-    return result
+    return result, inputs, checked
 
 
 def render_every_check(result, project):
     """
-    Renderer: the text `check_all.py` prints for `run_every_check`'s dict: the `[????] check_all` line for a refusal, else
+    Renderer: the text `check_all.py` prints for `every_check`'s dict: the `[????] check_all` line for a refusal, else
     the inputs resolved from the folder `project`, when any, and `render` of the results.
     """
     if "reason" in result:

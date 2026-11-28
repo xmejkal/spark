@@ -1,0 +1,1 @@
+  ✓ build: the last build, <time>: ok, Design checks, <day-time>, could-not-run: physics could not look; 3 check(s) found nothing, resting on 1 unmeasured value(s); not asked for: the-order. Ask Claude to go through them with you. (claude)

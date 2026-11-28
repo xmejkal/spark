@@ -167,5 +167,61 @@ class ThePinLineTest(unittest.TestCase):
                 self.assertIsNone(checks_reading.missing_pin_line(self.with_pin_map(pin_map)))
 
 
+class TheDesignLineTest(unittest.TestCase):
+    """P1255: the Design checks' line, `design_line`, says the check-design record in one sentence from the record alone
+    (`said_of`), and runs nothing (`test_the_reader_runs_nothing` reads this module)."""
+
+    INPUTS = ["requirements.json"]
+
+    def a_project(self):
+        project = Path(tempfile.mkdtemp()) / "lamp"
+        project.mkdir()
+        (project / "requirements.json").write_text('{"board": "xiao-esp32-c6"}\n')
+        return project
+
+    def kept(self, project, status, lines):
+        CheckRecordStore(project, "check-design").save(self.INPUTS, AT, {"status": status, "data": {}, "lines": lines})
+        return project
+
+    def test_no_build_and_no_record_is_no_line(self):
+        self.assertIsNone(checks_reading.design_line(self.a_project(), False))
+
+    def test_a_build_and_no_record_says_not_run_yet(self):
+        self.assertEqual(checks_reading.design_line(self.a_project(), True), "Design checks: not run yet. Ask Claude to run them, for free.")
+
+    def test_a_record_is_said_with_no_build_too(self):
+        project = self.kept(self.a_project(), "ok", ["2 check(s) found nothing"])
+        self.assertEqual(checks_reading.design_line(project, False), "Design checks, %s: 2 check(s) found nothing." % day_and_time(AT))
+
+    def test_a_current_record_of_problems_names_its_status_and_its_lines(self):
+        project = self.kept(self.a_project(), "problems", ["rules-vs-netlist found 1 problem(s)", "2 check(s) found nothing"])
+        self.assertEqual(checks_reading.design_line(project, True),
+                         "Design checks, %s, problems: rules-vs-netlist found 1 problem(s); 2 check(s) found nothing. "
+                         "Ask Claude to go through them with you." % day_and_time(AT))
+
+    def test_a_could_not_run_record_says_could_not_look_and_never_ok(self):
+        project = self.kept(self.a_project(), "could-not-run", ["physics could not look", "3 check(s) found nothing"])
+        line = checks_reading.design_line(project, True)
+        self.assertEqual(line, "Design checks, %s, could-not-run: physics could not look; 3 check(s) found nothing. "
+                               "Ask Claude to go through them with you." % day_and_time(AT))
+        self.assertNotIn("ok", line.split(":")[0])
+
+    def test_an_older_record_names_its_inputs(self):
+        project = self.kept(self.a_project(), "ok", ["2 check(s) found nothing"])
+        (project / "requirements.json").write_text('{"board": "firebeetle2-esp32s3"}\n')
+        self.assertEqual(checks_reading.design_line(project, True),
+                         "Design checks, %s, on older requirements.json: ask Claude to run them again." % day_and_time(AT))
+
+    def test_an_unreadable_record_says_why(self):
+        project = self.a_project()
+        (project / ".spark").mkdir()
+        (project / ".spark" / "check-design.json").write_text("{not json")
+        self.assertEqual(checks_reading.design_line(project, False), "Design checks: the check record is no JSON. Ask Claude to run them again.")
+
+    def test_the_line_reads_check_design_s_record_not_check_firmware_s(self):
+        project = with_record(a_project())
+        self.assertEqual(checks_reading.design_line(project, True), "Design checks: not run yet. Ask Claude to run them, for free.")
+
+
 if __name__ == "__main__":
     unittest.main()

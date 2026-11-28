@@ -33,11 +33,15 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_all  # noqa: E402
 from spark.checks import build_check, check  # noqa: E402
-from spark.checks.check_design import CheckDesign  # noqa: E402
+from spark.checks.check_design import CheckDesign, record_lines  # noqa: E402
 from spark.core import outcomes  # noqa: E402
+from spark.core.operation import READS, WRITES  # noqa: E402
+from spark.core.zone_time import stamp  # noqa: E402
+from spark.flow import checks_reading  # noqa: E402
+from spark.records.check_record import CheckRecordStore  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.result import OperationResult  # noqa: E402
-from fakes import FakeOutsideWorld  # noqa: E402
+from fakes import FakeClock, FakeOutsideWorld  # noqa: E402
 from spark.design import loader  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
@@ -573,17 +577,17 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
 
 
 class TheRunAndItsTextAreInTheLibraryTest(unittest.TestCase):
-    """P783 PR 3: `check.run_every_check` is the dict check_all prints and `check.render_every_check` its text, so the
+    """P783 PR 3: `check.every_check`'s dict (P1255: its first part) is the dict check_all prints and `check.render_every_check` its text, so the
     CLI only parses and prints."""
 
     def test_a_folder_that_is_not_there_is_project_unusable_and_one_line(self):
         missing = Path(tempfile.mkdtemp()) / "nowhere"
-        result = check.run_every_check(project=str(missing), boards=[], circuit=None, rules=None, package=None)
+        result = check.every_check(project=str(missing), boards=[], circuit=None, rules=None, package=None)[0]
         self.assertEqual((result["tool"], result["status"], result["reason"].code), ("check_all", "could-not-run", "project_unusable"))
         self.assertEqual(check.render_every_check(result, str(missing)), "  [????] check_all          %s" % result["reason"])
 
     def test_nothing_named_is_every_check_skipped_with_no_project_key_and_no_resolved_block(self):
-        result = check.run_every_check(project=None, boards=[], circuit=None, rules=None, package=None)
+        result = check.every_check(project=None, boards=[], circuit=None, rules=None, package=None)[0]
         self.assertEqual((result["status"], result["resolved"]), ("could-not-run", []))
         self.assertNotIn("project", result)
         self.assertEqual(check.render_every_check(result, None), check.render(result["results"]))
@@ -713,7 +717,7 @@ class CheckDesignIsAnOperationTest(unittest.TestCase):
     def test_boards_given_as_one_string_is_one_board_not_its_characters(self):
         # the review of P804: `list("b.json")` was six boards of one character each
         folder = Path(tempfile.mkdtemp())
-        one = check.run_every_check(project=str(folder), boards="b1.json")
+        one = check.every_check(project=str(folder), boards="b1.json")[0]
         self.assertEqual([note for note in one["resolved"] if note.startswith("boards ")], ["boards       b1.json (given)"])
 
     def test_a_folder_that_is_not_there_is_one_could_not_run_finding(self):
@@ -1239,6 +1243,185 @@ class OneCircuitConventionTest(unittest.TestCase):
         from spark.build import project_setup
         self.assertEqual(check.CONVENTIONS["circuit"], ("folder", list(loader.CIRCUIT_PATHS)))
         self.assertIs(project_setup.CIRCUIT_PATHS, loader.CIRCUIT_PATHS)
+
+class TheCheckRecordIsWrittenTest(unittest.TestCase):
+    """
+    P1255: check-design keeps its answer in the check record `.spark/check-design.json` of the project, over the inputs
+    its checks read, so the flow can say it without running a check. The boards are hashed after the `--boards` merge.
+    """
+
+    NOT_KEPT_OUTSIDE = "did not keep the check record: an input is outside the project, spark and the store"
+    NOT_KEPT_SUB_FOLDER = "did not keep the check record: a sub-folder of a project writes none"
+
+    def setUp(self):
+        self.store = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.store, True)
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.store)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.project = self.a_project(Path(tempfile.mkdtemp()) / "project")
+        (self.project / ".spark").mkdir()
+        (self.project / ".spark" / "rules.json").write_text(json.dumps({"physics": {"rails": {}}}))
+
+    def a_project(self, folder):
+        (folder / "dist" / "board").mkdir(parents=True)
+        (folder / "dist" / "board" / "circuit.json").write_text("[]")
+        (folder / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": []}))
+        self.addCleanup(shutil.rmtree, folder, True)
+        return folder
+
+    def run_on(self, folder, *flags):
+        """(the exit, the --json answer, the text) of check_all.py over `folder`, with a test clock."""
+        out, text = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = check_all.main((["--project", str(folder)] if folder else []) + list(flags) + ["--json"], outside=FakeOutsideWorld())
+        with contextlib.redirect_stdout(text), contextlib.redirect_stderr(text):
+            check_all.main((["--project", str(folder)] if folder else []) + list(flags), outside=FakeOutsideWorld())
+        return code, json.loads(out.getvalue()), text.getvalue()
+
+    def kept(self, folder=None):
+        return CheckRecordStore(folder or self.project, "check-design").read()
+
+    def test_a_run_keeps_its_answer_over_the_inputs_it_read(self):
+        code, answer, _ = self.run_on(self.project)
+        read = self.kept()
+        self.assertEqual((read.state, read.current, read.status, read.at), (outcomes.RECORDED, True, answer["status"], stamp(FakeClock().now())))
+        self.assertEqual(read.inputs, ["dist/board/circuit.json", ".spark/rules.json", "requirements.json", "boards/",
+                                       "spark:boards/xiao-esp32-c6.json"])
+        self.assertEqual((answer["written"], answer["not_written"]), (True, None))
+        self.assertEqual(read.data, {})
+        self.assertTrue(read.lines, read)
+
+    def test_the_kept_lines_name_each_check_by_what_it_found(self):
+        def result(name, status, **found):
+            return dict({"check": name, "what": "the %s check" % name, "status": status}, **found)
+        finding = [result("rules-vs-netlist", "problems", problems=["U1.GND floats"]), result("physics", "could-not-run", reason="no rails"),
+                   result("the-order", "skipped"), result("bom", "ok", unmeasured=["a ? line"]), result("vendor-truth", "ok")]
+        clean = [result("rules-vs-netlist", "ok"), result("physics", "ok"), result("the-order", "skipped")]
+        blind = [result("rules-vs-netlist", "ok"), result("physics", "ok", unchecked=["no rail"]), result("bom", "ok", unmeasured=["a ? line"])]
+        self.assertEqual(record_lines(check.findings_of(finding), finding, check.unmeasured_in(finding)),
+                         ["rules-vs-netlist found 1 problem(s)", "physics could not look",
+                          "2 check(s) found nothing, resting on 1 unmeasured value(s)", "not asked for: the-order"])
+        self.assertEqual(record_lines(check.findings_of(clean), clean, 0), ["2 check(s) found nothing", "not asked for: the-order"])
+        self.assertEqual(record_lines(check.findings_of(blind), blind, check.unmeasured_in(blind)),
+                         ["physics could not look", "2 check(s) found nothing, resting on 1 unmeasured value(s)"])
+
+    def test_the_boards_flag_puts_its_own_file_in_the_inputs(self):
+        own = self.project / "own-board.json"
+        own.write_text((ROOT / "boards" / "xiao-esp32-c6.json").read_text())
+        self.run_on(self.project, "--boards", str(own))
+        self.assertIn("own-board.json", self.kept().inputs)
+        self.assertNotIn("spark:boards/xiao-esp32-c6.json", self.kept().inputs)
+        own.write_text(own.read_text().replace("{", "{\n", 1))
+        self.assertFalse(self.kept().current)  # a changed board file reads older
+
+    def test_an_input_outside_the_project_and_its_roots_keeps_no_record_and_says_why(self):
+        circuit = written("circuit.json", [])
+        _, answer, text = self.run_on(self.project, "--circuit", circuit)
+        self.assertEqual((answer["written"], answer["not_written"]), (False, self.NOT_KEPT_OUTSIDE))
+        self.assertFalse((self.project / ".spark" / "check-design.json").exists())
+        self.assertIn(self.NOT_KEPT_OUTSIDE, text)
+        result = run_operation(CheckDesign(), {"project": str(self.project), "circuit": circuit}, FakeOutsideWorld())
+        self.assertEqual(result.notes, [{"subject": ".spark/check-design.json", "sentence": self.NOT_KEPT_OUTSIDE}])
+
+    def test_a_sub_folder_keeps_no_record_and_says_why(self):
+        car = self.a_project(self.project / "car")
+        _, answer, text = self.run_on(car)
+        self.assertEqual((answer["written"], answer["not_written"]), (False, self.NOT_KEPT_SUB_FOLDER))
+        self.assertFalse((self.project / ".spark" / "check-design.json").exists())
+        self.assertFalse((car / ".spark").exists())
+        self.assertIn(self.NOT_KEPT_SUB_FOLDER, text)
+        self.assertIsNone(CheckDesign().written_project({"project": str(car)}))
+
+    def test_no_project_a_missing_folder_and_a_folder_in_no_project_keep_none_and_say_nothing(self):
+        bare = self.a_project(Path(tempfile.mkdtemp()) / "bare")
+        missing = self.project / "nowhere"
+        circuit = str(self.project / "dist" / "board" / "circuit.json")
+        for name, folder, flags in (("no project", None, ["--circuit", circuit]), ("missing", missing, []), ("no project up", bare, [])):
+            with self.subTest(case=name):
+                _, answer, text = self.run_on(folder, *flags)
+                if name == "missing":  # a refusal holds tool, status and reason only
+                    self.assertNotIn("written", answer)
+                    self.assertNotIn("not_written", answer)
+                else:
+                    self.assertEqual((answer["written"], answer["not_written"]), (False, None))
+                self.assertNotIn("follow-up", text)
+                self.assertNotIn("check record", text)
+                self.assertIsNone(CheckDesign().written_project({"project": str(folder) if folder else None}))
+        self.assertFalse((bare / ".spark").exists())
+        self.assertFalse((self.project / ".spark" / "check-design.json").exists())
+
+    def test_a_record_that_cannot_be_written_is_a_note_and_a_line(self):
+        marked = self.a_project(Path(tempfile.mkdtemp()) / "marked")
+        (marked / "boards").mkdir()
+        (marked / "boards" / "active.json").write_text(json.dumps({"schema": 1, "board": "xiao-esp32-c6"}))
+        (marked / ".spark").write_text("a file where the folder goes")
+        _, answer, text = self.run_on(marked)
+        self.assertEqual((answer["written"], answer["not_written"]), (False, "did not keep the check record: FileExistsError"))
+        self.assertIn("did not keep the check record: FileExistsError", text)
+
+    def test_a_rebuild_a_changed_requirements_file_and_a_board_copied_into_boards_make_the_record_older(self):
+        changes = {"a rebuild": lambda: (self.project / "dist" / "board" / "circuit.json").write_text("[{}]"),
+                   "requirements": lambda: (self.project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6"})),
+                   "a board copied into boards/": lambda: ((self.project / "boards").mkdir(),
+                                                           (self.project / "boards" / "xiao-esp32-c6.json").write_text("{}"))}
+        for name, change in changes.items():
+            with self.subTest(change=name):
+                self.setUp()
+                self.run_on(self.project)
+                self.assertTrue(self.kept().current)
+                change()
+                self.assertFalse(self.kept().current)
+
+    def test_a_requirements_file_with_a_colon_in_its_name_keeps_the_answer_and_says_why_no_record(self):
+        """The refuter's regression (P1255 fix A): `v2:requirements.json` is no plain input, so the run says it is outside
+        and keeps the exit it has without that file, never a ValueError."""
+        before, _, _ = self.run_on(self.project)
+        (self.project / "v2:requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": []}))
+        code, answer, text = self.run_on(self.project)
+        self.assertEqual((code, answer["written"], answer["not_written"]), (before, False, self.NOT_KEPT_OUTSIDE))
+        self.assertNotIn("a check record's inputs are plain paths", text)
+
+    def test_the_record_hashes_the_requirements_files_that_choose_the_board(self):
+        """P1255 fix B: one glob names the files that choose the board, for the check and for its record, so the record
+        names a second requirements file too. The names are written out here, not read from the glob."""
+        (self.project / "remote.requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3"}))
+        self.run_on(self.project)
+        self.assertEqual([name for name in self.kept().inputs if name.endswith("requirements.json")],
+                         ["remote.requirements.json", "requirements.json"])
+
+    def test_a_circuit_built_after_the_run_makes_the_record_older(self):
+        """An input not found yet is kept by its convention's first pattern when that is no glob, so a later build counts."""
+        (self.project / "dist" / "board" / "circuit.json").unlink()
+        self.run_on(self.project)
+        self.assertIn("dist/board/circuit.json", self.kept().inputs)
+        self.assertTrue(self.kept().current)
+        (self.project / "dist" / "board" / "circuit.json").write_text("[]")
+        self.assertFalse(self.kept().current)
+
+    def test_the_flow_reads_the_record_with_its_secrets_rule_as_current(self):
+        self.run_on(self.project)
+        self.assertTrue(checks_reading.read_check(self.project, CheckDesign.name).current)
+
+    def test_a_project_with_a_page_has_it_written_again(self):
+        (self.project / "page.html").write_text("<html></html>")
+        _, _, text = self.run_on(self.project)
+        self.assertIn("wrote page.html again", text)
+
+    def test_a_run_that_wrote_no_record_does_not_write_the_page_again(self):
+        """P1255 fix F: an input outside the project and its roots writes no record, so the page is not written again."""
+        (self.project / "page.html").write_text("<html></html>")
+        circuit = written("circuit.json", [])
+        _, _, text = self.run_on(self.project, "--circuit", circuit)
+        self.assertNotIn("wrote page.html again", text)
+        self.assertEqual((self.project / "page.html").read_text(), "<html></html>")
+        self.assertIsNone(CheckDesign().written_project({"project": str(self.project), "circuit": circuit, "boards": []}))
+        self.assertEqual(CheckDesign().written_project({"project": str(self.project), "boards": []}), self.project)
+
+    def test_the_run_writes_only_with_a_project(self):
+        self.assertEqual(CheckDesign().effects_of({"project": None}), (READS,))
+        self.assertEqual(CheckDesign().effects_of({"project": str(self.project)}), (READS, WRITES))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -4,9 +4,10 @@ sentence from the record alone, beside the deploy's reading (`deploy_reading`). 
 and runs nothing: `flow.py show` never runs a check. The guide's `simulation` entry (`simulation_of`) is the free checks'
 sentence, then why there is no simulation, and whether the page draws it grey: only where nothing more runs. A check
 record whose files changed since reads as older, never as current. check-design (P1255) reuses `read_check` and `said_of`
-with its own name and label.
+with its own name and label: `design_line` is the Design checks' line, which the build phase says.
 """
 
+from spark.checks.check_design import CheckDesign
 from spark.core.outcomes import NONE_RECORDED, NOT_CHECKED, OK, RECORDED
 from spark.core.zone_time import day_and_time
 from spark.firmware.firmware_check import CheckFirmware
@@ -18,6 +19,8 @@ from spark.records.check_record import CheckRecordStore
 # --- MVP ---
 #: The label of the free checks (P1208's word): the import check and the own tests together.
 FREE_CHECKS_LABEL = "Free checks"
+#: The label of check-design's line (P1255), after its op: the build phase says it.
+DESIGN_CHECKS_LABEL = "Design checks"
 #: The sentence of a check record by its state, the label first.
 NOT_RUN_YET = "%s: not run yet. Ask Claude to run them, for free."
 NOT_READ = "%s: %s. Ask Claude to run them again."
@@ -33,8 +36,8 @@ LINES_JOIN, INPUTS_JOIN = "; ", " or "
 def read_check(project, name):
     """The CheckRecord of the check `name` in `project`, its secrets files left out as the Operation leaves them out. The
     leave-out rule is the firmware's secrets rule (`project_secrets.is_secret_path`, P1060), the one `check-firmware` saves
-    with. A record whose inputs hold no firmware/ secrets file, such as P1255's `check-design` over `board.tsx`, is
-    unaffected by it."""
+    with. `check-design` saves with none (P1255): harmless only because none of its inputs is under firmware/, which a
+    test pins."""
     return CheckRecordStore(project, name, leave_out=is_secret_path).read()
 
 
@@ -50,6 +53,15 @@ def said_of(check, label):
     if check.status != OK:
         return CURRENT_NOT_OK % (label, day_and_time(check.at), check.status, LINES_JOIN.join(check.lines))
     return CURRENT % (label, day_and_time(check.at), LINES_JOIN.join(check.lines))
+
+
+def design_line(project, built):
+    """The Design checks' sentence (`said_of`) of the check-design record of `project`, or None with no record when
+    `built` is False: a project with no board built has nothing to check yet. It reads the record and runs nothing."""
+    check = read_check(project, CheckDesign.name)
+    if not built and check.state == NONE_RECORDED:
+        return None
+    return said_of(check, DESIGN_CHECKS_LABEL)
 
 
 def is_current_ok(check):
