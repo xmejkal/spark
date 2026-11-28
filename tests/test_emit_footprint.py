@@ -147,8 +147,10 @@ class WhereThePadsGoTest(unittest.TestCase):
 
     def test_the_label_order_is_the_boards_own(self):
         # If this drifts, every trace still connects — to the wrong pad.
-        expected = firebeetle()["physical"]["header_order"]["row_18"]
-        self.assertEqual([label for label, _, _ in self.placed[:18]], expected)
+        order = firebeetle()["physical"]["header_order"]
+        labels = [label for label, _, _ in self.placed]
+        self.assertEqual(labels[:14], order["row_14"])
+        self.assertEqual(labels[14:], order["row_18"])
 
 
 class WhatItWillNotInventTest(unittest.TestCase):

@@ -1,0 +1,4 @@
+{
+ "//": "P1334: four pad centres of the FireBeetle 2 ESP32-S3 on DFRobot's top view (the wiki page https://wiki.dfrobot.com/dfr0975, image 'Board Overview V1.2', https://dfimg.dfrobot.com/8116b3fb111c496b92a0efac795320fc/wikien/faad458ee01dde06e4a5339522c106b1_0x0.jpg.webp, WebP 500 x 736 px, 53266 bytes, sha256 0b27c04b1b3f76e9ddc591105ac0624f439994ab8048ccc8d1cf8e6e0f43a858), measured on 2026-11-28 by a lead's agent: the picture turned 180 degrees so that USB-C is near, scaled to the 25.4 x 60 mm outline, the centre of each drilled hole. In the frame's mm (part_shape's and FeatureCheck's), within 0.1 mm. Numbers only: no vendor's bytes.",
+ "anchors_mm": [["RST", 24.14, 48.34], ["RX", 24.15, 5.16], ["VCC", 1.3, 38.21], ["D10", 1.26, 5.18]]
+}

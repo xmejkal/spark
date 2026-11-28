@@ -119,14 +119,19 @@ class TheFireBeetlePictureTest(unittest.TestCase):
         self.assertEqual(part_pictures.read_picture(self.PATH.read_text()).credit,
                          "FireBeetle 2 ESP32-S3: drawing from the PO's pixel-games wiring page (pixel-master/docs/wiring.html), MIT")
 
-    def test_the_battery_socket_is_on_the_rx_edge_as_the_po_s_board_has_it(self):
-        # The PO's bench look (2026-11-20): USB-C at the near edge, RX on the left edge, BAT on the same edge as RX
+    def test_the_battery_socket_is_on_the_d10_edge_as_the_po_s_board_has_it(self):
+        # The PO's bench look (2026-11-28, P1334): USB-C at the near edge, the 14-pin row with D10 on the left edge, BAT on the same edge
         root = ElementTree.fromstring(self.PATH.read_text())
         group = root.find("svg:g", NS)
         a, b, c, d, e, f = [float(n) for n in re.findall(r"-?[\d.]+", group.get("transform"))]
         bat = next(text for text in group.findall("svg:text", NS) if text.text == "BAT")
         x = a * float(bat.get("x")) + c * float(bat.get("y")) + e
         self.assertLess(x, 25.4 / 2)
+        from spark.breadboard import part_shape
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        pins = part_shape.RecordShapeSource().find_shape(board).pins
+        self.assertLess(pins["D10"][0], 25.4 / 2)
+        self.assertGreater(pins["RX"][0], 25.4 / 2)
 
 
 class TheSvgTest(unittest.TestCase):
