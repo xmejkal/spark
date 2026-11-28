@@ -187,8 +187,9 @@ class TheRoutesTest(unittest.TestCase):
         # dashed are signals (they were 4 and 8 of 3 to 10, now 5, 11 and 12 of 3 to 12)
         self.assertEqual({step: path.fallback for step, path in self.routed["button-light"][2].paths.items()},
                          {5: "", 6: "", 7: "", 8: "", 9: ""})
+        # P1334: the swapped FireBeetle rows move the e-paper's routes (measured in P1350's S1, 2026-11-28)
         self.assertEqual({step: path.fallback for step, path in self.routed["epaper"][2].paths.items()},
-                         {3: "", 4: "", 6: "", 7: "", 8: "", 9: "", 10: "", 5: "bends", 11: "bends", 12: "bends"})
+                         {3: "", 5: "", 7: "", 8: "", 9: "", 10: "", 4: "bends", 6: "bends", 11: "bends", 12: "bends"})
 
     def test_no_search_is_cut_short_by_its_budget(self):
         # a search the budget stops returns no way as a search with no way does; the largest that found one took 47497
