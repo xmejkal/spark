@@ -252,6 +252,11 @@ pick's part, in the breadboard sheet's words: yours, in your drawer or to get; e
 plain sentences, [] for none (P1180), and own_part, the board's own part that serves the need, such as onboard button,
 else null: a board's pick for a need that does not compute names it in its label, and its first note says when a
 compute need picked that board (P1136). The text says a pick's notes on a line of its own under its need's line.
+With listed changes in breadboard.md and no follow-up after the sheet (no board log, no check record of the free checks
+later than it), the breadboard is now, by you and Claude: data.guide.now.changes holds the count of the sheet's own
+"Changes since" lines, and the next step is check-firmware (P1270). After the pin names changed since the free checks last
+read them, the firmware is stale, and the next step is check-firmware. A pin that moved keeps its name, so it does not make
+the firmware stale, and spark still says to rewire.
 flow.py show runs no offer."""
     arguments = (COMMON_ARGUMENTS["project"]._replace(help="the project folder (default: here)"), COMMON_ARGUMENTS["json"])
     effects = (READS,)
