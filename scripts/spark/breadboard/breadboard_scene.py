@@ -147,8 +147,9 @@ class BreadboardScene(collections.namedtuple("BreadboardScene", "layout marks pa
     """
 
     #: What the note says of the wires drawn dashed, and of the wires not drawn, filled with their numbers.
-    DASHED_NOTE = ("wire %s bends more than 4 times to go around the parts and is drawn dashed",
-                   "wires %s bend more than 4 times to go around the parts and are drawn dashed")
+    DASHED_NOTE = tuple(words % wire_routing.TrackRouting.MAX_BENDS for words in (
+        "wire %%s bends more than %d times to go around the parts and is drawn dashed",
+        "wires %%s bend more than %d times to go around the parts and are drawn dashed"))
     NOT_DRAWN_NOTE = ("wire %s finds no way around the parts and is not drawn", "wires %s find no way around the parts "
                       "and are not drawn")
 

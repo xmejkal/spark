@@ -70,6 +70,9 @@ re-implementing a lookup.
    `physical.header.doubtful_pads` lists the pads whose net is in doubt, such as a ground pad silkscreened NC. The
    drawn breadboard needs it: write `[]` when none is doubtful, after checking. With several ground pads, the drawing
    wires `GND` to the first one in `power_pads` that is not doubtful (P955).
+   The first header row of `header_order` is spark's left row, seen parts up with USB-C near (`footprint_emitter.pads`
+   puts it at -x). Before reading a maker's picture with USB-C far, turn it around. `physical.header.row_side` states the
+   side, with its source (P1334).
    `physical.header.joined_pads` (optional, P962) is a fact `{value, verified, source, why_it_matters, cites}` whose value
    lists every group of pads that the maker's schematic joins inside the board, such as `[["3V3", "3V3_2"], ["GND1", "GND2"]]`.
    A group holds two pads or more of `header_order`, a pad is in one group only and in no `doubtful_pads`, and the pads of

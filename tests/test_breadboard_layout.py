@@ -687,8 +687,8 @@ class TheRailSeatingTest(unittest.TestCase):
         surface = drawing.Surface.load_full()
         self.assertEqual(rails.RailSeating(surface).group("3V3", "+", ["t", "b"]), "tp")
         self.assertEqual(rails.RailSeating(surface).group("GND", "-", ["b", "t"]), "bn")
-        # the e-paper fixture: board 3V3 in row a, the e-paper's VCC in row f, so the top + rail
-        self.assertEqual({one.split(".")[0] for _, one in self.rail_jumpers("epaper").values()}, {"tp", "tn"})
+        # the e-paper fixture: board 3V3 in row j (P1334: the 14-pin row on the left), the e-paper's VCC in row f, so the bottom + rail
+        self.assertEqual({one.split(".")[0] for _, one in self.rail_jumpers("epaper").values()}, {"bp", "bn"})
 
     def test_a_second_power_mark_takes_the_other_side(self):
         seating = rails.RailSeating(drawing.Surface.load_full())
@@ -742,14 +742,14 @@ class TheRailSeatingTest(unittest.TestCase):
         r1, button = parts["R1"], parts["WakeButton"]
         self.assertEqual(r1.holes["1"].group, button.holes["1.l"].group)
         jumper = next(jumper for jumper in layout.jumpers if jumper.step == 4)
-        self.assertEqual({jumper.one.group, jumper.other.group} - {r1.holes["2"].group}, {"tp"})
+        self.assertEqual({jumper.one.group, jumper.other.group} - {r1.holes["2"].group}, {"bp"})
         self.assertEqual((jumper.role, jumper.pill_words), ("power", "R1 end 2 to + rail"))
         with in_store():
             read = sheet._read_build(WAKE / "requirements.json")
         self.assertEqual(read.steps.numbered()[3].words, "Put R1 (10kΩ pull-up on WakeButton A), end 2, in a free row "
                          "close to the row of its other end, and run a jumper from that row to the 3V3 rail.")
         holes = drawing.StepHoles.of(layout, read.steps)
-        self.assertEqual((holes.get(4), holes.get(6)), ("d39, then from a39 to top + rail, hole 32", "d33"))
+        self.assertEqual((holes.get(4), holes.get(6)), ("d39, then from a39 to bottom + rail, hole 32", "d33"))
         self.assertEqual(under_a_resistor(layout), [])
 
     def test_a_pull_down_leg_on_ground_is_drawn(self):
@@ -873,12 +873,12 @@ class EachStepNamesItsHolesTest(unittest.TestCase):
         layout = drawing.BreadboardPlanner(*epaper_inputs(read)).plan(read.steps)
         lines = wiring_steps.NumberedList().render(read.steps, drawing.StepHoles.of(layout, read.steps))
         self.assertEqual(lines[:5], [
-            "1. Put the board in the breadboard, each pin in its own row. Holes: b6 to b23, i10 to i23.",
+            "1. Put the board in the breadboard, each pin in its own row. Holes: b10 to b23, i6 to i23.",
             "2. Put e-paper in the breadboard, each pin in its own row. Holes: j42 to j49.",
-            "3. Run a jumper from board 3V3 to a free + rail. Mark it 3V3. Holes: from a7 to top + rail, hole 5.",
+            "3. Run a jumper from board 3V3 to a free + rail. Mark it 3V3. Holes: from j7 to bottom + rail, hole 5.",
             "4. Run a jumper from the row of e-paper VCC (back up, header at the top: the left end pin, above the label "
-            "VCC) to the 3V3 rail. Holes: from f49 to top + rail, hole 40.",
-            "5. Run a jumper from board A5 to the row of e-paper D/C. Holes: from j14 to f44."])
+            "VCC) to the 3V3 rail. Holes: from f49 to bottom + rail, hole 23.",
+            "5. Run a jumper from board A5 to the row of e-paper D/C. Holes: from a14 to f44."])
         self.assertEqual(len(lines), 12)  # P953: power and ground go through the rails, one jumper per end
         self.assertTrue(all(" Holes: " in line for line in lines))
 

@@ -30,7 +30,9 @@ Wokwi was shown.
 
 Each wire in the picture goes around the parts, never over a part's body (P953): out of its hole along the column,
 then only on tracks half a pitch between the rows and columns of holes, with at most 4 bends, one pitch from the wire
-beside it, and across another only at a right angle. A wire that needs more bends to get around is drawn dashed, and
+beside it, and across another only at a right angle. It keeps off the 4 track spots half a pitch beside another wire's
+end: closer than `END_CLEARANCE_PX` (5.8 px), it would touch that end's dot. A turn at a diagonal spot is allowed. A
+wire that needs more bends to get around is drawn dashed, may pass beside another wire's end on its last try, and
 the note under the picture names it ("wire 7 bends more than 4 times to go around the parts and is drawn dashed"); a
 wire with no way at all is not drawn, and the note says so. The steps and their holes are the same either way.
 

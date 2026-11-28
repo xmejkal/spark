@@ -46,15 +46,15 @@ class TheShapeIsReadFromTheRecordTest(unittest.TestCase):
         shape = RECORD.find_shape(firebeetle())
         self.assertEqual(len(shape.pins), 32)
         self.assertEqual(shape.size, (25.4, 60.0))
-        self.assertEqual(shape.pins["RX"], (1.27, 5.2))
-        self.assertEqual(shape.pins["D10"], (24.13, 5.2))
+        self.assertEqual(shape.pins["D10"], (1.27, 5.2))
+        self.assertEqual(shape.pins["RX"], (24.13, 5.2))
 
     def test_projected_to_px_the_body_is_96_by_226_8_and_the_pins_keep_their_places(self):
         part_px = part_shape.project_to_px(RECORD.find_shape(firebeetle()))
         self.assertEqual(part_px["size"], [96.0, 226.772])
         self.assertEqual(part_px["center"], [48.0, 113.386])
-        self.assertEqual(part_px["pins"]["RX"], [4.8, 19.654])
-        self.assertEqual(part_px["pins"]["D10"], [91.2, 19.654])
+        self.assertEqual(part_px["pins"]["D10"], [4.8, 19.654])
+        self.assertEqual(part_px["pins"]["RX"], [91.2, 19.654])
         self.assertTrue(part_px["covers_holes"])
         self.assertEqual((part_px["source"], part_px["wokwi_part"], part_px["pad_labels"], part_px["full_surface"]),
                          ("record", False, True, True))
@@ -80,10 +80,11 @@ class TheShapeIsReadFromTheRecordTest(unittest.TestCase):
         for name, group in groups.items():
             with self.subTest(group=name):
                 self.assertEqual(provenance.fact_problems(name, group), [])
-        # P946: the row side is the PO's bench look (2026-11-20), the one group verified
+        # P946: the row side is the PO's bench look (2026-11-28, P1334), the one group verified
         self.assertEqual({name: group["verified"] for name, group in groups.items()},
                          {"pads": False, "row_side": True, "usb_end": False, "doubtful_pads": False})
-        self.assertIn("2026-11-20", groups["row_side"]["source"])
+        self.assertIn("2026-11-28", groups["row_side"]["source"])
+        self.assertIn("P1334", groups["row_side"]["source"])
 
     def test_the_unverified_groups_become_notes_in_order(self):
         notes = part_shape.project_to_px(RECORD.find_shape(firebeetle()))["notes"]

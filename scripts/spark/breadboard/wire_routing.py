@@ -10,12 +10,13 @@ the top numbers and below the bottom ones), so a wire can go round a part that r
 half a pitch of a part's body or of a printed letter or number is blocked, and a run never lies within half a pitch of a
 rail's line.
 
-`TrackJumperRouter` finds each path with A* (cost 1 a cell, 2 outside the board, 4 a bend, 6 a crossing), the
-jumpers in the order of the lanes (shortest span first, then step), so runs nest. A wire leaves its hole half a pitch
-along its column to a track, runs on tracks only, and comes into its other hole the same way; it has at most 4 bends,
-shares no piece of a track with another wire, crosses another only at a right angle and at least a pitch from a bend
-or an end of either, and lies in a band of at most 4 wires side by side. A jumper with no such path gets one with up to
-8 bends, drawn dashed; one with none at all is not drawn, and the picture's note says so. `LaneJumperRouter` is the
+`TrackJumperRouter` finds each path with A* (the costs CELL, OUTSIDE, BESIDE_A_LINE, BEND and CROSS of `TrackRouting`),
+the jumpers in the order of the lanes (shortest span first, then step), so runs nest. A wire leaves its hole half a
+pitch along its column to a track, runs on tracks only, and comes into its other hole the same way; it has at most
+MAX_BENDS bends, shares no piece of a track with another wire, crosses another only at a right angle and at least a
+pitch from a bend or an end of either, keeps END_CLEARANCE_PX from another wire's end (`is_beside_an_end`), and lies in
+a band of at most BAND wires side by side. A jumper with no such path gets one with up to FALLBACK_BENDS bends, drawn
+dashed; one with none at all is not drawn, and the picture's note says so. `LaneJumperRouter` is the
 older way (P947), one lane per jumper across, which may cross a part.
 """
 
@@ -165,6 +166,15 @@ def _strictly_in(box, point, by):
     return box.left - by < x < box.right + by and box.top - by < y < box.bottom + by
 
 
+def is_beside_an_end(piece, end):
+    """True when a wire's piece, two points in px, comes closer to a jumper's end than TrackRouting.END_CLEARANCE_PX:
+    the 4 cells beside it, never a diagonal (P1350). The router's rings and the tests read this one rule."""
+    (x1, y1), (x2, y2) = piece
+    length = (x2 - x1) ** 2 + (y2 - y1) ** 2
+    share = min(1, max(0, ((end[0] - x1) * (x2 - x1) + (end[1] - y1) * (y2 - y1)) / length)) if length else 0
+    return math.dist((x1 + share * (x2 - x1), y1 + share * (y2 - y1)), end) < TrackRouting.END_CLEARANCE_PX
+
+
 class TrackJumperRouter(JumperRouter):
     """Strategy: each jumper on the tracks of a TrackGrid, around every body (the module's docstring has the rules and
     the costs). `routing(...)` gives the TrackRouting of one drawing, which also counts the states its searches took."""
@@ -178,7 +188,8 @@ class TrackJumperRouter(JumperRouter):
 
 
 #: Value: one search's jumper, its holes' cells, the cells next to them along their column (`legs`), its most bends, and
-#: `close`: True for a last try, drawn dashed, which may pass beside another jumper's end or run half a pitch from a wire.
+#: `close`: True for a last try, drawn dashed, which may pass within END_CLEARANCE_PX of another jumper's end or run
+#: half a pitch from a wire.
 Search = collections.namedtuple("Search", "step start goal legs most close")
 
 
@@ -187,10 +198,11 @@ class TrackRouting:
     Value: one drawing's routing, worked out once when it is made: the grid, the cells each wire holds (`axes`, by
     axis), the cells a run along an axis may not enter (`near`: next to a run along that axis, end to end or side by
     side, so two runs keep a pitch apart), the cells a crossing may not take (`no_cross`, within a pitch of a bend or an
-    end), and the cells beside each end hole (`rings`, which only its own jumper may take, as a wire there would touch
-    the end's dot). `paths` is {step: JumperPath}; `expanded` counts the states the searches took, the budget a test
-    pins in place of seconds; `cut_short` counts the searches BUDGET stopped before they found a way or ran out of
-    states, since such a stop is no proof that there is no way.
+    end), and the cells beside each end hole (`rings`: the cells closer than END_CLEARANCE_PX to the end's cell, which
+    only its own jumper may take, as a wire there would touch the end's dot). `paths` is {step: JumperPath};
+    `expanded` counts the states the searches took, the budget a test pins in place of seconds; `cut_short` counts the
+    searches BUDGET stopped before they found a way or ran out of states, since such a stop is no proof that there is
+    no way.
     """
 
     #: The costs of the search: a cell on the board, a cell off it, a cell of a run beside a rail's line, a bend, a
@@ -203,6 +215,7 @@ class TrackRouting:
     #: How close to a part's body a wire's leg out of its hole may come, in px: more than the white under-stroke's half
     #: width (2, P953's visual spec).
     LEG_CLEARANCE = 2.5
+    END_CLEARANCE_PX = 5.8  # the drawn dot's 3.4 and half the wire's white edge, 2.0, are 5.4; +0.4 for the full ring
     #: The most states one search may take before it gives up.
     BUDGET = 60000
 
@@ -211,9 +224,8 @@ class TrackRouting:
         self.axes, self.near, self.no_cross, self.rings = {}, {}, set(), {}
         for jumper in layout.jumpers:
             for hole in (jumper.one, jumper.other):
-                u, v = self.grid.cell(hole.x, hole.y)
-                for du, dv in MOVES:
-                    self.rings.setdefault((u + du, v + dv), set()).add(jumper.step)
+                for cell in self._ring(hole):
+                    self.rings.setdefault(cell, set()).add(jumper.step)
         self.expanded, self.cut_short, self.paths = 0, 0, {}
         order = sorted(layout.jumpers, key=lambda one: (abs(one.one.x - one.other.x), one.step))
         for most, fallback, close in self.TRIES:
@@ -223,6 +235,14 @@ class TrackRouting:
                     self.paths[jumper.step] = self._taken(jumper, cells, fallback)
         for jumper in order:
             self.paths.setdefault(jumper.step, JumperPath((), 0, NO_WAY))
+
+    def _ring(self, hole):
+        """The cells beside an end hole that only its own jumper may take: each neighbour cell that is_beside_an_end
+        of the end's cell (P1350)."""
+        u, v = self.grid.cell(hole.x, hole.y)
+        centre = self.grid.point((u, v))  # the end's cell, as the search sees it (P1350)
+        return [cell for cell in ((u + du, v + dv) for du in (-1, 0, 1) for dv in (-1, 0, 1) if du or dv)
+                if is_beside_an_end((self.grid.point(cell),) * 2, centre)]
 
     def _of(self, jumper, most, close):
         start, goal = self.grid.cell(jumper.one.x, jumper.one.y), self.grid.cell(jumper.other.x, jumper.other.y)

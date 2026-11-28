@@ -44,7 +44,7 @@ DFRobot's sources agree with the model, and spark's record does not. All views b
 - The record's `row_side` is marked verified, from the PO's look on 2026-11-20. It says that `RX` and the battery socket are on the left edge. No DFRobot source shows that.
 - The label `ESP-WROOM-32` on the model also shows on DFRobot's "V1.2 and later" picture, so it is no sign of a wrong model.
 
-The effect: the footprint and the breadboard sheet for this board mirror the two rows. Do not wire from them until the record is corrected.
+The effect: the footprint and the breadboard sheet for this board mirror the two rows. Do not wire from them until the record is corrected. (2026-11-28: corrected by P1334 #1913.)
 
 The pins in this spike matched the footprint only with the model upside down, because the footprint is mirrored. If the rows are corrected, the model fits with parts up. It then needs a turn of 180 degrees about Z. The largest miss stays 0.210 mm. This placement is calculated and was not run.
 
