@@ -7,7 +7,7 @@ The proposals below are cards for spark-main to file after the PO's yes. P275 #3
 - type: refactor story. The goldens stay byte for byte, but the check's public codes `not-joined`, `joined-to-other` and `joined-to-unused` change for agents (docs/guide/agents/scripts.md:219-220) <!-- REQUIRED:item-type -->
 - needed by: "we don't want to have multiple places in the codebase implementing almost the same, remember this" (the PO, 2026-11-28) <!-- REQUIRED:needed-by -->
 - value proven by: 9 of 9 golden breadboards stay byte for byte (at most 5 of them draw a placement or a route). One test catches a bare wire over another net's pad. A grep finds one union-find in scripts/spark <!-- REQUIRED:value-proven-by -->
-- depends on: Q2 (the order against P1199 D3), and a perfboard join to test against, so it lands with the walking skeleton unless Q2 says otherwise <!-- REQUIRED:depends-on -->
+- depends on: the clock spike P1074 #1575's finding (D5, D6), and a perfboard join to test against, so it lands with the walking skeleton unless Q2 says otherwise <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): refactor <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1199 #1747 <!-- REQUIRED:spark-process:parent -->
@@ -17,7 +17,7 @@ The proposals below are cards for spark-main to file after the PO's yes. P275 #3
 - type: refactor story, byte-neutral
 - needed by: "lets just leave the penalties for turning and crossing and such configurable or at least as constants in the code, so that we can later play around with it" (the PO, 2026-11-28, #1937)
 - value proven by: 9 of 9 goldens, tests/test_wire_routing.py with `cut_short` equal, a test that pins each default, and `TRIES` derived from the Value's own numbers
-- depends on: P1350 #1937 merged, and Q2 (the order against P1199 D3)
+- depends on: P1350 #1937 merged, and the clock spike P1074 #1575's finding (D5, D6)
 - status: proposed
 - label (the repository's type label): refactor
 - parent (the epic, as a sub-issue): P1199 #1747
@@ -27,7 +27,7 @@ The proposals below are cards for spark-main to file after the PO's yes. P275 #3
 - type: chore, byte-neutral
 - needed by: "feel free to refactor anytime you think something could be dried out" (the PO, 2026-11-28)
 - value proven by: drawing.py at about 542 lines (lines 543 to 599 out), 9 of 9 goldens, no private `_round_px` import left (a grep)
-- depends on: Q2 (the order against P1199 D3)
+- depends on: the clock spike P1074 #1575's finding (D5, D6)
 - status: proposed
 - label (the repository's type label): refactor
 - parent (the epic, as a sub-issue): P1199 #1747

@@ -7,9 +7,9 @@ the remaining risk (D rows). An extension may tighten these. Next: design, or a 
 → the design skill the facts name, with this file; otherwise none, and the collection plan says who runs it.
 Stands on: the assumptions not retired in risks-and-tests.md; of which those the decider rated high, or — while any
 is unrated. check computes both. -->
-**Ready for:** collecting evidence <!-- REQUIRED:ready -->
+**Ready for:** design, after the MVP walk and the clock spike P1074 #1575 (D5, D6, D14) <!-- REQUIRED:ready -->
 **Stands on:** 11 H, 1 of which would change the decision <!-- REQUIRED:debt -->
-**Decision needed:** his confirmation of the jobs, the direction (D5 to D12) and the remaining risk; then his yes to file items.md <!-- REQUIRED:decision-needed -->
+**Decision needed:** his yes to file items.md <!-- REQUIRED:decision-needed -->
 
 ## Frame
 - Request, verbatim (corrections marked): the PO, 2026-11-28, about 10:55 CET, relayed by spark-artifact: "I'd actually like you to start refining and planning and designing etc. the perfboard step, it should actually maybe not be so much different from the breadboard, they will definitely share some modules or strategies and interfaces if you will, like routable, etc. etc. Make sure the architecture is good as usual, reusable, feel free to refactor anytime you think something could be dried out (that works in general, if it kinda makes sense, we don't want to have multiple places in the codebase implementing almost the same, remember this), so yeah, lets do that, including the designs, etc." And on P1350 #1937, the same morning: "lets just leave the penalties for turning and crossing and such configurable or at least as constants in the code, so that we can later play around with it." <!-- REQUIRED:request -->
@@ -125,10 +125,10 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D10 · Q6, the first gadget: "None planned yet": no gadget is planned for a perfboard yet, and button-light stays the test example · the PO · 2026-11-28, by 12:26 CET · this session's question dialog · options: the clock on a FIT0193, the clock on the DFR0481, none planned yet. The walking skeleton targets button-light; the board record waits for a board he picks (D9)
 - D11 · Q7, the drag's first slice: "Both together": the drag comes for both editors at once, after the perfboard's text plan exists · the PO · 2026-11-28, by 12:26 CET · this session's question dialog · options: the breadboard first, both together. A direction for D-q7's order
 - D12 · Q8: "Read it first": spike P1239 reads Perfboard Designer's licence and router first, and spark reuses its ideas or format where the licence allows · the PO · 2026-11-28, by 12:26 CET · this session's question dialog · options: read it first, go on without it
-- D13 · Q9, an account (E, n = 1): he turned his last soldered board over "Like a page", left to right · the PO · 2026-11-28, by 12:26 CET · this session's question dialog · options: like a page, top to bottom, not soldered one yet. So the canvas's mirror on X fits his habit (★C8); the sheet still says how to turn the board
+- D13 · Q9, an account (E, n = 1): he turned his last soldered board over "Like a page", left to right · the PO · 2026-11-28, by 12:26 CET · this session's question dialog · options: like a page, top to bottom, not soldered one yet. So the canvas's mirror on X fits his habit: he turns a board like a page (★C8); the sheet still says how to turn the board
+- D14 · the understanding: "Yes, confirmed" to the summary of D4 to D13, the jobs J1 to J6 and the remaining risk (he may not solder soon, D4) · the PO · 2026-11-28, by 12:29 CET · this session's question dialog · options: yes, something is off. It confirms the jobs, the direction and the remaining risk
 
 ## Found on the way <!-- CLAIMS -->
-<!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
 - [C27] Names: the router's penalties are "weights" in the design, because "cost" means money in spark's rules. The Frame's "costs", TL2-16's `TrackCosts` and UL-5's `costs` key take that word in the design · E council/architecture.md:73 (ARCH-P3) · caveat: a names check, not a finding about the product
 - [C24] Perfboard Designer, an open-source browser tool, lays out perfboards, checks connections and lists an MCP server and a page for AI agents. P1199's research did not list it · E https://perfboarddesigner.com/learn/perfboard-wiring/ (read 2026-11-28) · caveat: licence not read; a proposal for spike P1239 (Q8) <!-- REQUIRED:found -->
 - [C25] The canvas state "No perfboard: Your drawer holds no perfboard" is false for the PO, who bought three. The state he meets is "a perfboard without its holes" · E Perfboard.dc.html:256, ★C5 (bought is not the same as still in the drawer, the seller's label) · caveat: a canvas fix, in this discovery's canvas step
@@ -144,7 +144,7 @@ None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
 <!-- Written only after the decider confirms the understanding (a D); copies only confirmed constraints. Holds: outcome ·
 who · success and its proof · constraints (appetite, confirmed no-gos, rabbit holes) · what they said (D) against what
 we assume (H) · links to the journeys and the map · riskiest assumptions and their tests · options considered. -->
-not yet: the jobs, a direction and the remaining risk are unconfirmed, and Q1 to Q9 are queued <!-- REQUIRED:handoff -->
+Outcome: a perfboard step that shares one layout code with the breadboard, first as a text plan on the CLI (D7) · who: the maker with a tested breadboard, and Claude through `--json` (jobs-and-journeys.md) · success and its proof: the Outcome's three observations in the Frame · constraints: after the MVP walk and the clock spike P1074 #1575, no design and no refactor before its finding (D5, D6); the proposed no-gos stand as proposals · what he said (D): headers as a setting `perfboard.board_mount` (D8), he picks the board each time (D9), button-light as the example (D10), the drag for both editors at once (D11), Perfboard Designer read first in P1239 (D12), he turns a board like a page (D13) · what we assume (H): A2 to A11, all rated low (D3); A1 rated high and accepted (D4) · links: [jobs and journeys](jobs-and-journeys.md), [story map](story-map.md) · options considered: the Options section · next: the architect writes design.md after the spike's finding <!-- REQUIRED:handoff -->
 
 ## Files
 [Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · council/
