@@ -3765,6 +3765,12 @@ class TheRewireTest(FlowTest):
                 self.assertIsNone(self.guide(project)["now"]["changes"])
                 self.assertIn("changes", self.guide(project)["now"])
 
+    def test_changes_is_null_while_an_earlier_phase_is_now_though_a_rewire_is_open(self):
+        project = with_needs(self.a_rebuilt_project(), [{"id": "soil", "does": "sense", "what": "soil-moisture"}])
+        now = self.guide(project)["now"]
+        self.assertNotEqual(now["phase"], "breadboard")
+        self.assertIsNone(now["changes"])
+
     def test_the_text_view_says_now_breadboard(self):
         project = self.a_rebuilt_project()
         count = self.guide(project)["now"]["changes"]

@@ -181,6 +181,7 @@ After a rebuild, the sheet and the screen list what to change on the bench
 ([P300](https://github.com/xmejkal/spark/issues/366)): one line for each part to put in or take out, each jumper to run,
 move or take out (by its two ends and its color), and each resistor to swap. With `--json`, each line is a `kept` entry with
 `did` `changed`, and the sheet's `wrote` entry may have `since`. The lines stay until another design is built: say the time in `since`, and read them only if the person wired that sheet.
+Then `flow.py show --project . --json` says them as NOW, with their count in `data.guide.now.changes` ("breadboard.md lists N changes"), while firmware is written and no board log or check record is later than the sheet; its next step is `check_firmware.py` ([P1270](https://github.com/xmejkal/spark/issues/1829)). Relay the sentence, ask the person to make the listed changes on the bench, and run the free check.
 A build that did not finish (a failed build, or requirements the build refuses) leaves a `breadboard.json` that holds
 parts, with a `left alone` entry, so a typo does not wipe your moves. Only the XIAO ESP32-C6 is drawn yet, and only when no point needs a rail or a supply from off the board. Otherwise
 the line `no drawn breadboard: …` names what is missing. A line `no breadboard sheet: …` says why there is none; `${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py requirements.json` writes it
@@ -330,7 +331,7 @@ names each pin name the firmware uses that `firmware/pins.py` lacks, with its fi
 board and no token, and it keeps its answer for the page in `.spark/check-firmware.json`, which no gate reads
 (`check_firmware.py --help`). If it says ok, the next step is the scenario below. If a module does not import, an own
 test fails or a pin name is missing, fix that first (a missing pin name: use a name `pins.py` holds, or add the part
-and build again with `--keep`, never edit `pins.py`): the paid run would fail on it.
+and build again with `--keep`, never edit `pins.py`): the paid run would fail on it. After a rebuild that added or removed a pin name, `flow.py show` marks the firmware `stale` (out of date) until this check runs again: the new record reads the new `pins.py` and clears it. A pin that only moved keeps its name and does not mark it.
 
 Every part record says how it is simulated (`simulation`: a Wokwi part standing in, a custom
 chip kept beside the record and compiled to WebAssembly by `wokwi-cli chip compile`, or a skip

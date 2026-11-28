@@ -186,7 +186,7 @@ pick lets go. For each candidate the person passed over, write their reason **in
 with the Write tool — `[{"need": "soil", "id": "<the part>", "why": "…", "by": "person"}]` — and add
 `--passed-over <file>`: the reason goes to the history in your store, never to the project.
 After a pick that wrote, `next` ends with the step `flow.py show` names now (P1035), and the text with its `next:` line.
-While needs are still open, that step is one pick with `<need>=<part>` for each (P1141): ask the person, then fill each `<part>`. A `page.html` the project has is written again on disk; `/spark:page` republishes it.
+While needs are still open, that step is one pick with `<need>=<part>` for each (P1141): ask the person, then fill each `<part>`. After a pick and a rebuild, NOW can say the changes the sheet lists (`data.guide.now.changes`, P1270): relay them, and run the free check. A `page.html` the project has is written again on disk; `/spark:page` republishes it.
 On a published page the person can choose a part for each need and send the picks in one Send; `/spark:page` carries
 that request to spark ([P1067](https://github.com/xmejkal/spark/issues/1565)).
 Relay it. A step with `needs_person` waits for the person. When that step is the build, first run
