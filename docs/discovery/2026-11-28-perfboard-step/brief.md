@@ -9,7 +9,7 @@ Stands on: the assumptions not retired in risks-and-tests.md; of which those the
 is unrated. check computes both. -->
 **Ready for:** design, after the MVP walk and the clock spike P1074 #1575 (D5, D6, D14) <!-- REQUIRED:ready -->
 **Stands on:** 11 H, 1 of which would change the decision <!-- REQUIRED:debt -->
-**Decision needed:** his yes to file items.md <!-- REQUIRED:decision-needed -->
+**Decision needed:** none now; the Ready order after the MVP walk stays his <!-- REQUIRED:decision-needed -->
 
 ## Frame
 - Request, verbatim (corrections marked): the PO, 2026-11-28, about 10:55 CET, relayed by spark-artifact: "I'd actually like you to start refining and planning and designing etc. the perfboard step, it should actually maybe not be so much different from the breadboard, they will definitely share some modules or strategies and interfaces if you will, like routable, etc. etc. Make sure the architecture is good as usual, reusable, feel free to refactor anytime you think something could be dried out (that works in general, if it kinda makes sense, we don't want to have multiple places in the codebase implementing almost the same, remember this), so yeah, lets do that, including the designs, etc." And on P1350 #1937, the same morning: "lets just leave the penalties for turning and crossing and such configurable or at least as constants in the code, so that we can later play around with it." <!-- REQUIRED:request -->
@@ -127,6 +127,7 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D12 · Q8: "Read it first": spike P1239 reads Perfboard Designer's licence and router first, and spark reuses its ideas or format where the licence allows · the PO · 2026-11-28, by 12:26 CET · this session's question dialog · options: read it first, go on without it
 - D13 · Q9, an account (E, n = 1): he turned his last soldered board over "Like a page", left to right · the PO · 2026-11-28, by 12:26 CET · this session's question dialog · options: like a page, top to bottom, not soldered one yet. So the canvas's mirror on X fits his habit: he turns a board like a page (★C8); the sheet still says how to turn the board
 - D14 · the understanding: "Yes, confirmed" to the summary of D4 to D13, the jobs J1 to J6 and the remaining risk (he may not solder soon, D4) · the PO · 2026-11-28, by 12:29 CET · this session's question dialog · options: yes, something is off. It confirms the jobs, the direction and the remaining risk
+- D15 · items.md: "Yes, file all six": spark-main files them as sub-issues of P1199, P275 and P1163, in the Views and editors slice, in Idea · the PO · 2026-11-28, by 12:31 CET · this session's question dialog · options: yes, file all six; not yet. A yes to file items.md; no card goes to Ready
 
 ## Found on the way <!-- CLAIMS -->
 - [C27] Names: the router's penalties are "weights" in the design, because "cost" means money in spark's rules. The Frame's "costs", TL2-16's `TrackCosts` and UL-5's `costs` key take that word in the design · E council/architecture.md:73 (ARCH-P3) · caveat: a names check, not a finding about the product
@@ -137,7 +138,7 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 ## Board actions <!-- REQUIRED:spark-process:board-actions -->
 <!-- Each action on the board or the issue (stage, waiting flag, comment, filing): taken, with its D, or pending.
 None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
-- #1939 stays in Discovery while the questions run · no action. Filing items.md's six items through spark-main, and a comment on P275 #311 that links this discovery · pending, each needs a D
+- #1939 stays in Discovery while the questions run · no action. Filing items.md's six items through spark-main · pending, D15. A comment on P275 #311 that links this discovery · pending, with the filing
 <!-- EXTEND:brief-sections -->
 
 ## Hand-off
