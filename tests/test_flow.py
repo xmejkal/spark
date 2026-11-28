@@ -66,7 +66,7 @@ from spark.flow.write_flow_page import write_page  # noqa: E402
 from spark.records.check_record import CheckRecordStore  # noqa: E402
 from spark.flow.flow_codes import WIRED_BUILD_MESSAGE, WIRED_SHEET_MESSAGE, WIRED_STEP_MESSAGE  # noqa: E402
 from spark.flow.wired_board import day_of  # noqa: E402
-from spark.flow.phase_steps import SCENARIO_PLACEHOLDER  # noqa: E402
+from spark.flow.phase_steps import PIN_NAMES_WHY, REWIRE_WHY, SCENARIO_PLACEHOLDER  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.core.result import NextStep  # noqa: E402
 
@@ -3485,6 +3485,10 @@ class TheFirmwareWrittenTest(FlowTest):
     did not finish, a stale deploy, ready seen and no log keep a plain firmware. A_DEPLOY_PROJECT holds a passed run, so its DONE
     goes on to the simulate: these tests read membership and the station, never the end of the line."""
 
+    def test_a_written_firmware_with_no_status_has_no_next(self):
+        said, _ = show(a_firmware(a_built_project()))
+        self.assertNotIn("check-firmware", [step["op"] for step in said["next"]])
+
     def test_each_partial_deploy_but_a_lost_board_says_the_firmware_is_written(self):
         for name, sentence, reason in (("no read-back", FILES_UNREAD_SENTENCE, None), ("not started", NOT_STARTED_SENTENCE, None),
                                        ("port gone", "the board's port is gone: x", "port_gone"),
@@ -3637,6 +3641,10 @@ class TheStalePinNamesTest(FlowTest):
         said, _ = show(ThePinMapTest.checked(self, "LED = 2\n"))
         self.assertEqual(statuses(said)["firmware"], "problems")
 
+    def test_next_is_the_check_firmware_step(self):
+        said, _ = show(self.stale())
+        self.assertEqual([(step["op"], step["why"]) for step in said["next"]], [("check-firmware", PIN_NAMES_WHY)])
+
     def test_a_moved_pin_keeps_the_firmware_with_no_status(self):
         project = ThePinMapTest.checked(self, "JOY_SW = 4\n")
         (project / "firmware" / "pins.py").write_text("JOY_SW = 5\n")
@@ -3701,6 +3709,10 @@ class TheRewireTest(FlowTest):
         said, _ = show(project)  # the record read the same names on other numbers: it is older, and its names are pins.py's
         self.assertIsNone(statuses(said)["firmware"])
         self.assertEqual((said["data"]["guide"]["now"]["phase"], said["data"]["guide"]["now"]["changes"]), ("breadboard", 1))
+
+    def test_next_is_the_check_firmware_step(self):
+        said, _ = show(self.a_rebuilt_project())
+        self.assertEqual([(step["op"], step["why"]) for step in said["next"]], [("check-firmware", REWIRE_WHY)])
 
     def test_the_count_is_the_sheet_s_own(self):
         project = self.a_rebuilt_project()

@@ -11,7 +11,7 @@ from pathlib import Path
 
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, RUNS, WRITES, Operation
 from spark.core.outcomes import COULD_NOT_RUN, NONE_RECORDED, NOT_CHECKED, PROBLEMS, RECORDED
-from spark.core.result import Finding, OperationResult
+from spark.core.result import Finding, NextStep, OperationResult
 from spark.core.text_guards import printable
 from spark.core.zone_time import stamp
 from spark.firmware import firmware_codes
@@ -79,6 +79,12 @@ answer's `data.tests` holds `passed` of `total` and the ids of the tests that fa
 (`own_test_failed`). A run that timed out, gave no count or ran no test is could-not-run (`own_tests_not_run`), never ok. No
 tests/ folder is a note and `data.tests.state` `none-recorded`. A test that passes proves what it asserts, on this machine,
 and never the wiring.""" % (IMPORT_TIMEOUT_S, OWN_TESTS_TIMEOUT_S)
+
+
+def check_step(project, why):
+    """The step that runs the free checks on the whole project (P1270): op check-firmware, the project made absolute, reads,
+    runs and writes the check record. Claude runs it, so it needs no person and no yes. `why` is the flow's reason."""
+    return NextStep(CheckFirmware.name, ["--project", str(Path(project).absolute())], why, (READS, RUNS, WRITES), False, False)
 
 
 class CheckFirmware(Operation):
