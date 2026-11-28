@@ -24,7 +24,7 @@
 | id | belief | type | evidence now | importance | cheapest test | pass line, dated | result that would change the decision | status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | A1 <!-- REQUIRED:assumptions --> | He solders a perfboard within a few months of this design (PA-9), before the code it describes moves | value | H PA-4, PA-9 (★C4) | high D3 | none, by D4 | no test: D4 ("No test, go on"), set 2026-11-28 | "none planned yet": keep the design to the shared parts and the walking skeleton | open |
-| A2 | A plan in text and JSON on the CLI (slice 0) is a result he calls done | value | H PA-6 | low D3 | Q3, one question | proposed: he picks the text plan as the first done, set 2026-11-28 | he needs the drawing or the page first: slice 0 grows | open |
+| A2 | A plan in text and JSON on the CLI (slice 0) is a result he calls done | value | H PA-6 | low D3 | Q3, one question | proposed: he picks the text plan as the first done, set 2026-11-28 | he needs the drawing or the page first: slice 0 grows | retired 2026-11-28 |
 | A3 | A person who follows the step sheet puts each joint in the right hole after turning the board | usability | H UL-4 (geometry), E his account: he turns a board like a page (D13) | low D3 | Q9 (an account), then a dry rehearsal on an offcut with no solder | proposed: 0 joints in a wrong hole, of every joint the button-light plan names, set 2026-11-28 | one joint in a wrong row: the sheet says how to turn, or the view mirrors the other axis | open |
 | A4 | One `GridSearch` lifted from `TrackRouting` keeps 9 of 9 golden breadboards byte for byte (at most 5 of them draw a route) and `cut_short` equal | feasibility | E ★C13, ★C14 (code read). H the heap's tie order | low D3 | the move itself after P1350, the hook's story run | proposed: 9 of 9 goldens equal and tests/test_wire_routing.py passes, set 2026-11-28 | one golden moves: the search keeps its own copy until the order is understood | open |
 | A5 | One A* over a two-face pad lattice, with the insulated jumper as one more edge, routes button-light and the e-paper clock within the budget | feasibility | H TL2-16, TL2-17 | low D3 | spike P1239 | proposed: both route, each search under 60000 states (`BUDGET`, wire_routing.py:207), set 2026-11-28 | one does not route: a second join router, or a person's jumper | open |
@@ -49,6 +49,7 @@
 ## Results
 | date | source and pointer | what was seen | pass line met or missed | what it changes |
 | --- | --- | --- | --- | --- |
+| 2026-11-28 | brief.md D7 (the question dialog) | he picked "Text plan on the CLI" as the first done | met: A2's pass line (he picks the text plan) | slice 0 stays the text plan; A2 retired |
 
 ## Budgets <!-- REQUIRED:electronics-firmware:budgets -->
 n/a for energy: no battery, no new regulator and no radio change. The perfboard moves no part's power. Peaks per join, from P1199 EP-1 and EP-2 (calculated from records, rung R2): the largest consumer is the FireBeetle's 3V3 regulator at 1.5 A (stated, marked unverified). At that current, 50 mm of 24 AWG drops 6.2 mV and a one-pitch bridge 0.32 mV. The L9110S at 0.8 A a channel (stated) stays under the guide's 20 AWG line. No dissipation per part changes. A bench reading with the meter on a soldered board (a later rung) can settle the drops.

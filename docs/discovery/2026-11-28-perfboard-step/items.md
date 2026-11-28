@@ -7,7 +7,7 @@ The proposals below are cards for spark-main to file after the PO's yes. P275 #3
 - type: refactor story. The goldens stay byte for byte, but the check's public codes `not-joined`, `joined-to-other` and `joined-to-unused` change for agents (docs/guide/agents/scripts.md:219-220) <!-- REQUIRED:item-type -->
 - needed by: "we don't want to have multiple places in the codebase implementing almost the same, remember this" (the PO, 2026-11-28) <!-- REQUIRED:needed-by -->
 - value proven by: 9 of 9 golden breadboards stay byte for byte (at most 5 of them draw a placement or a route). One test catches a bare wire over another net's pad. A grep finds one union-find in scripts/spark <!-- REQUIRED:value-proven-by -->
-- depends on: the clock spike P1074 #1575's finding (D5, D6), and a perfboard join to test against, so it lands with the walking skeleton unless Q2 says otherwise <!-- REQUIRED:depends-on -->
+- depends on: the clock spike P1074 #1575's finding (D5, D6), and a perfboard join to test against, so it lands with the walking skeleton <!-- REQUIRED:depends-on -->
 - status: proposed, filing approved D15 <!-- REQUIRED:item-status -->
 - label (the repository's type label): refactor <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P1199 #1747 <!-- REQUIRED:spark-process:parent -->
@@ -47,7 +47,7 @@ The proposals below are cards for spark-main to file after the PO's yes. P275 #3
 - type: story
 - needed by: "the perfboard step, it should actually maybe not be so much different from the breadboard" (the PO, 2026-11-28)
 - value proven by: one CLI run on button-light (D10) writes each part's holes, each join with its kind and every hole, and the cut, and the same-pins check passes. Its `--json` has `board`, `parts`, `joins`, `weights` and `pins_kept`
-- depends on: the two refactor stories above, spike P1239 #1792, the drawer story, Q3 and Q6
+- depends on: the two refactor stories above, spike P1239 #1792, the drawer story (D7, D10)
 - status: proposed, filing approved D15
 - label (the repository's type label): feature
 - parent (the epic, as a sub-issue): P275 #311
@@ -56,7 +56,7 @@ The proposals below are cards for spark-main to file after the PO's yes. P275 #3
 ## After a drag that changes the wiring, one sentence for Claude with Copy (the drag's first slice)
 - type: story
 - needed by: "and for now it can for example based on it generate a prompt, or something, when the wiring changes, to copy and say to claude" (the PO, 2026-11-28, #1699)
-- value proven by: one Operation takes a dragged layout and names the wiring change in one sentence, on button-light's breadboard. The CLI with `--json`, spark's commands and skills, and the page's Copy all reach it
+- value proven by: one Operation takes a dragged layout and names the wiring change in one sentence, on button-light's breadboard and perfboard at once (D11). The CLI with `--json`, spark's commands and skills, and the page's Copy all reach it
 - depends on: the design's drag model (P1352's design), the perfboard's text plan, because the drag comes for both editors at once (D11)
 - status: proposed, filing approved D15
 - label (the repository's type label): feature

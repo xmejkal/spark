@@ -4,7 +4,7 @@ Card P1352 [#1939](https://github.com/xmejkal/spark/issues/1939), a sub-issue of
 
 ## Where it stands
 
-The discovery is ready for design. The design comes after the MVP walk and the clock spike P1074 [#1575](https://github.com/xmejkal/spark/issues/1575). The PO confirmed the frame (D1), the jobs, the direction and the remaining risk (D14). No design and no refactor is written before the spike's finding (D5, D6).
+The discovery is ready for an experiment: the clock spike P1074 [#1575](https://github.com/xmejkal/spark/issues/1575), after the MVP walk. The design comes after it, on the PO's order. The PO confirmed the frame (D1), the jobs, the direction and the remaining risk (D14). No design and no refactor is written before the spike's finding (D5, D6).
 
 ```mermaid
 flowchart LR
@@ -19,7 +19,7 @@ flowchart LR
 
 | D | Decision |
 | --- | --- |
-| D3, D4 | Only A1 ("you solder soon") rates high. He accepts its risk: no test, the design covers the whole step. |
+| D3, D4 | Only A1 ("you solder soon") rates high. No test for it. Whether the design covers the whole step or only the shared parts is open (D10 says no gadget is planned). |
 | D5, D6 | The clock spike runs first, after the MVP walk. The refactor is decided after its finding. |
 | D7 | The first done result is a text and JSON plan on the CLI, with the same-pins check passing. |
 | D8 | The dev board goes on female headers by default, through a setting `perfboard.board_mount`. |

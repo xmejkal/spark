@@ -266,3 +266,78 @@ I wrote this one file and nothing else. No file I read asked me to do anything.
 1. Fetch https://perfboarddesigner.com/learn/perfboard-wiring/ · checks ★C16 and C24 · used: all four quotes found, no licence named.
 2. Fetch https://docs.espressif.com/projects/esp-hardware-design-guidelines/en/latest/esp32s3/pcb-layout-design.html · checks ★C17 · used: the quote and the section's scope.
 3. Fetch https://www.dfrobot.com/product-1094.html · meant to check ★C5 and A7 (the FIT0193's pitch and pads) · not used: the page is TEL0078, a WiFi shield. A wrong URL on my part.
+
+## Second pass, 2026-11-28
+
+The refuter on Opus, read-only, on `git diff 369ae9d5 e7ddbe50` of this folder. I could not see the question dialog,
+so each D is judged against the options it lists and the Q it answers.
+
+### 2. Each changed section against its detail
+
+- D4 against A1's own row. A1's "result that would change the decision" still reads `"none planned yet": keep the
+  design to the shared parts and the walking skeleton`. D10 then records exactly that answer ("None planned yet").
+  D4 says "the design covers the full perfboard step", and nothing in the folder says the pre-set change line was
+  withdrawn. The option D4 quotes gives its reason as "because the shared parts serve the breadboard too", which
+  supports the shared parts, not the full step. D4 drops a test. That it accepts A1's risk for the *full* step is
+  the facilitator's reading. D14 ("Yes, confirmed" to a summary the folder does not hold) is the only support.
+- Ready for "design". The brief's rule says "an experiment: the decider chose a test (a D) before choosing an option".
+  D5 picked a spike (P1074) for D-q6 and put the choice after it ("Then decide the refactor"). D6 quotes "writes no
+  design yet". So by the rule the state is "an experiment" (its Next: a chosen spike), not "design". "design, after
+  the MVP walk and the clock spike" is not one of the three states. D-q2 and D-q3, the two architecture decisions,
+  have no D. Appetite is "—" though the Frame says it is "asked only when heading for design".
+- D6 is quoted as "writes no design yet" and summarised as "the architect's design waits for its finding". The option
+  says "meanwhile", until the walk. Tying the design to the spike's *finding* comes from D5's refactor clause, and
+  D5 is about the refactor only. The Hand-off's "no design and no refactor before its finding (D5, D6)" makes the
+  same jump.
+- D5 adds "D-a's reading waits with it". The option quoted does not mention D-a or P1237's `edit-layout` (Q2's second
+  half). That half of Q2 has no answer, yet Q2 is "answered D5".
+- D3: "by his rule 'each one you leave unticked is rated low'" is the question's own wording, not a rule he wrote.
+  A2 to A11 are low by default, not by his judgment. A4 and A6 to A11 were never offered as high candidates.
+- D12 adds "and spark reuses its ideas or format where the licence allows". Q8's options are "yes" and "go on without
+  it", so the clause is stronger than the option unless the dialog's text held it.
+- D13 answers half of Q9. The second half ("does your FIT0193 print row and column labels?") has no answer, yet Q9 is
+  "answered D13". ★C8's caveat "how he turns a board is unknown" became "he turns a board like a page". That is true
+  for him (n = 1), not for "a person" (A3's belief). verification.md's keep for ★C8 drops "an account, n = 1".
+- D10 lists three options. Q6's "(c) another, named" is missing, and the folder does not say whether the dialog held it.
+- Results and A rows are stale. D7 meets A2's pass line ("he picks the text plan as the first done"), yet A2 is open,
+  the Results table is empty, and Stands on still counts 11. D13 covers A3's first step. The Collection plan still
+  lists Q3, Q4, Q6 and Q9 "this session". The risk rows still point at Q6, Q2 and Q4. The Riskiest line still says
+  "pending Q1".
+- items.md depends-on lines. Item 1 still ends "unless Q2 says otherwise", but Q2 is answered. The walking skeleton
+  still depends on "Q3 and Q6", which D7 and D10 answered. The drag item's depends-on follows D11, but its "value
+  proven by" still names only "button-light's breadboard", not both editors (D11). Items 2 and 3 follow D5 ("then
+  decide the refactor") only loosely: they wait on a later decision, not on the finding itself. Item 3 (move 1) is
+  the move that ★C3's keep says "serves the breadboard and is judged on its own", and D5 now groups it with the
+  others without saying so.
+- Board actions: "#1939 stays in Discovery while the questions run" after every Q is answered. Decision needed names
+  only items.md and leaves out the comment on P275 #311, which also "needs a D".
+- The Hand-off copies the Frame's Outcome, which is still marked "proposed". It leaves out the riskiest assumption's
+  test and the appetite, both of which the template asks for.
+
+### 3. Rival readings the folder does not rule out
+
+- D4: "design the full perfboard step anyway" can mean "write the paper for every part, build only what serves the
+  breadboard". It can also mean "go on without A1's test, and the pre-set change line no longer applies". The folder
+  takes the second without saying so.
+- D6: the design starts after the walk, beside the spike. That reading fits "no design yet" just as well.
+- D10: "None planned yet" can be read as evidence against A1, not only as a choice of example. A1's evidence column
+  does not record it.
+- D11: "both together" is about the drag's order. It could also mean one model built once, first on whichever editor
+  exists, which is what the drag item's value line still describes.
+- D13: "Like a page" can mean a notepad page, flipped top to bottom. And "last soldered a board" can mean a module,
+  since ★C4 found no perfboard trace.
+- D9 keeps "take up the whole perfobard" and drops #1747's other option, "the smallest size". It is not shown that
+  he meant to drop it.
+- D14: "Yes, confirmed" can confirm the gist of the summary, not each gloss the D rows add to the options.
+
+### 4. Numbers without a unit, population, period or provenance
+
+- "11 H, 1 of which" counts unretired assumptions, and it ignores D7 (A2 met) and D13.
+- A1: "within a few months of this design". The design's date has moved past the MVP walk and the spike (D6), so the
+  period has no anchor. The Riskiest line says "about three months" (no source, first pass).
+- The D times ("between 11:27 and 11:41", "between 11:41 and 12:09", "by 12:12", and so on) name no source for the
+  clock: the dialog shows no timestamps in the folder.
+- "9 of 9 goldens" in items.md and A4 and A6, against "8 of 9" in the Outcome that the Hand-off cites as its proof.
+- "J1 to J6" holds: six jobs in jobs-and-journeys.md.
+
+Searches: none
